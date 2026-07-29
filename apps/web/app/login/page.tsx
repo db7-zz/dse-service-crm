@@ -67,7 +67,7 @@ export default function LoginPage() {
               label="密码"
               rules={[
                 { required: true, message: "请输入密码" },
-                { min: 12, message: "密码不少于12位" },
+                { min: 6, message: "密码不少于6位" },
               ]}
             >
               <Input.Password

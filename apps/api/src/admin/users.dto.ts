@@ -25,9 +25,9 @@ export class CreateUserDto {
   @MaxLength(100)
   displayName!: string;
 
-  @ApiProperty({ format: "password", minLength: 12 })
+  @ApiProperty({ format: "password", minLength: 6 })
   @IsString()
-  @MinLength(12)
+  @MinLength(6)
   password!: string;
 
   @ApiProperty({ enum: ROLE_CODES, isArray: true })
@@ -44,10 +44,10 @@ export class UpdateUserDto {
   @MaxLength(100)
   displayName?: string;
 
-  @ApiPropertyOptional({ format: "password", minLength: 12 })
+  @ApiPropertyOptional({ format: "password", minLength: 6 })
   @IsOptional()
   @IsString()
-  @MinLength(12)
+  @MinLength(6)
   password?: string;
 
   @ApiPropertyOptional({ maxLength: 500 })

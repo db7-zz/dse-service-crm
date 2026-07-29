@@ -7,8 +7,8 @@ export class LoginDto {
   @Matches(/^[A-Za-z0-9._-]{3,64}$/)
   username!: string;
 
-  @ApiProperty({ format: "password", minLength: 12 })
+  @ApiProperty({ format: "password", minLength: 6 })
   @IsString()
-  @MinLength(12)
+  @MinLength(6)
   password!: string;
 }

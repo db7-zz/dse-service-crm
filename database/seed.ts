@@ -56,8 +56,8 @@ async function main(): Promise<void> {
   const databaseUrl = required("DATABASE_URL");
   const adminPassword = required("SEED_ADMIN_PASSWORD");
   const butlerPassword = required("SEED_BUTLER_PASSWORD");
-  if (adminPassword.length < 12 || butlerPassword.length < 12) {
-    throw new Error("Seed passwords must contain at least 12 characters.");
+  if (adminPassword.length < 6 || butlerPassword.length < 6) {
+    throw new Error("Seed passwords must contain at least 6 characters.");
   }
 
   const prisma = createPrismaClient(databaseUrl);

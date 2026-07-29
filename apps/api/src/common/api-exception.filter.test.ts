@@ -7,7 +7,7 @@ describe("mapApiException", () => {
   it("maps validation details without exposing an internal exception", () => {
     const mapped = mapApiException(
       new BadRequestException({
-        message: ["password must be longer than or equal to 12 characters"],
+        message: ["password must be longer than or equal to 6 characters"],
       }),
     );
     expect(mapped.status).toBe(400);

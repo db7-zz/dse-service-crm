@@ -265,7 +265,7 @@ export default function UsersPage() {
               name="password"
               rules={[
                 { required: true, message: "请输入初始密码" },
-                { min: 12, message: "密码不少于12位" },
+                { min: 6, message: "密码不少于6位" },
               ]}
             >
               <Input.Password />
