@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
@@ -14,11 +15,14 @@ import { AdminModule } from "./admin/admin.module.js";
 import { AuditModule } from "./audit/audit.module.js";
 import { HealthModule } from "./health/health.module.js";
 
+const rootEnvironmentFile = fileURLToPath(new URL("../../../.env", import.meta.url));
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
+      envFilePath: rootEnvironmentFile,
       validate: validateEnvironment,
     }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),

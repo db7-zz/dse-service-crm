@@ -22,7 +22,7 @@ services:
       target: api
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:8080}
+      APP_ORIGIN: ${COMPOSE_APP_ORIGIN:-http://localhost:8080}
       API_PORT: 3001
       DATABASE_URL: postgresql://${POSTGRES_USER:-dse_crm}:${POSTGRES_PASSWORD:-dse_crm_dev_only}@postgres:5432/${POSTGRES_DB:-dse_crm_dev}?schema=public
       SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-dse_session}

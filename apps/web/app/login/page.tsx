@@ -34,7 +34,7 @@ export default function LoginPage() {
             </Typography.Paragraph>
           </Space>
           {error ? (
-            <Alert type="error" showIcon message={error} style={{ marginBottom: 20 }} />
+            <Alert type="error" showIcon title={error} style={{ marginBottom: 20 }} />
           ) : null}
           <Form
             layout="vertical"

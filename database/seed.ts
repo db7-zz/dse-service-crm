@@ -1,6 +1,11 @@
-import "dotenv/config";
+import { config as loadEnvironment } from "dotenv";
 import argon2 from "argon2";
 import { createPrismaClient } from "./src/index.js";
+
+loadEnvironment({
+  path: new URL("../.env", import.meta.url),
+  quiet: true,
+});
 
 const ROLE_DEFINITIONS = [
   ["ADMINISTRATOR", "管理员", "维护账号、角色、权限和审计"],

@@ -18,6 +18,9 @@ DSE升学服务CRM的阶段0技术底座。当前版本只包含认证、权限�
 5. 创建开发账号：`pnpm db:seed`
 6. 启动前后端：`pnpm dev`
 
+本机直接开发时访问 `http://localhost:3000`；API位于 `http://localhost:3001`。
+根目录 `.env` 会由API、Prisma迁移和种子命令自动加载。
+
 也可使用 `docker compose up --build` 启动同源入口，浏览
 `http://localhost:8080`。
 
