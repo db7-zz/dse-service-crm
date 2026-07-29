@@ -1,0 +1,19 @@
+import "dotenv/config";
+import { defineConfig, env } from "prisma/config";
+
+const databaseUrl =
+  process.env.DATABASE_URL ??
+  (process.argv.includes("generate")
+    ? "postgresql://prisma-generate:prisma-generate@127.0.0.1:5432/prisma-generate"
+    : env("DATABASE_URL"));
+
+export default defineConfig({
+  schema: "schema.prisma",
+  migrations: {
+    path: "migrations",
+    seed: "tsx seed.ts",
+  },
+  datasource: {
+    url: databaseUrl,
+  },
+});

@@ -1,0 +1,55 @@
+name: 功能Issue
+description: 阶段功能或技术能力
+title: "[Feature][S0] "
+labels: ["type:feature", "stage:S0"]
+body:
+  - type: input
+    id: feature-id
+    attributes:
+      label: Feature ID
+      placeholder: S0-F00
+    validations:
+      required: true
+  - type: input
+    id: prd
+    attributes:
+      label: 对应PRD
+      placeholder: docs/releases/S0-技术底座/INCREMENT_PRD_S0.md
+    validations:
+      required: true
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景与目标
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 需求范围与不在范围
+    validations:
+      required: true
+  - type: textarea
+    id: changes
+    attributes:
+      label: 页面、数据、权限和接口变化
+    validations:
+      required: true
+  - type: textarea
+    id: exceptions
+    attributes:
+      label: 异常情况与迁移
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      value: |
+        - [ ] 正常流程通过
+        - [ ] 权限与异常流程通过
+        - [ ] 审计日志正确
+        - [ ] 单元与集成测试通过
+        - [ ] 文档已更新
+    validations:
+      required: true

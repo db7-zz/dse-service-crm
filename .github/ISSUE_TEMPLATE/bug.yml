@@ -1,0 +1,23 @@
+name: 缺陷
+description: 报告可复现的系统缺陷
+title: "[Bug][S0] "
+labels: ["type:bug", "stage:S0"]
+body:
+  - type: textarea
+    id: current
+    attributes:
+      label: 当前表现与复现步骤
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期表现
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: 影响范围与环境
+    validations:
+      required: true

@@ -1,0 +1,68 @@
+.root {
+  min-height: 100vh;
+}
+
+.sider {
+  position: fixed !important;
+  inset: 0 auto 0 0;
+  z-index: 10;
+  height: 100vh;
+  overflow: auto;
+  background: var(--color-navigation) !important;
+}
+
+.brand {
+  height: 72px;
+  padding: 16px 20px;
+  color: #fff;
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
+}
+
+.brandTitle {
+  display: block;
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 24px;
+  white-space: nowrap;
+}
+
+.brandSubtitle {
+  display: block;
+  overflow: hidden;
+  color: rgb(255 255 255 / 62%);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.contentLayout {
+  min-height: 100vh;
+  transition: margin-left 0.2s ease;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 24px !important;
+  background: #fff !important;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.content {
+  min-height: calc(100vh - 64px);
+  padding: 24px;
+}
+
+.contentCard {
+  min-height: calc(100vh - 112px);
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #edf0f5;
+  border-radius: var(--radius-base);
+}

@@ -1,0 +1,91 @@
+export * from "./storage.js";
+
+export const RoleCode = {
+  ADMINISTRATOR: "ADMINISTRATOR",
+  ERIC_MANAGER: "ERIC_MANAGER",
+  BUTLER: "BUTLER",
+  PLANNER: "PLANNER",
+  SPECIALIST: "SPECIALIST",
+  STUDENT: "STUDENT",
+} as const;
+
+export type RoleCode = (typeof RoleCode)[keyof typeof RoleCode];
+
+export const PermissionCode = {
+  WORKSPACE_ACCESS: "workspace.access",
+  SUPERVISION_ACCESS: "supervision.access",
+  SYSTEM_USERS_READ: "system.users.read",
+  SYSTEM_USERS_WRITE: "system.users.write",
+  SYSTEM_AUDIT_READ: "system.audit.read",
+  PORTAL_ACCESS: "portal.access",
+} as const;
+
+export type PermissionCode = (typeof PermissionCode)[keyof typeof PermissionCode];
+
+export const ErrorCode = {
+  AUTH_INVALID_CREDENTIALS: "AUTH_INVALID_CREDENTIALS",
+  AUTH_ACCOUNT_DISABLED: "AUTH_ACCOUNT_DISABLED",
+  AUTH_ACCOUNT_LOCKED: "AUTH_ACCOUNT_LOCKED",
+  AUTH_SESSION_EXPIRED: "AUTH_SESSION_EXPIRED",
+  AUTH_CSRF_INVALID: "AUTH_CSRF_INVALID",
+  UNAUTHENTICATED: "UNAUTHENTICATED",
+  FORBIDDEN: "FORBIDDEN",
+  VALIDATION_ERROR: "VALIDATION_ERROR",
+  RESOURCE_NOT_FOUND: "RESOURCE_NOT_FOUND",
+  CONFLICT: "CONFLICT",
+  RATE_LIMITED: "RATE_LIMITED",
+  INTERNAL_ERROR: "INTERNAL_ERROR",
+} as const;
+
+export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
+
+export interface ApiError {
+  code: ErrorCode | string;
+  message: string;
+  details: Record<string, unknown>;
+}
+
+export type ApiEnvelope<T> =
+  | {
+      success: true;
+      data: T;
+      error: null;
+      requestId: string;
+    }
+  | {
+      success: false;
+      data: null;
+      error: ApiError;
+      requestId: string;
+    };
+
+export interface AuthenticatedUser {
+  id: string;
+  username: string;
+  displayName: string;
+  roles: RoleCode[];
+  permissions: PermissionCode[];
+}
+
+export interface AuditEvent {
+  id: string;
+  operatorId: string | null;
+  operatorRole: RoleCode | null;
+  objectType: string;
+  objectId: string | null;
+  action: string;
+  beforeData: Record<string, unknown> | null;
+  afterData: Record<string, unknown> | null;
+  reason: string | null;
+  requestId: string;
+  ipAddress: string | null;
+  deviceInfo: string | null;
+  createdAt: string;
+}
+
+export function hasPermission(
+  user: Pick<AuthenticatedUser, "permissions">,
+  permission: PermissionCode,
+): boolean {
+  return user.permissions.includes(permission);
+}

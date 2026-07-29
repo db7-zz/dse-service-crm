@@ -1,0 +1,43 @@
+{
+  "name": "dse-service-crm",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": ">=11 <12"
+  },
+  "scripts": {
+    "build": "pnpm packages:build && pnpm --filter @dse/api build && pnpm --filter @dse/web build",
+    "predev": "pnpm packages:build",
+    "dev": "turbo run dev --parallel",
+    "packages:build": "pnpm --filter @dse/shared build && pnpm --filter @dse/config build && pnpm --filter @dse/database build && pnpm --filter @dse/api-client build && pnpm --filter @dse/ui build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
+    "pretest:e2e": "pnpm packages:build",
+    "test:e2e": "playwright test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "pnpm --filter @dse/database db:generate",
+    "db:validate": "pnpm --filter @dse/database db:validate",
+    "db:diff": "pnpm --filter @dse/database db:diff",
+    "db:migrate": "pnpm --filter @dse/database db:migrate",
+    "db:migrate:deploy": "pnpm --filter @dse/database db:migrate:deploy",
+    "db:seed": "pnpm --filter @dse/database db:seed",
+    "openapi:generate": "pnpm packages:build && pnpm --filter @dse/api openapi:generate",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24.10.0",
+    "eslint": "^9.39.0",
+    "globals": "^16.5.0",
+    "prettier": "^3.6.2",
+    "turbo": "^2.5.8",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0"
+  }
+}
