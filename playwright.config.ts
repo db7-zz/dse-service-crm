@@ -18,7 +18,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "pnpm --filter @dse/api dev",
+      command: "pnpm --filter @dse/api exec nest start",
       url: "http://localhost:3001/api/v1/health/live",
       reuseExistingServer: !process.env.CI,
       env: {
