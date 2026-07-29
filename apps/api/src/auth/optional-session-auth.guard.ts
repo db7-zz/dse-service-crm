@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
+import { CanActivate, ExecutionContext, Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Environment } from "../config/environment.js";
 import type { RequestContext } from "../common/request-context.js";
@@ -7,8 +7,8 @@ import { AuthService } from "./auth.service.js";
 @Injectable()
 export class OptionalSessionAuthGuard implements CanActivate {
   public constructor(
-    private readonly config: ConfigService<Environment, true>,
-    private readonly authService: AuthService,
+    @Inject(ConfigService) private readonly config: ConfigService<Environment, true>,
+    @Inject(AuthService) private readonly authService: AuthService,
   ) {}
 
   public async canActivate(context: ExecutionContext): Promise<boolean> {

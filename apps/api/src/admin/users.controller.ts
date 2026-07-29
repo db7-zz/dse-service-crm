@@ -4,6 +4,7 @@ import {
   Controller,
   DefaultValuePipe,
   Get,
+  Inject,
   Param,
   ParseIntPipe,
   Patch,
@@ -28,7 +29,7 @@ import { UsersService } from "./users.service.js";
 @Controller("admin/users")
 @UseGuards(SessionAuthGuard, PermissionGuard)
 export class UsersController {
-  public constructor(private readonly usersService: UsersService) {}
+  public constructor(@Inject(UsersService) private readonly usersService: UsersService) {}
 
   @Get()
   @RequiresPermission(PermissionCode.SYSTEM_USERS_READ)

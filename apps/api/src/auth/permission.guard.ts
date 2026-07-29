@@ -10,7 +10,7 @@ import { REQUIRED_PERMISSION } from "./requires-permission.decorator.js";
 @Injectable()
 export class PermissionGuard implements CanActivate {
   public constructor(
-    private readonly reflector: Reflector,
+    @Inject(Reflector) private readonly reflector: Reflector,
     @Inject(PRISMA) private readonly prisma: PrismaClient,
   ) {}
 

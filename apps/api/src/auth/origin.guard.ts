@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, HttpStatus, Injectable } from "@nestjs/common";
+import { CanActivate, ExecutionContext, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { ErrorCode } from "@dse/shared";
 import type { Environment } from "../config/environment.js";
@@ -7,7 +7,9 @@ import type { RequestContext } from "../common/request-context.js";
 
 @Injectable()
 export class OriginGuard implements CanActivate {
-  public constructor(private readonly config: ConfigService<Environment, true>) {}
+  public constructor(
+    @Inject(ConfigService) private readonly config: ConfigService<Environment, true>,
+  ) {}
 
   public canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<RequestContext>();

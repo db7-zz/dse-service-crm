@@ -1,5 +1,5 @@
 import type { CookieOptions, Response } from "express";
-import { Body, Controller, Get, Post, Req, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Post, Req, Res, UseGuards } from "@nestjs/common";
 import {
   ApiCookieAuth,
   ApiCreatedResponse,
@@ -22,8 +22,8 @@ import { SessionAuthGuard } from "./session-auth.guard.js";
 @Controller("auth")
 export class AuthController {
   public constructor(
-    private readonly authService: AuthService,
-    private readonly config: ConfigService<Environment, true>,
+    @Inject(AuthService) private readonly authService: AuthService,
+    @Inject(ConfigService) private readonly config: ConfigService<Environment, true>,
   ) {}
 
   @Post("login")

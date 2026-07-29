@@ -1,5 +1,13 @@
 import { PermissionCode } from "@dse/shared";
-import { Controller, DefaultValuePipe, Get, ParseIntPipe, Query, UseGuards } from "@nestjs/common";
+import {
+  Controller,
+  DefaultValuePipe,
+  Get,
+  Inject,
+  ParseIntPipe,
+  Query,
+  UseGuards,
+} from "@nestjs/common";
 import { ApiCookieAuth, ApiTags } from "@nestjs/swagger";
 import { PermissionGuard } from "../auth/permission.guard.js";
 import { RequiresPermission } from "../auth/requires-permission.decorator.js";
@@ -12,7 +20,7 @@ import { AuditService } from "./audit.service.js";
 @UseGuards(SessionAuthGuard, PermissionGuard)
 @RequiresPermission(PermissionCode.SYSTEM_AUDIT_READ)
 export class AuditController {
-  public constructor(private readonly auditService: AuditService) {}
+  public constructor(@Inject(AuditService) private readonly auditService: AuditService) {}
 
   @Get()
   public list(

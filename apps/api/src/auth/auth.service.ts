@@ -45,7 +45,7 @@ const USER_RELATIONS = {
 export class AuthService {
   public constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
-    private readonly config: ConfigService<Environment, true>,
+    @Inject(ConfigService) private readonly config: ConfigService<Environment, true>,
   ) {}
 
   public async login(
