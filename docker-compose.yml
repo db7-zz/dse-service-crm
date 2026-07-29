@@ -13,7 +13,7 @@ services:
       timeout: 5s
       retries: 20
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     networks: [crm_internal]
 
   api:

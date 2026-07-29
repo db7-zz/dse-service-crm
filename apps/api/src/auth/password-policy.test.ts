@@ -41,9 +41,6 @@ describe("password length policy", () => {
       }),
       true,
     );
-    await expectPasswordLength(
-      Object.assign(new UpdateUserDto(), { password: "12345" }),
-      false,
-    );
+    await expectPasswordLength(Object.assign(new UpdateUserDto(), { password: "12345" }), false);
   });
 });
