@@ -6,13 +6,14 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   AuditOutlined,
   DashboardOutlined,
+  DownOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   SafetyCertificateOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
-import { Avatar, Button, Dropdown, Layout, Menu, Space, Typography } from "antd";
+import { Avatar, Button, Dropdown, Layout, Menu } from "antd";
 import { PermissionCode, RoleCode } from "@dse/shared";
 import { LoadingState, PermissionDenied } from "@dse/ui";
 import { useAuth } from "../auth/auth-context";
@@ -110,6 +111,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             onClick={() => setCollapsed((value) => !value)}
           />
           <Dropdown
+            trigger={["click"]}
             menu={{
               items: [
                 {
@@ -124,17 +126,23 @@ export function AppShell({ children }: { children: ReactNode }) {
               ],
             }}
           >
-            <Space style={{ cursor: "pointer" }}>
-              <Avatar>{user.displayName.slice(0, 1)}</Avatar>
-              <div>
-                <Typography.Text strong>{user.displayName}</Typography.Text>
-                <br />
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            <button
+              type="button"
+              className={styles.userMenu}
+              aria-label={`打开${user.displayName}的账户菜单`}
+            >
+              <Avatar size={36} className={styles.userAvatar}>
+                {user.displayName.slice(0, 1)}
+              </Avatar>
+              <span className={styles.userText}>
+                <span className={styles.userName}>{user.displayName}</span>
+                <span className={styles.userMeta}>
                   {workspaceName} ·{" "}
                   {user.roles.map((role) => ROLE_LABELS[role] ?? role).join(" / ")}
-                </Typography.Text>
-              </div>
-            </Space>
+                </span>
+              </span>
+              <DownOutlined className={styles.userChevron} aria-hidden />
+            </button>
           </Dropdown>
         </Header>
         <Content className={styles.content}>
