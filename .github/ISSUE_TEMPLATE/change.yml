@@ -1,0 +1,31 @@
+name: 小型变更
+description: 不改变业务状态的小型文案、UI或交互调整
+title: "[Change][S0] "
+labels: ["type:change", "stage:S0"]
+body:
+  - type: dropdown
+    id: type
+    attributes:
+      label: 变更类型
+      options: [文案, UI布局, 小字段, 交互微调, Bug修复]
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: 当前表现
+    validations:
+      required: true
+  - type: textarea
+    id: target
+    attributes:
+      label: 目标表现和影响范围
+    validations:
+      required: true
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: 业务规则确认
+      options:
+        - label: 本变更不影响业务规则；如影响则升级为增量PRD
+          required: true

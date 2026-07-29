@@ -1,0 +1,23 @@
+{
+  "name": "@dse/config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./design-tokens": {
+      "types": "./src/design-tokens.ts",
+      "import": "./dist/design-tokens.js",
+      "default": "./dist/design-tokens.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --coverage --passWithNoTests"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}
