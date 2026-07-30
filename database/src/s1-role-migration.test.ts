@@ -41,7 +41,14 @@ describeWithDatabase("S1 administrator role migration", () => {
         "action",
         "request_id"
       )
-      VALUES ($1, 'ERIC_MANAGER', 'migration-test', $1, 'HISTORICAL_ACTION', $2)
+      VALUES (
+        $1::uuid,
+        'ERIC_MANAGER',
+        'migration-test',
+        $1::text,
+        'HISTORICAL_ACTION',
+        $2
+      )
       RETURNING "id"`,
       [userId, randomUUID()],
     );
