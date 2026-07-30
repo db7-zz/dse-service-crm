@@ -24,6 +24,16 @@ describe("role navigation", () => {
     expect(navigationFor(current).map((item) => item.label)).toContain("监督管理看板");
   });
 
+  it("routes an administrator with student access to student management first", () => {
+    const current = user([
+      PermissionCode.WORKSPACE_ACCESS,
+      PermissionCode.STUDENTS_READ,
+      PermissionCode.SYSTEM_USERS_READ,
+    ]);
+    expect(defaultRouteFor(current)).toBe("/workspace/students");
+    expect(navigationFor(current).map((item) => item.label)).toContain("学生管理");
+  });
+
   it("does not expose S1 supervision through the legacy permission", () => {
     const current = user([PermissionCode.WORKSPACE_ACCESS, PermissionCode.SUPERVISION_ACCESS]);
     expect(navigationFor(current).map((item) => item.label)).not.toContain("监督管理看板");

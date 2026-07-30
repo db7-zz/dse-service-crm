@@ -30,7 +30,7 @@ export default function LoginPage() {
               登录内部管理端
             </Typography.Title>
             <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
-              使用管理员、业务负责人或服务团队账号登录
+              使用管理员或服务团队账号登录
             </Typography.Paragraph>
           </Space>
           {error ? (
@@ -91,7 +91,7 @@ export default function LoginPage() {
             让服务过程清晰、可靠、可追溯
           </Typography.Title>
           <Typography.Paragraph style={{ color: "rgb(255 255 255 / 76%)", fontSize: 17 }}>
-            阶段0已建立安全认证、角色权限、统一工作区和审计能力，为后续完整业务闭环提供稳定底座。
+            从学生建档、负责人协作到任务监督，让每一次服务进展都有清晰记录。
           </Typography.Paragraph>
         </div>
       </aside>

@@ -187,7 +187,14 @@ async function main(): Promise<void> {
       const passwordHash = await argon2.hash(account.password, { type: argon2.argon2id });
       const user = await prisma.user.upsert({
         where: { username: account.username },
-        update: { displayName: account.displayName, passwordHash, status: "ACTIVE" },
+        update: {
+          displayName: account.displayName,
+          passwordHash,
+          status: "ACTIVE",
+          failedLoginCount: 0,
+          failedLoginWindowStartedAt: null,
+          lockedUntil: null,
+        },
         create: {
           username: account.username,
           displayName: account.displayName,

@@ -19,6 +19,12 @@ const NAVIGATION: NavigationItem[] = [
     permission: PermissionCode.WORKSPACE_ACCESS,
   },
   {
+    key: "students",
+    label: "学生管理",
+    href: "/workspace/students",
+    permission: PermissionCode.STUDENTS_READ,
+  },
+  {
     key: "supervision",
     label: "监督管理看板",
     href: "/workspace/supervision",
@@ -45,6 +51,9 @@ export function navigationFor(user: AuthenticatedUser): NavigationItem[] {
 }
 
 export function defaultRouteFor(user: AuthenticatedUser): string {
+  if (user.permissions.includes(PermissionCode.STUDENTS_READ)) {
+    return "/workspace/students";
+  }
   if (user.permissions.includes(PermissionCode.SYSTEM_USERS_READ)) {
     return "/workspace/system/users";
   }

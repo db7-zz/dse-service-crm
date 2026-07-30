@@ -14,6 +14,16 @@ enum UserStatus {
   LOCKED
 }
 
+enum StudentServiceStatus {
+  NOT_ENABLED
+  ENABLED
+}
+
+enum StudentResponsibilityType {
+  DEFAULT_BUTLER
+  PLANNER
+}
+
 model User {
   id                         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   username                   String      @unique @db.VarChar(64)
@@ -29,6 +39,12 @@ model User {
   roles                      UserRole[]
   sessions                   Session[]
   auditLogs                  AuditLog[]  @relation("AuditOperator")
+  studentsCreated            Student[]   @relation("StudentCreator")
+  studentsAsDefaultButler    Student[]   @relation("StudentDefaultButler")
+  studentsAsPlanner          Student[]   @relation("StudentPlanner")
+  responsibilityChangesMade StudentResponsibilityChange[] @relation("ResponsibilityChangeOperator")
+  responsibilityChangesFrom StudentResponsibilityChange[] @relation("ResponsibilityChangePreviousUser")
+  responsibilityChangesTo   StudentResponsibilityChange[] @relation("ResponsibilityChangeNewUser")
 
   @@map("users")
 }
@@ -119,4 +135,48 @@ model AuditLog {
   @@index([objectType, objectId])
   @@index([requestId])
   @@map("audit_logs")
+}
+
+model Student {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentNo          String               @unique @map("student_no") @db.VarChar(24)
+  name               String               @db.VarChar(100)
+  phone              String?              @db.VarChar(32)
+  email              String?              @db.VarChar(254)
+  defaultButlerId    String?              @map("default_butler_id") @db.Uuid
+  plannerId          String?              @map("planner_id") @db.Uuid
+  serviceStatus      StudentServiceStatus @default(NOT_ENABLED) @map("service_status")
+  version            Int                  @default(1)
+  createdById        String               @map("created_by") @db.Uuid
+  createdAt          DateTime             @default(now()) @map("created_at")
+  updatedAt          DateTime             @updatedAt @map("updated_at")
+  defaultButler      User?                @relation("StudentDefaultButler", fields: [defaultButlerId], references: [id], onDelete: SetNull)
+  planner            User?                @relation("StudentPlanner", fields: [plannerId], references: [id], onDelete: SetNull)
+  createdBy          User                 @relation("StudentCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  responsibilityChanges StudentResponsibilityChange[]
+
+  @@index([name])
+  @@index([serviceStatus, createdAt])
+  @@index([defaultButlerId])
+  @@index([plannerId])
+  @@map("students")
+}
+
+model StudentResponsibilityChange {
+  id                 String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId          String                    @map("student_id") @db.Uuid
+  responsibilityType StudentResponsibilityType @map("responsibility_type")
+  previousUserId     String?                   @map("previous_user_id") @db.Uuid
+  newUserId          String?                   @map("new_user_id") @db.Uuid
+  reason             String                    @db.VarChar(500)
+  operatorId         String                    @map("operator_id") @db.Uuid
+  createdAt          DateTime                  @default(now()) @map("created_at")
+  student            Student                   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  previousUser       User?                     @relation("ResponsibilityChangePreviousUser", fields: [previousUserId], references: [id], onDelete: SetNull)
+  newUser            User?                     @relation("ResponsibilityChangeNewUser", fields: [newUserId], references: [id], onDelete: SetNull)
+  operator           User                      @relation("ResponsibilityChangeOperator", fields: [operatorId], references: [id], onDelete: Restrict)
+
+  @@index([studentId, createdAt])
+  @@index([operatorId])
+  @@map("student_responsibility_changes")
 }
