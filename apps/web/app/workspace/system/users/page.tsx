@@ -36,7 +36,6 @@ interface UserPage {
 
 const ROLE_OPTIONS = [
   { value: RoleCode.ADMINISTRATOR, label: "管理员" },
-  { value: RoleCode.ERIC_MANAGER, label: "业务负责人" },
   { value: RoleCode.BUTLER, label: "管家" },
   { value: RoleCode.PLANNER, label: "规划老师" },
   { value: RoleCode.SPECIALIST, label: "专项老师" },

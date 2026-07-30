@@ -214,7 +214,7 @@ export interface components {
             displayName: string;
             /** Format: password */
             password: string;
-            roleCodes: ("ADMINISTRATOR" | "ERIC_MANAGER" | "BUTLER" | "PLANNER" | "SPECIALIST" | "STUDENT")[];
+            roleCodes: ("ADMINISTRATOR" | "BUTLER" | "PLANNER" | "SPECIALIST" | "STUDENT")[];
         };
         UpdateUserDto: {
             displayName?: string;
@@ -223,7 +223,7 @@ export interface components {
             reason?: string;
         };
         SetUserRolesDto: {
-            roleCodes: ("ADMINISTRATOR" | "ERIC_MANAGER" | "BUTLER" | "PLANNER" | "SPECIALIST" | "STUDENT")[];
+            roleCodes: ("ADMINISTRATOR" | "BUTLER" | "PLANNER" | "SPECIALIST" | "STUDENT")[];
             reason: string;
         };
         UserStateChangeDto: {

@@ -503,8 +503,8 @@
   },
   "info": {
     "title": "DSE升学服务CRM API",
-    "description": "阶段0认证、权限、账号、审计和健康检查接口",
-    "version": "0.1.0",
+    "description": "S1认证、权限、账号、审计与任务监督闭环接口",
+    "version": "0.2.0",
     "contact": {}
   },
   "tags": [],
@@ -558,7 +558,6 @@
               "type": "string",
               "enum": [
                 "ADMINISTRATOR",
-                "ERIC_MANAGER",
                 "BUTLER",
                 "PLANNER",
                 "SPECIALIST",
@@ -601,7 +600,6 @@
               "type": "string",
               "enum": [
                 "ADMINISTRATOR",
-                "ERIC_MANAGER",
                 "BUTLER",
                 "PLANNER",
                 "SPECIALIST",

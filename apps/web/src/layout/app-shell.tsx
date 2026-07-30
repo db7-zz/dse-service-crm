@@ -31,7 +31,7 @@ const ICONS: Record<string, ReactNode> = {
 
 const ROLE_LABELS: Record<string, string> = {
   [RoleCode.ADMINISTRATOR]: "管理员",
-  [RoleCode.ERIC_MANAGER]: "业务负责人",
+  [RoleCode.ERIC_MANAGER]: "历史角色（已停用）",
   [RoleCode.BUTLER]: "管家",
   [RoleCode.PLANNER]: "规划老师",
   [RoleCode.SPECIALIST]: "专项老师",
@@ -71,11 +71,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
       .sort((a, b) => b.href.length - a.href.length)[0]?.key ?? "workspace";
   const siderWidth = collapsed ? 80 : 240;
-  const workspaceName = user.roles.includes(RoleCode.ADMINISTRATOR)
-    ? "管理员端"
-    : user.roles.includes(RoleCode.ERIC_MANAGER)
-      ? "监督管理端"
-      : "内部工作台";
+  const workspaceName = user.roles.includes(RoleCode.ADMINISTRATOR) ? "管理员端" : "内部工作台";
 
   return (
     <Layout className={styles.root}>

@@ -11,6 +11,16 @@ export const RoleCode = {
 
 export type RoleCode = (typeof RoleCode)[keyof typeof RoleCode];
 
+export const AssignableRoleCodes = [
+  RoleCode.ADMINISTRATOR,
+  RoleCode.BUTLER,
+  RoleCode.PLANNER,
+  RoleCode.SPECIALIST,
+  RoleCode.STUDENT,
+] as const;
+
+export type AssignableRoleCode = (typeof AssignableRoleCodes)[number];
+
 export const PermissionCode = {
   WORKSPACE_ACCESS: "workspace.access",
   SUPERVISION_ACCESS: "supervision.access",
@@ -18,6 +28,17 @@ export const PermissionCode = {
   SYSTEM_USERS_WRITE: "system.users.write",
   SYSTEM_AUDIT_READ: "system.audit.read",
   PORTAL_ACCESS: "portal.access",
+  STUDENTS_READ: "students.read",
+  STUDENTS_WRITE: "students.write",
+  SOP_READ: "sop.read",
+  SOP_WRITE: "sop.write",
+  SERVICE_ACTIVATION_WRITE: "service.activation.write",
+  TASKS_OWN_READ: "tasks.own.read",
+  TASKS_OWN_WRITE: "tasks.own.write",
+  TASK_SUPERVISION_READ: "tasks.supervision.read",
+  TASK_SUPERVISION_WRITE: "tasks.supervision.write",
+  OVERDUE_ALERTS_READ: "overdue-alerts.read",
+  OVERDUE_ALERTS_WRITE: "overdue-alerts.write",
 } as const;
 
 export type PermissionCode = (typeof PermissionCode)[keyof typeof PermissionCode];
