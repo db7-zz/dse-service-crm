@@ -103,10 +103,10 @@ describeWithDatabase("authentication and S1 authorization baseline", () => {
       .expect(201);
 
     const me = await agent.get("/api/v1/auth/me").expect(200);
-    expect(me.body.data.user.permissions).toEqual(
+    expect(me.body.data.permissions).toEqual(
       expect.arrayContaining(["tasks.own.read", "tasks.own.write"]),
     );
-    expect(me.body.data.user.permissions).not.toContain("tasks.supervision.read");
+    expect(me.body.data.permissions).not.toContain("tasks.supervision.read");
 
     const response = await agent.get("/api/v1/admin/users").expect(403);
     expect(response.body.error.code).toBe("FORBIDDEN");
