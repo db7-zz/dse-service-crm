@@ -10,12 +10,14 @@ import {
   ThunderboltOutlined,
   UserSwitchOutlined,
 } from "@ant-design/icons";
-import { Alert, App, Button, Form, Input, Modal, Select, Skeleton, Tooltip } from "antd";
+import { Alert, App, Button, Checkbox, Form, Input, Modal, Select, Skeleton, Tag } from "antd";
 import { ApiClientError } from "@dse/api-client";
 import { PermissionCode } from "@dse/shared";
 import { PermissionPage } from "../../../../src/auth/permission-page";
 import {
   assignResponsiblePerson,
+  activateStudentService,
+  bulkAssignStudentTasks,
   getResponsiblePersonOptions,
   getStudent,
 } from "../../../../src/students/student-api";
@@ -71,7 +73,13 @@ export default function StudentDetailPage() {
   const [assignmentType, setAssignmentType] = useState<AssignmentType>();
   const [submitting, setSubmitting] = useState(false);
   const [conflict, setConflict] = useState(false);
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [assignmentForm] = Form.useForm<{ userId?: string; reason: string }>();
+  const [bulkAssignForm] = Form.useForm<{
+    butlerId: string;
+    reason: string;
+    taskIds: string[];
+  }>();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -107,6 +115,12 @@ export default function StudentDetailPage() {
   const assignmentLabel = assignmentType === "default-butler" ? "默认管家" : "规划老师";
   const assignmentOptions =
     assignmentType === "default-butler" ? options.butlers : options.planners;
+  const unassignedTasks =
+    student?.stages.flatMap((stage) =>
+      stage.tasks
+        .filter((task) => !task.owner && (task.status === "TODO" || task.status === "IN_PROGRESS"))
+        .map((task) => ({ ...task, stageName: stage.name })),
+    ) ?? [];
 
   return (
     <PermissionPage permission={PermissionCode.STUDENTS_READ}>
@@ -157,21 +171,53 @@ export default function StudentDetailPage() {
                     编辑资料
                   </Button>
                 </Link>
-                <Tooltip title="服务启用将在后续 Issue 开放">
-                  <Button
-                    className={styles.primaryButton}
-                    type="primary"
-                    icon={<ThunderboltOutlined />}
-                    disabled
-                  >
-                    启用服务
-                  </Button>
-                </Tooltip>
-                <Tooltip title="任务生成后可在此批量分配，功能将在后续 Issue 开放">
-                  <Button className={styles.secondaryButton} icon={<UserSwitchOutlined />} disabled>
-                    批量分配任务
-                  </Button>
-                </Tooltip>
+                <Button
+                  className={styles.primaryButton}
+                  type="primary"
+                  icon={<ThunderboltOutlined />}
+                  disabled={student.serviceStatus === "ENABLED"}
+                  loading={submitting}
+                  onClick={() =>
+                    Modal.confirm({
+                      title: `为 ${student.name} 启用服务？`,
+                      content:
+                        "系统会使用当前已发布 SOP，一次生成八个阶段和全部任务。该操作不能重复执行。",
+                      okText: "确认启用",
+                      cancelText: "取消",
+                      onOk: async () => {
+                        setSubmitting(true);
+                        try {
+                          await activateStudentService(student.id, student.version);
+                          await message.success("服务已启用，阶段和任务已生成");
+                          await load();
+                        } catch (exception) {
+                          await message.error(
+                            exception instanceof Error ? exception.message : "服务启用失败",
+                          );
+                        } finally {
+                          setSubmitting(false);
+                        }
+                      },
+                    })
+                  }
+                >
+                  {student.serviceStatus === "ENABLED" ? "服务已启用" : "启用服务"}
+                </Button>
+                <Button
+                  className={styles.secondaryButton}
+                  icon={<UserSwitchOutlined />}
+                  disabled={unassignedTasks.length === 0}
+                  onClick={() => {
+                    setBulkAssignOpen(true);
+                    bulkAssignForm.setFieldsValue({
+                      butlerId: student.defaultButler?.id,
+                      reason: "管理员批量分配学生未分配任务",
+                      taskIds: unassignedTasks.map((task) => task.id),
+                    });
+                  }}
+                >
+                  批量分配任务（{unassignedTasks.length}）
+                </Button>
               </div>
             </section>
 
@@ -252,7 +298,7 @@ export default function StudentDetailPage() {
                 <div className={styles.cardHeader}>
                   <div>
                     <h2 className={styles.cardTitle}>服务与 SOP</h2>
-                    <p className={styles.cardCaption}>后续启用入口已预留</p>
+                    <p className={styles.cardCaption}>启用后固定使用当时发布的版本快照</p>
                   </div>
                 </div>
                 <dl className={styles.definitionGrid}>
@@ -262,7 +308,7 @@ export default function StudentDetailPage() {
                   </div>
                   <div className={styles.definitionItem}>
                     <dt>SOP 版本</dt>
-                    <dd>{student.sopVersion?.version ?? "尚未套用"}</dd>
+                    <dd>{student.sopVersion?.displayVersion ?? "尚未套用"}</dd>
                   </div>
                 </dl>
               </section>
@@ -287,8 +333,69 @@ export default function StudentDetailPage() {
                     <span className={styles.metricValue}>{student.taskSummary.unassigned}</span>
                     <span className={styles.metricLabel}>待分配</span>
                   </div>
+                  <div className={styles.metric}>
+                    <span className={styles.metricValue}>{student.taskSummary.overdue}</span>
+                    <span className={styles.metricLabel}>已逾期</span>
+                  </div>
+                  <div className={styles.metric}>
+                    <span className={styles.metricValue}>{student.taskSummary.completed}</span>
+                    <span className={styles.metricLabel}>已完成</span>
+                  </div>
+                  <div className={styles.metric}>
+                    <span className={styles.metricValue}>{student.taskSummary.todo}</span>
+                    <span className={styles.metricLabel}>待开始</span>
+                  </div>
                 </div>
               </section>
+
+              {student.stages.length > 0 ? (
+                <section className={`${styles.detailCard} ${styles.detailCardWide}`}>
+                  <div className={styles.cardHeader}>
+                    <div>
+                      <h2 className={styles.cardTitle}>八阶段任务</h2>
+                      <p className={styles.cardCaption}>阶段实例只用于组织和筛选，不设置状态</p>
+                    </div>
+                  </div>
+                  <div className={styles.stageInstances}>
+                    {student.stages.map((stage) => (
+                      <article className={styles.stageInstance} key={stage.id}>
+                        <div className={styles.stageInstanceHeader}>
+                          <span className={styles.stageIndex}>{stage.sequenceNo}</span>
+                          <strong>{stage.name}</strong>
+                          <span className={styles.secondaryText}>{stage.tasks.length} 项任务</span>
+                        </div>
+                        <div className={styles.stageTaskList}>
+                          {stage.tasks.map((task) => (
+                            <div className={styles.stageTask} key={task.id}>
+                              <Link href={`/workspace/tasks/${task.id}`}>{task.title}</Link>
+                              <span>{task.owner?.displayName ?? "未分配"}</span>
+                              <Tag
+                                color={
+                                  task.isOverdue
+                                    ? "red"
+                                    : task.status === "COMPLETED"
+                                      ? "green"
+                                      : "blue"
+                                }
+                              >
+                                {task.isOverdue
+                                  ? "逾期"
+                                  : task.status === "TODO"
+                                    ? "待开始"
+                                    : task.status === "IN_PROGRESS"
+                                      ? "进行中"
+                                      : task.status === "COMPLETED"
+                                        ? "已完成"
+                                        : "已取消"}
+                              </Tag>
+                            </div>
+                          ))}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
 
               <section className={`${styles.detailCard} ${styles.detailCardWide}`}>
                 <div className={styles.cardHeader}>
@@ -336,6 +443,7 @@ export default function StudentDetailPage() {
           okText="保存变更"
           cancelText="取消"
           confirmLoading={submitting}
+          forceRender
           destroyOnHidden
           onCancel={() => {
             setAssignmentType(undefined);
@@ -422,6 +530,89 @@ export default function StudentDetailPage() {
                 showCount
                 placeholder="说明本次分配、更换或取消分配的原因"
               />
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        <Modal
+          open={bulkAssignOpen}
+          title="批量分配未分配任务"
+          okText="确认分配"
+          cancelText="取消"
+          confirmLoading={submitting}
+          forceRender
+          destroyOnHidden
+          onCancel={() => setBulkAssignOpen(false)}
+          onOk={() => bulkAssignForm.submit()}
+        >
+          <Alert
+            style={{ marginBottom: 18 }}
+            type="info"
+            showIcon
+            title="批量操作采用全有或全无"
+            description="如任一任务在提交前已被分配或版本改变，整批操作会被拒绝并列出冲突。"
+          />
+          <Form
+            form={bulkAssignForm}
+            layout="vertical"
+            onFinish={async (values) => {
+              if (!student) return;
+              setSubmitting(true);
+              try {
+                await bulkAssignStudentTasks({
+                  studentId: student.id,
+                  butlerId: values.butlerId,
+                  reason: values.reason,
+                  tasks: unassignedTasks
+                    .filter((task) => values.taskIds.includes(task.id))
+                    .map((task) => ({ taskId: task.id, version: task.version })),
+                });
+                await message.success("任务已批量分配");
+                setBulkAssignOpen(false);
+                await load();
+              } catch (exception) {
+                await message.error(
+                  exception instanceof Error ? exception.message : "批量分配失败",
+                );
+                await load();
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+          >
+            <Form.Item
+              name="butlerId"
+              label="分配给"
+              rules={[{ required: true, message: "请选择管家" }]}
+            >
+              <Select
+                showSearch
+                optionFilterProp="label"
+                options={options.butlers.map((person) => ({
+                  value: person.id,
+                  label: person.displayName,
+                }))}
+              />
+            </Form.Item>
+            <Form.Item
+              name="taskIds"
+              label="选择任务"
+              rules={[{ required: true, message: "至少选择一项任务" }]}
+            >
+              <Checkbox.Group style={{ display: "grid", gap: 10 }}>
+                {unassignedTasks.map((task) => (
+                  <Checkbox value={task.id} key={task.id}>
+                    {task.stageName} · {task.title}
+                  </Checkbox>
+                ))}
+              </Checkbox.Group>
+            </Form.Item>
+            <Form.Item
+              name="reason"
+              label="分配原因"
+              rules={[{ required: true, whitespace: true, message: "请填写分配原因" }]}
+            >
+              <Input.TextArea rows={3} maxLength={500} showCount />
             </Form.Item>
           </Form>
         </Modal>

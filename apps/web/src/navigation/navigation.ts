@@ -25,6 +25,18 @@ const NAVIGATION: NavigationItem[] = [
     permission: PermissionCode.STUDENTS_READ,
   },
   {
+    key: "sop",
+    label: "SOP 版本",
+    href: "/workspace/sop",
+    permission: PermissionCode.SOP_READ,
+  },
+  {
+    key: "my-tasks",
+    label: "我的任务",
+    href: "/workspace/my-tasks",
+    permission: PermissionCode.TASKS_OWN_READ,
+  },
+  {
     key: "supervision",
     label: "监督管理看板",
     href: "/workspace/supervision",
@@ -51,6 +63,9 @@ export function navigationFor(user: AuthenticatedUser): NavigationItem[] {
 }
 
 export function defaultRouteFor(user: AuthenticatedUser): string {
+  if (user.permissions.includes(PermissionCode.TASKS_OWN_READ)) {
+    return "/workspace/my-tasks";
+  }
   if (user.permissions.includes(PermissionCode.STUDENTS_READ)) {
     return "/workspace/students";
   }

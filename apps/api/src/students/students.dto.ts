@@ -1,5 +1,7 @@
 import { Type } from "class-transformer";
 import {
+  ArrayMinSize,
+  IsArray,
   IsDefined,
   IsEmail,
   IsIn,
@@ -13,6 +15,7 @@ import {
   Min,
   MinLength,
   ValidateIf,
+  ValidateNested,
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
@@ -145,4 +148,41 @@ export class AssignResponsiblePersonDto {
   @IsInt()
   @Min(1)
   version!: number;
+}
+
+export class ActivateStudentServiceDto {
+  @ApiProperty({ minimum: 1, description: "学生资料乐观锁版本号" })
+  @IsInt()
+  @Min(1)
+  version!: number;
+}
+
+export class BulkAssignTaskItemDto {
+  @ApiProperty({ format: "uuid" })
+  @IsUUID()
+  taskId!: string;
+
+  @ApiProperty({ minimum: 1, description: "任务乐观锁版本号" })
+  @IsInt()
+  @Min(1)
+  version!: number;
+}
+
+export class BulkAssignUnassignedTasksDto {
+  @ApiProperty({ format: "uuid" })
+  @IsUUID()
+  butlerId!: string;
+
+  @ApiProperty({ maxLength: 500 })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(500)
+  reason!: string;
+
+  @ApiProperty({ type: [BulkAssignTaskItemDto] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => BulkAssignTaskItemDto)
+  tasks!: BulkAssignTaskItemDto[];
 }

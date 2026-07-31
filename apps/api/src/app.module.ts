@@ -14,7 +14,9 @@ import { AuthModule } from "./auth/auth.module.js";
 import { AdminModule } from "./admin/admin.module.js";
 import { AuditModule } from "./audit/audit.module.js";
 import { HealthModule } from "./health/health.module.js";
+import { SopModule } from "./sop/sop.module.js";
 import { StudentsModule } from "./students/students.module.js";
+import { TasksModule } from "./tasks/tasks.module.js";
 
 const rootEnvironmentFile = fileURLToPath(new URL("../../../.env", import.meta.url));
 
@@ -51,7 +53,9 @@ const rootEnvironmentFile = fileURLToPath(new URL("../../../.env", import.meta.u
     AuthModule,
     AdminModule,
     AuditModule,
+    SopModule,
     StudentsModule,
+    TasksModule,
     HealthModule,
   ],
   providers: [

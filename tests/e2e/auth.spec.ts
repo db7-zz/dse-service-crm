@@ -18,6 +18,7 @@ test("administrator creates a minimal student and sees future service entries", 
   await expect(page.getByText("学生管理", { exact: true })).toBeVisible();
   await expect(page.getByText("审计日志", { exact: true })).toBeVisible();
   await expect(page.getByText("监督管理看板", { exact: true })).toBeVisible();
+  await expect(page.getByText("SOP 版本", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "新建学生" }).click();
   await page.getByLabel("学生姓名（必填）").fill("黄翰");
@@ -27,8 +28,8 @@ test("administrator creates a minimal student and sees future service entries", 
 
   await expect(page.getByRole("heading", { name: "黄翰" })).toBeVisible();
   await expect(page.getByText("服务未启用")).toBeVisible();
-  await expect(page.getByRole("button", { name: "启用服务" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "批量分配任务" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "启用服务" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: /批量分配任务/ })).toBeDisabled();
 
   await page.getByRole("button", { name: "打开测试管理员的账户菜单" }).click();
   await page.getByRole("menuitem", { name: "退出登录" }).click();
@@ -43,7 +44,8 @@ test("butler cannot see system management", async ({ page }) => {
     .fill(process.env.SEED_BUTLER_PASSWORD ?? "Butler-Development-Only-123!");
   await page.getByRole("button", { name: loginButtonName }).click();
 
-  await expect(page.getByRole("heading", { name: "工作区" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "我的任务" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "我的任务" })).toBeVisible();
   await expect(page.getByText("账号管理", { exact: true })).toHaveCount(0);
   await expect(page.getByText("审计日志", { exact: true })).toHaveCount(0);
   await expect(page.getByText("监督管理看板", { exact: true })).toHaveCount(0);

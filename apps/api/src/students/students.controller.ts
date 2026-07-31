@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Inject,
   Param,
   ParseUUIDPipe,
@@ -21,11 +22,14 @@ import { RequiresPermission } from "../auth/requires-permission.decorator.js";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestContext } from "../common/request-context.js";
 import {
+  ActivateStudentServiceDto,
   AssignResponsiblePersonDto,
+  BulkAssignUnassignedTasksDto,
   CreateStudentDto,
   ListStudentsQueryDto,
   UpdateStudentDto,
 } from "./students.dto.js";
+import { StudentWorkflowService } from "./student-workflow.service.js";
 import { StudentsService } from "./students.service.js";
 
 @ApiTags("students")
@@ -34,6 +38,9 @@ import { StudentsService } from "./students.service.js";
 @UseGuards(SessionAuthGuard, PermissionGuard)
 export class StudentsController {
   public constructor(@Inject(StudentsService) private readonly studentsService: StudentsService) {}
+
+  @Inject(StudentWorkflowService)
+  private readonly studentWorkflowService!: StudentWorkflowService;
 
   @Get("responsible-person-options")
   @RequiresPermission(PermissionCode.STUDENTS_READ)
@@ -91,5 +98,28 @@ export class StudentsController {
     @Req() request: RequestContext,
   ) {
     return this.studentsService.assignResponsiblePerson(studentId, "PLANNER", body, request);
+  }
+
+  @Post(":studentId/service-activation")
+  @RequiresPermission(PermissionCode.SERVICE_ACTIVATION_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public activateService(
+    @Param("studentId", new ParseUUIDPipe({ version: "4" })) studentId: string,
+    @Body() body: ActivateStudentServiceDto,
+    @Req() request: RequestContext,
+  ) {
+    return this.studentWorkflowService.activate(studentId, body, request);
+  }
+
+  @Post(":studentId/assign-unassigned-tasks")
+  @RequiresPermission(PermissionCode.TASK_SUPERVISION_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public bulkAssignUnassignedTasks(
+    @Param("studentId", new ParseUUIDPipe({ version: "4" })) studentId: string,
+    @Body() body: BulkAssignUnassignedTasksDto,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Req() request: RequestContext,
+  ) {
+    return this.studentWorkflowService.bulkAssign(studentId, body, idempotencyKey, request);
   }
 }

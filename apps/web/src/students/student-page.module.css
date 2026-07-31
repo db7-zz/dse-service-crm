@@ -512,6 +512,53 @@
   white-space: nowrap;
 }
 
+.stageInstances {
+  display: grid;
+  gap: 14px;
+}
+
+.stageInstance {
+  padding: 18px;
+  background: #f7f7f9;
+  border: 1px solid var(--student-line);
+  border-radius: 20px;
+}
+
+.stageInstanceHeader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.stageIndex {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  background: linear-gradient(145deg, #0071e3, #5e5ce6);
+  border-radius: 10px;
+  place-items: center;
+}
+
+.stageTaskList {
+  display: grid;
+  gap: 8px;
+}
+
+.stageTask {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 130px auto;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 13px;
+  background: #fff;
+  border-radius: 14px;
+}
+
 @media (width <= 1100px) {
   .filterBar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -530,7 +577,8 @@
 
   .formGrid,
   .definitionGrid,
-  .ownerGrid {
+  .ownerGrid,
+  .stageTask {
     grid-template-columns: 1fr;
   }
 

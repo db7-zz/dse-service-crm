@@ -25,6 +25,30 @@ const STUDENT_INCLUDE = {
 
 const STUDENT_DETAIL_INCLUDE = {
   ...STUDENT_INCLUDE,
+  serviceActivation: {
+    include: {
+      sopVersion: {
+        select: {
+          id: true,
+          versionNo: true,
+          status: true,
+        },
+      },
+      enabledBy: { select: { id: true, displayName: true } },
+    },
+  },
+  stageInstances: {
+    orderBy: { sequenceNoSnapshot: "asc" as const },
+    include: {
+      tasks: {
+        orderBy: { taskTemplate: { sequenceNo: "asc" as const } },
+        include: {
+          owner: { select: { id: true, displayName: true } },
+          taskTemplate: { select: { sequenceNo: true } },
+        },
+      },
+    },
+  },
   responsibilityChanges: {
     include: {
       previousUser: { select: { id: true, displayName: true } },
@@ -43,8 +67,8 @@ export class StudentsService {
   public constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
   public async list(input: ListStudentsQueryDto) {
-    const requestedPage = Number(input.page);
-    const pageSize = Number(input.pageSize);
+    const requestedPage = Math.max(1, Number(input.page) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(input.pageSize) || 20));
     const search = input.search?.trim();
     const where: Prisma.StudentWhereInput = {
       ...(input.serviceStatus ? { serviceStatus: input.serviceStatus } : {}),
@@ -438,17 +462,58 @@ export class StudentsService {
   }
 
   private serializeStudentDetail(student: StudentWithHistory) {
+    const tasks = student.stageInstances.flatMap((stage) => stage.tasks);
+    const now = Date.now();
     return {
       ...this.serializeStudent(student),
-      sopVersion: null,
+      activation: student.serviceActivation
+        ? {
+            id: student.serviceActivation.id,
+            enabledAt: student.serviceActivation.enabledAt.toISOString(),
+            enabledBy: student.serviceActivation.enabledBy,
+          }
+        : null,
+      sopVersion: student.serviceActivation
+        ? {
+            id: student.serviceActivation.sopVersion.id,
+            versionNo: student.serviceActivation.sopVersion.versionNo,
+            displayVersion: `v${student.serviceActivation.sopVersion.versionNo}`,
+            status: student.serviceActivation.sopVersion.status,
+          }
+        : null,
       taskSummary: {
-        total: 0,
-        todo: 0,
-        inProgress: 0,
-        completed: 0,
-        overdue: 0,
-        unassigned: 0,
+        total: tasks.length,
+        todo: tasks.filter((task) => task.status === "TODO").length,
+        inProgress: tasks.filter((task) => task.status === "IN_PROGRESS").length,
+        completed: tasks.filter((task) => task.status === "COMPLETED").length,
+        overdue: tasks.filter(
+          (task) =>
+            (task.status === "TODO" || task.status === "IN_PROGRESS") &&
+            task.currentDueAt.getTime() < now,
+        ).length,
+        unassigned: tasks.filter(
+          (task) => !task.ownerId && (task.status === "TODO" || task.status === "IN_PROGRESS"),
+        ).length,
       },
+      stages: student.stageInstances.map((stage) => ({
+        id: stage.id,
+        stageCode: stage.stageCodeSnapshot,
+        name: stage.nameSnapshot,
+        sequenceNo: stage.sequenceNoSnapshot,
+        description: stage.descriptionSnapshot,
+        tasks: stage.tasks.map((task) => ({
+          id: task.id,
+          title: task.titleSnapshot,
+          sequenceNo: task.taskTemplate.sequenceNo,
+          status: task.status,
+          owner: task.owner,
+          currentDueAt: task.currentDueAt.toISOString(),
+          isOverdue:
+            (task.status === "TODO" || task.status === "IN_PROGRESS") &&
+            task.currentDueAt.getTime() < now,
+          version: task.version,
+        })),
+      })),
       responsibilityHistory: student.responsibilityChanges.map((change) => ({
         id: change.id,
         responsibilityType: change.responsibilityType,

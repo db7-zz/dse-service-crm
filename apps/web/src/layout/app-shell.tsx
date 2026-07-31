@@ -7,10 +7,12 @@ import {
   AuditOutlined,
   DashboardOutlined,
   DownOutlined,
+  FileDoneOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   SafetyCertificateOutlined,
+  SnippetsOutlined,
   TeamOutlined,
   UsergroupAddOutlined,
 } from "@ant-design/icons";
@@ -27,6 +29,8 @@ const ICONS: Record<string, ReactNode> = {
   workspace: <DashboardOutlined />,
   supervision: <SafetyCertificateOutlined />,
   students: <UsergroupAddOutlined />,
+  sop: <SnippetsOutlined />,
+  "my-tasks": <FileDoneOutlined />,
   users: <TeamOutlined />,
   audit: <AuditOutlined />,
 };

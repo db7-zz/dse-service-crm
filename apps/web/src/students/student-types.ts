@@ -38,9 +38,16 @@ export interface StudentResponsibilityHistory {
 }
 
 export interface StudentDetail extends StudentRecord {
+  activation: null | {
+    id: string;
+    enabledAt: string;
+    enabledBy: StudentPerson;
+  };
   sopVersion: null | {
     id: string;
-    version: string;
+    versionNo: number;
+    displayVersion: string;
+    status: "DRAFT" | "PUBLISHED" | "RETIRED";
   };
   taskSummary: {
     total: number;
@@ -50,6 +57,23 @@ export interface StudentDetail extends StudentRecord {
     overdue: number;
     unassigned: number;
   };
+  stages: Array<{
+    id: string;
+    stageCode: string;
+    name: string;
+    sequenceNo: number;
+    description: string | null;
+    tasks: Array<{
+      id: string;
+      title: string;
+      sequenceNo: number;
+      status: "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELED";
+      owner: StudentPerson | null;
+      currentDueAt: string;
+      isOverdue: boolean;
+      version: number;
+    }>;
+  }>;
   responsibilityHistory: StudentResponsibilityHistory[];
 }
 

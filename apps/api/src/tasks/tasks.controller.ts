@@ -1,0 +1,207 @@
+import { PermissionCode } from "@dse/shared";
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Inject,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from "@nestjs/common";
+import { ApiCookieAuth, ApiTags } from "@nestjs/swagger";
+import { CsrfGuard } from "../auth/csrf.guard.js";
+import { OriginGuard } from "../auth/origin.guard.js";
+import { PermissionGuard } from "../auth/permission.guard.js";
+import { RequiresPermission } from "../auth/requires-permission.decorator.js";
+import { SessionAuthGuard } from "../auth/session-auth.guard.js";
+import type { RequestContext } from "../common/request-context.js";
+import {
+  AddTaskProgressDto,
+  CancelTaskDto,
+  CompleteTaskDto,
+  HandleOverdueAlertDto,
+  ListOverdueAlertsQueryDto,
+  ListTasksQueryDto,
+  ReassignTaskDto,
+  ReportTaskExtensionDto,
+  RescheduleTaskDto,
+  TaskVersionDto,
+} from "./task.dto.js";
+import { TasksService } from "./tasks.service.js";
+
+@ApiTags("tasks")
+@ApiCookieAuth()
+@Controller("tasks")
+@UseGuards(SessionAuthGuard, PermissionGuard)
+export class TasksController {
+  public constructor(@Inject(TasksService) private readonly tasksService: TasksService) {}
+
+  @Get(":taskId")
+  public detail(
+    @Param("taskId", new ParseUUIDPipe({ version: "4" })) taskId: string,
+    @Req() request: RequestContext,
+  ) {
+    return this.tasksService.detail(taskId, request);
+  }
+
+  @Get(":taskId/timeline")
+  public timeline(
+    @Param("taskId", new ParseUUIDPipe({ version: "4" })) taskId: string,
+    @Req() request: RequestContext,
+  ) {
+    return this.tasksService.timeline(taskId, request);
+  }
+
+  @Post(":taskId/start")
+  @RequiresPermission(PermissionCode.TASKS_OWN_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public start(
+    @Param("taskId", new ParseUUIDPipe({ version: "4" })) taskId: string,
+    @Body() body: TaskVersionDto,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Req() request: RequestContext,
+  ) {
+    return this.tasksService.start(taskId, body, idempotencyKey, request);
+  }
+
+  @Post(":taskId/progress")
+  @RequiresPermission(PermissionCode.TASKS_OWN_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public progress(
+    @Param("taskId", new ParseUUIDPipe({ version: "4" })) taskId: string,
+    @Body() body: AddTaskProgressDto,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Req() request: RequestContext,
+  ) {
+    return this.tasksService.addProgress(taskId, body, idempotencyKey, request);
+  }
+
+  @Post(":taskId/extensions")
+  @RequiresPermission(PermissionCode.TASKS_OWN_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public extension(
+    @Param("taskId", new ParseUUIDPipe({ version: "4" })) taskId: string,
+    @Body() body: ReportTaskExtensionDto,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Req() request: RequestContext,
+  ) {
+    return this.tasksService.reportExtension(taskId, body, idempotencyKey, request);
+  }
+
+  @Post(":taskId/complete")
+  @RequiresPermission(PermissionCode.TASKS_OWN_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public complete(
+    @Param("taskId", new ParseUUIDPipe({ version: "4" })) taskId: string,
+    @Body() body: CompleteTaskDto,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Req() request: RequestContext,
+  ) {
+    return this.tasksService.complete(taskId, body, idempotencyKey, request);
+  }
+}
+
+@ApiTags("my-tasks")
+@ApiCookieAuth()
+@Controller("my/tasks")
+@UseGuards(SessionAuthGuard, PermissionGuard)
+export class MyTasksController {
+  public constructor(@Inject(TasksService) private readonly tasksService: TasksService) {}
+
+  @Get()
+  @RequiresPermission(PermissionCode.TASKS_OWN_READ)
+  public list(@Query() query: ListTasksQueryDto, @Req() request: RequestContext) {
+    return this.tasksService.listMine(query, request);
+  }
+}
+
+@ApiTags("task-supervision")
+@ApiCookieAuth()
+@Controller("admin/task-supervision")
+@UseGuards(SessionAuthGuard, PermissionGuard)
+export class TaskSupervisionController {
+  public constructor(@Inject(TasksService) private readonly tasksService: TasksService) {}
+
+  @Get("summary")
+  @RequiresPermission(PermissionCode.TASK_SUPERVISION_READ)
+  public summary(@Query() query: ListTasksQueryDto) {
+    return this.tasksService.supervisionSummary(query);
+  }
+
+  @Get("tasks")
+  @RequiresPermission(PermissionCode.TASK_SUPERVISION_READ)
+  public tasks(@Query() query: ListTasksQueryDto) {
+    return this.tasksService.listForSupervision(query);
+  }
+}
+
+@ApiTags("admin-tasks")
+@ApiCookieAuth()
+@Controller("admin/tasks")
+@UseGuards(SessionAuthGuard, PermissionGuard, OriginGuard, CsrfGuard)
+export class AdminTasksController {
+  public constructor(@Inject(TasksService) private readonly tasksService: TasksService) {}
+
+  @Post(":taskId/reschedule")
+  @RequiresPermission(PermissionCode.TASK_SUPERVISION_WRITE)
+  public reschedule(
+    @Param("taskId", new ParseUUIDPipe({ version: "4" })) taskId: string,
+    @Body() body: RescheduleTaskDto,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Req() request: RequestContext,
+  ) {
+    return this.tasksService.reschedule(taskId, body, idempotencyKey, request);
+  }
+
+  @Post(":taskId/reassign")
+  @RequiresPermission(PermissionCode.TASK_SUPERVISION_WRITE)
+  public reassign(
+    @Param("taskId", new ParseUUIDPipe({ version: "4" })) taskId: string,
+    @Body() body: ReassignTaskDto,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Req() request: RequestContext,
+  ) {
+    return this.tasksService.reassign(taskId, body, idempotencyKey, request);
+  }
+
+  @Post(":taskId/cancel")
+  @RequiresPermission(PermissionCode.TASK_SUPERVISION_WRITE)
+  public cancel(
+    @Param("taskId", new ParseUUIDPipe({ version: "4" })) taskId: string,
+    @Body() body: CancelTaskDto,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Req() request: RequestContext,
+  ) {
+    return this.tasksService.cancel(taskId, body, idempotencyKey, request);
+  }
+}
+
+@ApiTags("overdue-alerts")
+@ApiCookieAuth()
+@Controller("admin/overdue-alerts")
+@UseGuards(SessionAuthGuard, PermissionGuard)
+export class OverdueAlertsController {
+  public constructor(@Inject(TasksService) private readonly tasksService: TasksService) {}
+
+  @Get()
+  @RequiresPermission(PermissionCode.OVERDUE_ALERTS_READ)
+  public list(@Query() query: ListOverdueAlertsQueryDto) {
+    return this.tasksService.listAlerts(query);
+  }
+
+  @Post(":alertId/handle")
+  @RequiresPermission(PermissionCode.OVERDUE_ALERTS_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public handle(
+    @Param("alertId", new ParseUUIDPipe({ version: "4" })) alertId: string,
+    @Body() body: HandleOverdueAlertDto,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Req() request: RequestContext,
+  ) {
+    return this.tasksService.handleAlert(alertId, body, idempotencyKey, request);
+  }
+}
