@@ -18,10 +18,15 @@ describe("role navigation", () => {
     expect(items.map((item) => item.label)).toEqual(["工作区"]);
   });
 
-  it("uses the supervision route for the business manager", () => {
-    const current = user([PermissionCode.WORKSPACE_ACCESS, PermissionCode.SUPERVISION_ACCESS]);
+  it("uses the supervision route for an administrator with the S1 permission", () => {
+    const current = user([PermissionCode.WORKSPACE_ACCESS, PermissionCode.TASK_SUPERVISION_READ]);
     expect(defaultRouteFor(current)).toBe("/workspace/supervision");
     expect(navigationFor(current).map((item) => item.label)).toContain("监督管理看板");
+  });
+
+  it("does not expose S1 supervision through the legacy permission", () => {
+    const current = user([PermissionCode.WORKSPACE_ACCESS, PermissionCode.SUPERVISION_ACCESS]);
+    expect(navigationFor(current).map((item) => item.label)).not.toContain("监督管理看板");
   });
 
   it("does not route a portal-only student into the internal workspace", () => {

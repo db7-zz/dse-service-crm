@@ -1,4 +1,4 @@
-import { RoleCode } from "@dse/shared";
+import { AssignableRoleCodes, type AssignableRoleCode } from "@dse/shared";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
   ArrayMinSize,
@@ -10,8 +10,6 @@ import {
   MaxLength,
   MinLength,
 } from "class-validator";
-
-const ROLE_CODES = Object.values(RoleCode);
 
 export class CreateUserDto {
   @ApiProperty({ example: "staff.name" })
@@ -30,11 +28,11 @@ export class CreateUserDto {
   @MinLength(6)
   password!: string;
 
-  @ApiProperty({ enum: ROLE_CODES, isArray: true })
+  @ApiProperty({ enum: AssignableRoleCodes, isArray: true })
   @IsArray()
   @ArrayMinSize(1)
-  @IsIn(ROLE_CODES, { each: true })
-  roleCodes!: RoleCode[];
+  @IsIn(AssignableRoleCodes, { each: true })
+  roleCodes!: AssignableRoleCode[];
 }
 
 export class UpdateUserDto {
@@ -58,11 +56,11 @@ export class UpdateUserDto {
 }
 
 export class SetUserRolesDto {
-  @ApiProperty({ enum: ROLE_CODES, isArray: true })
+  @ApiProperty({ enum: AssignableRoleCodes, isArray: true })
   @IsArray()
   @ArrayMinSize(1)
-  @IsIn(ROLE_CODES, { each: true })
-  roleCodes!: RoleCode[];
+  @IsIn(AssignableRoleCodes, { each: true })
+  roleCodes!: AssignableRoleCode[];
 
   @ApiProperty({ maxLength: 500 })
   @IsString()

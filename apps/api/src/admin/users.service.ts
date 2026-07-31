@@ -1,4 +1,10 @@
-import { ErrorCode, RoleCode, type AuthenticatedUser } from "@dse/shared";
+import {
+  AssignableRoleCodes,
+  ErrorCode,
+  RoleCode,
+  type AssignableRoleCode,
+  type AuthenticatedUser,
+} from "@dse/shared";
 import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import type { Prisma, PrismaClient } from "@dse/database";
 import { ApiException } from "../common/api-exception.js";
@@ -222,7 +228,15 @@ export class UsersService {
     return this.serializeUser(result);
   }
 
-  private async loadRoles(roleCodes: RoleCode[]) {
+  private async loadRoles(roleCodes: AssignableRoleCode[]) {
+    const assignableRoleCodes = new Set<string>(AssignableRoleCodes);
+    if (roleCodes.some((roleCode) => !assignableRoleCodes.has(roleCode))) {
+      throw new ApiException(
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.VALIDATION_ERROR,
+        "包含不可分配的历史角色",
+      );
+    }
     const roles = await this.prisma.role.findMany({ where: { code: { in: roleCodes } } });
     if (roles.length !== new Set(roleCodes).size) {
       throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, "包含无效角色");

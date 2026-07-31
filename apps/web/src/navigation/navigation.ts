@@ -22,7 +22,7 @@ const NAVIGATION: NavigationItem[] = [
     key: "supervision",
     label: "监督管理看板",
     href: "/workspace/supervision",
-    permission: PermissionCode.SUPERVISION_ACCESS,
+    permission: PermissionCode.TASK_SUPERVISION_READ,
   },
   {
     key: "users",
@@ -48,7 +48,7 @@ export function defaultRouteFor(user: AuthenticatedUser): string {
   if (user.permissions.includes(PermissionCode.SYSTEM_USERS_READ)) {
     return "/workspace/system/users";
   }
-  if (user.permissions.includes(PermissionCode.SUPERVISION_ACCESS)) {
+  if (user.permissions.includes(PermissionCode.TASK_SUPERVISION_READ)) {
     return "/workspace/supervision";
   }
   if (user.permissions.includes(PermissionCode.WORKSPACE_ACCESS)) {

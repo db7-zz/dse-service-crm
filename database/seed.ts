@@ -8,8 +8,8 @@ loadEnvironment({
 });
 
 const ROLE_DEFINITIONS = [
-  ["ADMINISTRATOR", "管理员", "维护账号、角色、权限和审计"],
-  ["ERIC_MANAGER", "业务负责人", "使用监督管理端进行全局监督"],
+  ["ADMINISTRATOR", "管理员", "维护账号、角色、权限、审计和S1业务"],
+  ["ERIC_MANAGER", "历史业务负责人", "仅为历史审计保留，不再用于新账号分配"],
   ["BUTLER", "管家", "负责学生日常服务协调"],
   ["PLANNER", "规划老师", "负责学情与升学规划"],
   ["SPECIALIST", "专项老师", "执行被分配的专项任务"],
@@ -23,6 +23,17 @@ const PERMISSION_DEFINITIONS = [
   ["system.users.write", "维护账号"],
   ["system.audit.read", "查看审计日志"],
   ["portal.access", "访问学生入口"],
+  ["students.read", "查看学生最小档案"],
+  ["students.write", "维护学生最小档案与负责人"],
+  ["sop.read", "查看SOP版本"],
+  ["sop.write", "维护和发布SOP版本"],
+  ["service.activation.write", "启用学生服务并套用SOP"],
+  ["tasks.own.read", "查看本人负责的任务"],
+  ["tasks.own.write", "执行本人负责的任务"],
+  ["tasks.supervision.read", "查看全部任务与监督数据"],
+  ["tasks.supervision.write", "改期、转派和取消任务"],
+  ["overdue-alerts.read", "查看逾期提醒"],
+  ["overdue-alerts.write", "处理逾期提醒"],
 ] as const;
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
@@ -31,9 +42,18 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "system.users.read",
     "system.users.write",
     "system.audit.read",
+    "students.read",
+    "students.write",
+    "sop.read",
+    "sop.write",
+    "service.activation.write",
+    "tasks.supervision.read",
+    "tasks.supervision.write",
+    "overdue-alerts.read",
+    "overdue-alerts.write",
   ],
-  ERIC_MANAGER: ["workspace.access", "supervision.access"],
-  BUTLER: ["workspace.access"],
+  ERIC_MANAGER: [],
+  BUTLER: ["workspace.access", "tasks.own.read", "tasks.own.write"],
   PLANNER: ["workspace.access"],
   SPECIALIST: ["workspace.access"],
   STUDENT: ["portal.access"],
@@ -84,12 +104,68 @@ async function main(): Promise<void> {
         where: { code: { in: permissionCodes } },
       });
       await prisma.rolePermission.deleteMany({ where: { roleId: role.id } });
-      await prisma.rolePermission.createMany({
-        data: permissions.map((permission) => ({
-          roleId: role.id,
-          permissionId: permission.id,
-        })),
+      if (permissions.length > 0) {
+        await prisma.rolePermission.createMany({
+          data: permissions.map((permission) => ({
+            roleId: role.id,
+            permissionId: permission.id,
+          })),
+        });
+      }
+    }
+
+    const administratorRole = await prisma.role.findUniqueOrThrow({
+      where: { code: "ADMINISTRATOR" },
+    });
+    const legacyManagerRole = await prisma.role.findUniqueOrThrow({
+      where: { code: "ERIC_MANAGER" },
+    });
+    const activeLegacyRelations = await prisma.userRole.findMany({
+      where: { roleId: legacyManagerRole.id, expiredAt: null },
+    });
+    const migratedAt = new Date();
+    for (const relation of activeLegacyRelations) {
+      const existingAdministratorRelation = await prisma.userRole.findUnique({
+        where: {
+          userId_roleId: {
+            userId: relation.userId,
+            roleId: administratorRole.id,
+          },
+        },
       });
+      const effectiveAt =
+        existingAdministratorRelation?.effectiveAt &&
+        existingAdministratorRelation.effectiveAt < relation.effectiveAt
+          ? existingAdministratorRelation.effectiveAt
+          : relation.effectiveAt;
+      await prisma.$transaction([
+        prisma.userRole.upsert({
+          where: {
+            userId_roleId: {
+              userId: relation.userId,
+              roleId: administratorRole.id,
+            },
+          },
+          update: {
+            effectiveAt,
+            expiredAt: null,
+          },
+          create: {
+            userId: relation.userId,
+            roleId: administratorRole.id,
+            effectiveAt,
+          },
+        }),
+        prisma.userRole.update({
+          where: {
+            userId_roleId: {
+              userId: relation.userId,
+              roleId: legacyManagerRole.id,
+            },
+          },
+          data: { expiredAt: migratedAt },
+        }),
+      ]);
     }
 
     const accounts = [

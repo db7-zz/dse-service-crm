@@ -92,8 +92,8 @@ function addEnvelopeSchemas(document: OpenAPIObject): OpenAPIObject {
 export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
   const config = new DocumentBuilder()
     .setTitle("DSE升学服务CRM API")
-    .setDescription("阶段0认证、权限、账号、审计和健康检查接口")
-    .setVersion("0.1.0")
+    .setDescription("S1认证、权限、账号、审计与任务监督闭环接口")
+    .setVersion("0.2.0")
     .addCookieAuth("dse_session")
     .build();
   return addEnvelopeSchemas(SwaggerModule.createDocument(app, config));

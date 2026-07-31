@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const describeWithDatabase = testDatabaseUrl ? describe : describe.skip;
 
-describeWithDatabase("S0 authentication and authorization", () => {
+describeWithDatabase("authentication and S1 authorization baseline", () => {
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -56,6 +56,20 @@ describeWithDatabase("S0 authentication and authorization", () => {
 
     expect(response.body.success).toBe(true);
     expect(response.body.data.user.roles).toContain("ADMINISTRATOR");
+    expect(response.body.data.user.permissions).toEqual(
+      expect.arrayContaining([
+        "students.read",
+        "students.write",
+        "sop.read",
+        "sop.write",
+        "service.activation.write",
+        "tasks.supervision.read",
+        "tasks.supervision.write",
+        "overdue-alerts.read",
+        "overdue-alerts.write",
+      ]),
+    );
+    expect(response.body.data.user.permissions).not.toContain("tasks.own.write");
     expect(response.body.data).not.toHaveProperty("token");
     expect(String(response.headers["set-cookie"])).toContain("dse_session=");
   });
@@ -88,19 +102,57 @@ describeWithDatabase("S0 authentication and authorization", () => {
       })
       .expect(201);
 
+    const me = await agent.get("/api/v1/auth/me").expect(200);
+    expect(me.body.data.permissions).toEqual(
+      expect.arrayContaining(["tasks.own.read", "tasks.own.write"]),
+    );
+    expect(me.body.data.permissions).not.toContain("tasks.supervision.read");
+
     const response = await agent.get("/api/v1/admin/users").expect(403);
     expect(response.body.error.code).toBe("FORBIDDEN");
 
     const { PRISMA } = await import("../src/database/database.module.js");
     const prisma = app.get<PrismaClient>(PRISMA);
     await expect(
-      prisma.auditLog.findFirst({
+      prisma.auditLog.findFirstOrThrow({
         where: {
           action: "PERMISSION_DENIED",
           requestId: response.body.requestId,
         },
       }),
-    ).resolves.not.toBeNull();
+    ).resolves.toMatchObject({
+      operatorId: expect.any(String),
+      operatorRole: "BUTLER",
+      objectType: "permission",
+      objectId: "system.users.read",
+      action: "PERMISSION_DENIED",
+      requestId: response.body.requestId,
+    });
+  });
+
+  it("rejects the historical manager role for new assignments", async () => {
+    const agent = request.agent(app.getHttpServer());
+    await agent
+      .post("/api/v1/auth/login")
+      .send({
+        username: "admin",
+        password: process.env.SEED_ADMIN_PASSWORD ?? "AdminPassword!2026",
+      })
+      .expect(201);
+    const csrfResponse = await agent.get("/api/v1/auth/csrf").expect(200);
+
+    const response = await agent
+      .post("/api/v1/admin/users")
+      .set("X-CSRF-Token", csrfResponse.body.data.csrfToken)
+      .send({
+        username: `legacy-role.${Date.now()}`,
+        displayName: "不可分配的历史角色",
+        password: "IntegrationPassword!2026",
+        roleCodes: ["ERIC_MANAGER"],
+      })
+      .expect(400);
+
+    expect(response.body.error.code).toBe("VALIDATION_ERROR");
   });
 
   it("creates, changes roles, disables, enables, and audits an account", async () => {
@@ -136,6 +188,14 @@ describeWithDatabase("S0 authentication and authorization", () => {
         reason: "验证角色调整和审计记录",
       })
       .expect(200);
+
+    const plannerAgent = request.agent(app.getHttpServer());
+    await plannerAgent
+      .post("/api/v1/auth/login")
+      .send({ username, password: "IntegrationPassword!2026" })
+      .expect(201);
+    await plannerAgent.get("/api/v1/admin/users").expect(403);
+
     await agent
       .post(`/api/v1/admin/users/${userId}/disable`)
       .set("X-CSRF-Token", csrfToken)

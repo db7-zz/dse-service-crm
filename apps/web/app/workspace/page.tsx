@@ -22,7 +22,7 @@ export default function WorkspaceHomePage() {
                 {
                   {
                     [RoleCode.ADMINISTRATOR]: "管理员",
-                    [RoleCode.ERIC_MANAGER]: "业务负责人",
+                    [RoleCode.ERIC_MANAGER]: "历史角色（已停用）",
                     [RoleCode.BUTLER]: "管家",
                     [RoleCode.PLANNER]: "规划老师",
                     [RoleCode.SPECIALIST]: "专项老师",
