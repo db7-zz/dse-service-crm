@@ -5,17 +5,30 @@
 .sider {
   position: fixed !important;
   inset: 0 auto 0 0;
-  z-index: 10;
+  z-index: 11;
   height: 100vh;
   overflow: auto;
-  background: var(--color-navigation) !important;
+  background: rgb(245 245 247 / 88%) !important;
+  border-right: 1px solid rgb(29 29 31 / 8%);
+  backdrop-filter: blur(28px) saturate(150%);
+}
+
+.mobileMask {
+  display: none;
+}
+
+.mobileClose {
+  position: absolute !important;
+  top: 18px;
+  right: 12px;
 }
 
 .brand {
+  position: relative;
   height: 72px;
   padding: 16px 20px;
-  color: #fff;
-  border-bottom: 1px solid rgb(255 255 255 / 10%);
+  color: #1d1d1f;
+  border-bottom: 1px solid rgb(29 29 31 / 8%);
 }
 
 .brandTitle {
@@ -30,7 +43,7 @@
 .brandSubtitle {
   display: block;
   overflow: hidden;
-  color: rgb(255 255 255 / 62%);
+  color: #86868b;
   font-size: 12px;
   line-height: 20px;
   white-space: nowrap;
@@ -38,6 +51,9 @@
 
 .contentLayout {
   min-height: 100vh;
+  background:
+    radial-gradient(circle at 72% 0%, rgb(190 218 255 / 26%), transparent 32%),
+    var(--color-layout-background);
   transition: margin-left 0.2s ease;
 }
 
@@ -50,8 +66,9 @@
   justify-content: space-between;
   height: 64px;
   padding: 0 24px !important;
-  background: #fff !important;
-  border-bottom: 1px solid #edf0f5;
+  background: rgb(255 255 255 / 72%) !important;
+  border-bottom: 1px solid rgb(29 29 31 / 8%);
+  backdrop-filter: blur(24px) saturate(140%);
 }
 
 .userMenu {
@@ -104,7 +121,7 @@
 }
 
 .userName {
-  color: #1f2937;
+  color: #1d1d1f;
   font-size: 14px;
   font-weight: 600;
   line-height: 20px;
@@ -123,15 +140,14 @@
 
 .content {
   min-height: calc(100vh - 64px);
-  padding: 24px;
+  padding: clamp(16px, 2.5vw, 34px);
 }
 
 .contentCard {
   min-height: calc(100vh - 112px);
-  padding: 24px;
-  background: #fff;
-  border: 1px solid #edf0f5;
-  border-radius: var(--radius-base);
+  padding: 0;
+  background: transparent;
+  border: 0;
 }
 
 @media (width <= 640px) {
@@ -147,5 +163,39 @@
 
   .userText {
     display: none;
+  }
+}
+
+@media (width <= 720px) {
+  .sider {
+    width: 240px !important;
+    min-width: 240px !important;
+    max-width: 240px !important;
+    flex: 0 0 240px !important;
+    visibility: hidden;
+    box-shadow: 22px 0 70px rgb(29 29 31 / 18%);
+    transform: translateX(-100%);
+    pointer-events: none;
+    transition: transform 0.2s ease;
+  }
+
+  .siderMobileOpen {
+    visibility: visible;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+
+  .mobileMask {
+    position: fixed;
+    inset: 0 0 0 240px;
+    z-index: 10;
+    display: block;
+    width: calc(100% - 240px);
+    height: 100%;
+    padding: 0;
+    cursor: pointer;
+    background: rgb(29 29 31 / 18%);
+    border: 0;
+    backdrop-filter: blur(3px);
   }
 }

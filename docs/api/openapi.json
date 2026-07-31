@@ -458,6 +458,1543 @@
         ]
       }
     },
+    "/api/v1/sop-versions": {
+      "get": {
+        "operationId": "SopController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "sop-versions"
+        ]
+      },
+      "post": {
+        "operationId": "SopController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "sop-versions"
+        ]
+      }
+    },
+    "/api/v1/sop-versions/{versionId}": {
+      "get": {
+        "operationId": "SopController_detail",
+        "parameters": [
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "sop-versions"
+        ]
+      },
+      "patch": {
+        "operationId": "SopController_update",
+        "parameters": [
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSopVersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "sop-versions"
+        ]
+      }
+    },
+    "/api/v1/sop-versions/{versionId}/validate": {
+      "post": {
+        "operationId": "SopController_validate",
+        "parameters": [
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "sop-versions"
+        ]
+      }
+    },
+    "/api/v1/sop-versions/{versionId}/publish": {
+      "post": {
+        "operationId": "SopController_publish",
+        "parameters": [
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishSopVersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "sop-versions"
+        ]
+      }
+    },
+    "/api/v1/students/responsible-person-options": {
+      "get": {
+        "operationId": "StudentsController_responsiblePersonOptions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "students"
+        ]
+      }
+    },
+    "/api/v1/students": {
+      "get": {
+        "operationId": "StudentsController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "serviceStatus",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NOT_ENABLED",
+                "ENABLED"
+              ]
+            }
+          },
+          {
+            "name": "defaultButlerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "plannerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "students"
+        ]
+      },
+      "post": {
+        "operationId": "StudentsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStudentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "students"
+        ]
+      }
+    },
+    "/api/v1/students/{studentId}": {
+      "get": {
+        "operationId": "StudentsController_detail",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "students"
+        ]
+      },
+      "patch": {
+        "operationId": "StudentsController_update",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStudentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "students"
+        ]
+      }
+    },
+    "/api/v1/students/{studentId}/default-butler": {
+      "put": {
+        "operationId": "StudentsController_assignDefaultButler",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignResponsiblePersonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "students"
+        ]
+      }
+    },
+    "/api/v1/students/{studentId}/planner": {
+      "put": {
+        "operationId": "StudentsController_assignPlanner",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignResponsiblePersonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "students"
+        ]
+      }
+    },
+    "/api/v1/students/{studentId}/service-activation": {
+      "post": {
+        "operationId": "StudentsController_activateService",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateStudentServiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "students"
+        ]
+      }
+    },
+    "/api/v1/students/{studentId}/assign-unassigned-tasks": {
+      "post": {
+        "operationId": "StudentsController_bulkAssignUnassignedTasks",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkAssignUnassignedTasksDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "students"
+        ]
+      }
+    },
+    "/api/v1/tasks/{taskId}": {
+      "get": {
+        "operationId": "TasksController_detail",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/api/v1/tasks/{taskId}/timeline": {
+      "get": {
+        "operationId": "TasksController_timeline",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/api/v1/tasks/{taskId}/start": {
+      "post": {
+        "operationId": "TasksController_start",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskVersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/api/v1/tasks/{taskId}/progress": {
+      "post": {
+        "operationId": "TasksController_progress",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddTaskProgressDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/api/v1/tasks/{taskId}/extensions": {
+      "post": {
+        "operationId": "TasksController_extension",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportTaskExtensionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/api/v1/tasks/{taskId}/complete": {
+      "post": {
+        "operationId": "TasksController_complete",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteTaskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/api/v1/my/tasks": {
+      "get": {
+        "operationId": "MyTasksController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "TODO",
+                "IN_PROGRESS",
+                "COMPLETED",
+                "CANCELED"
+              ]
+            }
+          },
+          {
+            "name": "ownerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "studentId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "stageCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 32,
+              "type": "string"
+            }
+          },
+          {
+            "name": "overdue",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "unassigned",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "openAlert",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "dueFrom",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dueTo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "my-tasks"
+        ]
+      }
+    },
+    "/api/v1/admin/task-supervision/summary": {
+      "get": {
+        "operationId": "TaskSupervisionController_summary",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "TODO",
+                "IN_PROGRESS",
+                "COMPLETED",
+                "CANCELED"
+              ]
+            }
+          },
+          {
+            "name": "ownerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "studentId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "stageCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 32,
+              "type": "string"
+            }
+          },
+          {
+            "name": "overdue",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "unassigned",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "openAlert",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "dueFrom",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dueTo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "task-supervision"
+        ]
+      }
+    },
+    "/api/v1/admin/task-supervision/tasks": {
+      "get": {
+        "operationId": "TaskSupervisionController_tasks",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "TODO",
+                "IN_PROGRESS",
+                "COMPLETED",
+                "CANCELED"
+              ]
+            }
+          },
+          {
+            "name": "ownerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "studentId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "stageCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 32,
+              "type": "string"
+            }
+          },
+          {
+            "name": "overdue",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "unassigned",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "openAlert",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "dueFrom",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dueTo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "task-supervision"
+        ]
+      }
+    },
+    "/api/v1/admin/tasks/{taskId}/reschedule": {
+      "post": {
+        "operationId": "AdminTasksController_reschedule",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RescheduleTaskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "admin-tasks"
+        ]
+      }
+    },
+    "/api/v1/admin/tasks/{taskId}/reassign": {
+      "post": {
+        "operationId": "AdminTasksController_reassign",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReassignTaskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "admin-tasks"
+        ]
+      }
+    },
+    "/api/v1/admin/tasks/{taskId}/cancel": {
+      "post": {
+        "operationId": "AdminTasksController_cancel",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelTaskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "admin-tasks"
+        ]
+      }
+    },
+    "/api/v1/admin/overdue-alerts": {
+      "get": {
+        "operationId": "OverdueAlertsController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "HANDLED",
+                "RESOLVED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "overdue-alerts"
+        ]
+      }
+    },
+    "/api/v1/admin/overdue-alerts/{alertId}/handle": {
+      "post": {
+        "operationId": "OverdueAlertsController_handle",
+        "parameters": [
+          {
+            "name": "alertId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandleOverdueAlertDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "overdue-alerts"
+        ]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",
@@ -628,6 +2165,389 @@
         "required": [
           "reason"
         ]
+      },
+      "SopTaskTemplateInputDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "description": {
+            "type": "object",
+            "maxLength": 2000,
+            "nullable": true
+          },
+          "completionCriteria": {
+            "type": "object",
+            "maxLength": 2000,
+            "nullable": true
+          },
+          "completionWindowHours": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "name",
+          "completionWindowHours"
+        ]
+      },
+      "SopStageTemplateInputDto": {
+        "type": "object",
+        "properties": {
+          "stageCode": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "description": {
+            "type": "object",
+            "maxLength": 1000,
+            "nullable": true
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SopTaskTemplateInputDto"
+            }
+          }
+        },
+        "required": [
+          "stageCode",
+          "name",
+          "tasks"
+        ]
+      },
+      "UpdateSopVersionDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "description": "乐观锁版本号"
+          },
+          "stages": {
+            "minItems": 8,
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SopStageTemplateInputDto"
+            }
+          }
+        },
+        "required": [
+          "version",
+          "stages"
+        ]
+      },
+      "PublishSopVersionDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "description": "乐观锁版本号"
+          }
+        },
+        "required": [
+          "version"
+        ]
+      },
+      "Object": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateStudentDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "黄翰",
+            "maxLength": 100
+          },
+          "phone": {
+            "type": "object",
+            "example": "+852 6123 4567",
+            "maxLength": 32,
+            "nullable": true
+          },
+          "email": {
+            "type": "object",
+            "example": "hon.wong@example.com",
+            "maxLength": 254,
+            "nullable": true
+          },
+          "defaultButlerId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "plannerId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateStudentDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "phone": {
+            "type": "object",
+            "maxLength": 32,
+            "nullable": true
+          },
+          "email": {
+            "type": "object",
+            "maxLength": 254,
+            "nullable": true
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "description": "乐观锁版本号"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "version"
+        ]
+      },
+      "AssignResponsiblePersonDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "description": "乐观锁版本号"
+          }
+        },
+        "required": [
+          "userId",
+          "reason",
+          "version"
+        ]
+      },
+      "ActivateStudentServiceDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "description": "学生资料乐观锁版本号"
+          }
+        },
+        "required": [
+          "version"
+        ]
+      },
+      "BulkAssignTaskItemDto": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "description": "任务乐观锁版本号"
+          }
+        },
+        "required": [
+          "taskId",
+          "version"
+        ]
+      },
+      "BulkAssignUnassignedTasksDto": {
+        "type": "object",
+        "properties": {
+          "butlerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BulkAssignTaskItemDto"
+            }
+          }
+        },
+        "required": [
+          "butlerId",
+          "reason",
+          "tasks"
+        ]
+      },
+      "TaskVersionDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "version"
+        ]
+      },
+      "AddTaskProgressDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "progressNote": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "progressPercent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 99
+          }
+        },
+        "required": [
+          "version",
+          "progressNote"
+        ]
+      },
+      "ReportTaskExtensionDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "expectedFinishAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "version",
+          "reason",
+          "expectedFinishAt"
+        ]
+      },
+      "CompleteTaskDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "completionNote": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "version",
+          "completionNote"
+        ]
+      },
+      "RescheduleTaskDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "newDueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "version",
+          "newDueAt",
+          "reason"
+        ]
+      },
+      "ReassignTaskDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "newOwnerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "version",
+          "newOwnerId",
+          "reason"
+        ]
+      },
+      "CancelTaskDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "version",
+          "reason"
+        ]
+      },
+      "HandleOverdueAlertDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
       },
       "ApiError": {
         "type": "object",

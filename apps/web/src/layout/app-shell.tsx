@@ -7,11 +7,14 @@ import {
   AuditOutlined,
   DashboardOutlined,
   DownOutlined,
+  FileDoneOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   SafetyCertificateOutlined,
+  SnippetsOutlined,
   TeamOutlined,
+  UsergroupAddOutlined,
 } from "@ant-design/icons";
 import { Avatar, Button, Dropdown, Layout, Menu } from "antd";
 import { PermissionCode, RoleCode } from "@dse/shared";
@@ -25,6 +28,9 @@ const { Header, Sider, Content } = Layout;
 const ICONS: Record<string, ReactNode> = {
   workspace: <DashboardOutlined />,
   supervision: <SafetyCertificateOutlined />,
+  students: <UsergroupAddOutlined />,
+  sop: <SnippetsOutlined />,
+  "my-tasks": <FileDoneOutlined />,
   users: <TeamOutlined />,
   audit: <AuditOutlined />,
 };
@@ -40,9 +46,29 @@ const ROLE_LABELS: Record<string, string> = {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobile, setMobile] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 720px)");
+    const syncViewport = () => {
+      setMobile(mediaQuery.matches);
+      if (!mediaQuery.matches) {
+        setMobileNavOpen(false);
+      }
+    };
+
+    syncViewport();
+    mediaQuery.addEventListener("change", syncViewport);
+    return () => mediaQuery.removeEventListener("change", syncViewport);
+  }, []);
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -70,26 +96,43 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigation
       .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
       .sort((a, b) => b.href.length - a.href.length)[0]?.key ?? "workspace";
-  const siderWidth = collapsed ? 80 : 240;
+  const siderCollapsed = mobile ? false : collapsed;
+  const siderWidth = siderCollapsed ? 80 : 240;
   const workspaceName = user.roles.includes(RoleCode.ADMINISTRATOR) ? "管理员端" : "内部工作台";
 
   return (
     <Layout className={styles.root}>
       <Sider
-        className={styles.sider}
+        className={`${styles.sider} ${mobileNavOpen ? styles.siderMobileOpen : ""}`}
         width={240}
         collapsedWidth={80}
-        collapsed={collapsed}
+        collapsed={siderCollapsed}
         trigger={null}
+        aria-hidden={mobile && !mobileNavOpen}
+        inert={mobile && !mobileNavOpen}
       >
         <div className={styles.brand}>
-          <span className={styles.brandTitle}>{collapsed ? "DSE" : "DSE CRM"}</span>
-          {!collapsed ? <span className={styles.brandSubtitle}>升学服务管理</span> : null}
+          <span className={styles.brandTitle}>{siderCollapsed ? "DSE" : "DSE CRM"}</span>
+          {!siderCollapsed ? <span className={styles.brandSubtitle}>升学服务管理</span> : null}
+          {mobile ? (
+            <Button
+              type="text"
+              className={styles.mobileClose}
+              aria-label="关闭导航"
+              icon={<MenuFoldOutlined />}
+              onClick={() => setMobileNavOpen(false)}
+            />
+          ) : null}
         </div>
         <Menu
           mode="inline"
-          theme="dark"
+          theme="light"
           selectedKeys={[selected]}
+          onClick={() => {
+            if (mobile) {
+              setMobileNavOpen(false);
+            }
+          }}
           items={navigation.map((item) => ({
             key: item.key,
             icon: ICONS[item.key],
@@ -98,13 +141,48 @@ export function AppShell({ children }: { children: ReactNode }) {
           style={{ background: "transparent", paddingTop: 12 }}
         />
       </Sider>
-      <Layout className={styles.contentLayout} style={{ marginLeft: siderWidth }}>
+      {mobileNavOpen ? (
+        <button
+          type="button"
+          className={styles.mobileMask}
+          aria-label="关闭导航遮罩"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      ) : null}
+      <Layout className={styles.contentLayout} style={{ marginLeft: mobile ? 0 : siderWidth }}>
         <Header className={styles.header}>
           <Button
             type="text"
-            aria-label={collapsed ? "展开导航" : "收起导航"}
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed((value) => !value)}
+            aria-label={
+              mobile
+                ? mobileNavOpen
+                  ? "关闭导航"
+                  : "打开导航"
+                : collapsed
+                  ? "展开导航"
+                  : "收起导航"
+            }
+            icon={
+              mobile ? (
+                mobileNavOpen ? (
+                  <MenuFoldOutlined />
+                ) : (
+                  <MenuUnfoldOutlined />
+                )
+              ) : collapsed ? (
+                <MenuUnfoldOutlined />
+              ) : (
+                <MenuFoldOutlined />
+              )
+            }
+            disabled={mobile && mobileNavOpen}
+            onClick={() => {
+              if (mobile) {
+                setMobileNavOpen((value) => !value);
+              } else {
+                setCollapsed((value) => !value);
+              }
+            }}
           />
           <Dropdown
             trigger={["click"]}

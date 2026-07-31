@@ -59,6 +59,67 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   STUDENT: ["portal.access"],
 };
 
+const SOP_BASELINE_STAGES = [
+  ["PROFILE", "建档阶段"],
+  ["ASSESSMENT", "学情评估阶段"],
+  ["PLANNING", "升学规划阶段"],
+  ["MATERIALS", "资料准备阶段"],
+  ["ESSAYS", "文书准备阶段"],
+  ["SUBMISSION", "申请递交阶段"],
+  ["RESULTS", "申请结果跟进阶段"],
+  ["ENROLLMENT", "入学确认阶段"],
+] as const;
+
+const SOP_BASELINE_TASKS: Record<
+  (typeof SOP_BASELINE_STAGES)[number][0],
+  {
+    name: string;
+    completionCriteria: string;
+    completionWindowHours: number;
+  }
+> = {
+  PROFILE: {
+    name: "确认学生建档资料",
+    completionCriteria: "核对学生联系方式与服务负责人信息，记录缺失项",
+    completionWindowHours: 24,
+  },
+  ASSESSMENT: {
+    name: "完成学情访谈与记录",
+    completionCriteria: "完成首次学情访谈并形成可追溯的访谈记录",
+    completionWindowHours: 48,
+  },
+  PLANNING: {
+    name: "确认升学规划要点",
+    completionCriteria: "与学生确认规划方向、关键选择和后续行动项",
+    completionWindowHours: 72,
+  },
+  MATERIALS: {
+    name: "建立申请材料清单",
+    completionCriteria: "列明全部所需材料、当前状态和责任人",
+    completionWindowHours: 96,
+  },
+  ESSAYS: {
+    name: "推进首轮文书准备",
+    completionCriteria: "完成文书素材收集并确认首轮交付安排",
+    completionWindowHours: 168,
+  },
+  SUBMISSION: {
+    name: "核对申请递交准备",
+    completionCriteria: "完成递交前资料核对并记录待处理风险",
+    completionWindowHours: 240,
+  },
+  RESULTS: {
+    name: "建立申请结果跟进",
+    completionCriteria: "确认结果查询方式、跟进频率和异常升级路径",
+    completionWindowHours: 720,
+  },
+  ENROLLMENT: {
+    name: "确认入学安排",
+    completionCriteria: "核对录取确认、注册、缴费及入学前关键事项",
+    completionWindowHours: 1440,
+  },
+};
+
 function required(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -187,7 +248,14 @@ async function main(): Promise<void> {
       const passwordHash = await argon2.hash(account.password, { type: argon2.argon2id });
       const user = await prisma.user.upsert({
         where: { username: account.username },
-        update: { displayName: account.displayName, passwordHash, status: "ACTIVE" },
+        update: {
+          displayName: account.displayName,
+          passwordHash,
+          status: "ACTIVE",
+          failedLoginCount: 0,
+          failedLoginWindowStartedAt: null,
+          lockedUntil: null,
+        },
         create: {
           username: account.username,
           displayName: account.displayName,
@@ -201,6 +269,71 @@ async function main(): Promise<void> {
         update: { expiredAt: null },
         create: { userId: user.id, roleId: role.id },
       });
+    }
+
+    const administrator = await prisma.user.findUniqueOrThrow({
+      where: { username: process.env.SEED_ADMIN_USERNAME ?? "admin" },
+    });
+    const existingBaseline = await prisma.sopVersion.findUnique({
+      where: { versionNo: 1 },
+      include: { stages: { include: { tasks: true } } },
+    });
+    if (!existingBaseline) {
+      await prisma.sopVersion.create({
+        data: {
+          versionNo: 1,
+          status: "DRAFT",
+          createdById: administrator.id,
+          stages: {
+            create: SOP_BASELINE_STAGES.map(([stageCode, name], index) => ({
+              stageCode,
+              name,
+              sequenceNo: index + 1,
+              description: null,
+              tasks: {
+                create: {
+                  ...SOP_BASELINE_TASKS[stageCode],
+                  sequenceNo: 1,
+                  ownerRole: "BUTLER",
+                },
+              },
+            })),
+          },
+        },
+      });
+    } else if (existingBaseline.status === "DRAFT") {
+      for (const [stageCode, name] of SOP_BASELINE_STAGES) {
+        const sequenceNo =
+          SOP_BASELINE_STAGES.findIndex(([candidate]) => candidate === stageCode) + 1;
+        const stage = await prisma.sopStageTemplate.upsert({
+          where: {
+            sopVersionId_stageCode: {
+              sopVersionId: existingBaseline.id,
+              stageCode,
+            },
+          },
+          update: {},
+          create: {
+            sopVersionId: existingBaseline.id,
+            stageCode,
+            name,
+            sequenceNo,
+          },
+        });
+        const existingTaskCount = await prisma.sopTaskTemplate.count({
+          where: { stageTemplateId: stage.id },
+        });
+        if (existingTaskCount === 0) {
+          await prisma.sopTaskTemplate.create({
+            data: {
+              stageTemplateId: stage.id,
+              ...SOP_BASELINE_TASKS[stageCode],
+              sequenceNo: 1,
+              ownerRole: "BUTLER",
+            },
+          });
+        }
+      }
     }
   } finally {
     await prisma.$disconnect();
