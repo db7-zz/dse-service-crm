@@ -46,24 +46,44 @@ describeWithDatabase("S1 SOP, activation, task execution and supervision", () =>
     let published = versions.body.data.items.find(
       (version: { status: string }) => version.status === "PUBLISHED",
     ) as { id: string; version: number } | undefined;
-    if (!published) {
-      const draft = versions.body.data.items.find(
-        (version: { status: string }) => version.status === "DRAFT",
-      ) as { id: string; version: number };
-      expect(draft).toBeDefined();
+    const existingDraft = versions.body.data.items.find(
+      (version: { status: string }) => version.status === "DRAFT",
+    ) as { id: string; version: number } | undefined;
+    if (existingDraft) {
       const validation = await admin.agent
-        .post(`/api/v1/sop-versions/${draft.id}/validate`)
+        .post(`/api/v1/sop-versions/${existingDraft.id}/validate`)
         .set("X-CSRF-Token", admin.csrfToken)
         .expect(201);
       expect(validation.body.data.valid).toBe(true);
       const result = await admin.agent
-        .post(`/api/v1/sop-versions/${draft.id}/publish`)
+        .post(`/api/v1/sop-versions/${existingDraft.id}/publish`)
         .set("X-CSRF-Token", admin.csrfToken)
-        .send({ version: draft.version })
+        .send({ version: existingDraft.version })
         .expect(201);
       published = result.body.data;
     }
     expect(published).toBeDefined();
+
+    const createdDraft = await admin.agent
+      .post("/api/v1/sop-versions")
+      .set("X-CSRF-Token", admin.csrfToken)
+      .expect(201);
+    const draft = createdDraft.body.data as { id: string; version: number };
+    const draftValidation = await admin.agent
+      .post(`/api/v1/sop-versions/${draft.id}/validate`)
+      .set("X-CSRF-Token", admin.csrfToken)
+      .expect(201);
+    expect(draftValidation.body.data.valid).toBe(true);
+    const publishResult = await admin.agent
+      .post(`/api/v1/sop-versions/${draft.id}/publish`)
+      .set("X-CSRF-Token", admin.csrfToken)
+      .send({ version: draft.version })
+      .expect(201);
+    published = publishResult.body.data;
+    const publishedTaskCount = (
+      publishResult.body.data.stages as Array<{ tasks: unknown[] }>
+    ).reduce((total, stage) => total + stage.tasks.length, 0);
+    expect(publishedTaskCount).toBeGreaterThan(0);
 
     const created = await admin.agent
       .post("/api/v1/students")
@@ -79,16 +99,16 @@ describeWithDatabase("S1 SOP, activation, task execution and supervision", () =>
     expect(activation.body.data).toMatchObject({
       serviceStatus: "ENABLED",
       stageCount: 8,
-      taskCount: 8,
+      taskCount: publishedTaskCount,
       assignedTaskCount: 0,
-      unassignedTaskCount: 8,
+      unassignedTaskCount: publishedTaskCount,
     });
 
     const detail = await admin.agent.get(`/api/v1/students/${student.id}`).expect(200);
     expect(detail.body.data.stages).toHaveLength(8);
     expect(detail.body.data.taskSummary).toMatchObject({
-      total: 8,
-      unassigned: 8,
+      total: publishedTaskCount,
+      unassigned: publishedTaskCount,
     });
     const tasks = detail.body.data.stages.flatMap(
       (stage: { tasks: Array<{ id: string; version: number }> }) => stage.tasks,

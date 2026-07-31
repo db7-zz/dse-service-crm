@@ -51,7 +51,9 @@ export class SopService {
     const actor = request.authenticatedUser as AuthenticatedUser;
     try {
       return await this.prisma.$transaction(async (transaction) => {
-        await transaction.$queryRaw`SELECT pg_advisory_xact_lock(2026073101)`;
+        await transaction.$queryRaw<Array<{ lock: string }>>`
+          SELECT pg_advisory_xact_lock(2026073101)::text AS lock
+        `;
         const existingDraft = await transaction.sopVersion.findFirst({
           where: { status: "DRAFT" },
           select: { id: true, versionNo: true },
@@ -221,7 +223,9 @@ export class SopService {
   public async publish(versionId: string, body: PublishSopVersionDto, request: RequestContext) {
     try {
       return await this.prisma.$transaction(async (transaction) => {
-        await transaction.$queryRaw`SELECT pg_advisory_xact_lock(2026073101)`;
+        await transaction.$queryRaw<Array<{ lock: string }>>`
+          SELECT pg_advisory_xact_lock(2026073101)::text AS lock
+        `;
         const draft = await transaction.sopVersion.findUnique({
           where: { id: versionId },
           include: SOP_INCLUDE,
