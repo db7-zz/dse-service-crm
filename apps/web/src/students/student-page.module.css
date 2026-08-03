@@ -124,7 +124,7 @@
 
 .filterBar {
   display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(150px, 0.75fr)) auto;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 12px;
   align-items: center;
   margin-bottom: 22px;
@@ -140,7 +140,7 @@
 
 .table {
   width: 100%;
-  min-width: 880px;
+  min-width: 1180px;
   border-collapse: collapse;
 }
 
@@ -539,6 +539,13 @@
   gap: 10px;
   align-items: center;
   margin-bottom: 12px;
+  width: 100%;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
 }
 
 .stageIndex {
@@ -560,7 +567,7 @@
 
 .stageTask {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) 130px auto;
+  grid-template-columns: minmax(180px, 1fr) 130px minmax(210px, auto) auto;
   gap: 12px;
   align-items: center;
   padding: 11px 13px;

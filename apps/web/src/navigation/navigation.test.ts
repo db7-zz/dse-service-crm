@@ -42,11 +42,13 @@ describe("role navigation", () => {
   it("routes a butler directly to the personal task queue", () => {
     const current = user([
       PermissionCode.WORKSPACE_ACCESS,
+      PermissionCode.STUDENTS_OWN_READ,
       PermissionCode.TASKS_OWN_READ,
       PermissionCode.TASKS_OWN_WRITE,
     ]);
     expect(defaultRouteFor(current)).toBe("/workspace/my-tasks");
     expect(navigationFor(current).map((item) => item.label)).toContain("我的任务");
+    expect(navigationFor(current).map((item) => item.label)).toContain("学生管理");
   });
 
   it("does not expose S1 supervision through the legacy permission", () => {

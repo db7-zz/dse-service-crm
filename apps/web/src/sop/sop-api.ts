@@ -32,6 +32,7 @@ export function saveSopDraft(versionId: string, version: number, stages: SopStag
           description: task.description,
           completionCriteria: task.completionCriteria,
           completionWindowHours: task.completionWindowHours,
+          isBlocking: task.isBlocking,
         })),
       })),
     }),

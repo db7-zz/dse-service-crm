@@ -22,7 +22,9 @@ export interface TaskListItem {
     name: string;
     sequenceNo: number;
   };
-  taskSequenceNo: number;
+  taskSequenceNo: number | null;
+  sourceType: "SOP" | "MANUAL";
+  isBlocking: boolean;
   owner: TaskPerson | null;
   originalDueAt: string;
   currentDueAt: string;
@@ -64,7 +66,7 @@ export interface TaskTimelineItem {
 export interface TaskDetail extends TaskListItem {
   description: string | null;
   completionCriteria: string | null;
-  completionWindowHours: number;
+  completionWindowHours: number | null;
   completionNote: string | null;
   canceledAt: string | null;
   cancelReason: string | null;
@@ -109,6 +111,15 @@ export interface TaskDetail extends TaskListItem {
     resolvedReason: string | null;
   }>;
   timeline: TaskTimelineItem[];
+  stageChanged?: boolean;
+  completedStageCount?: number;
+  progressVersion?: number;
+  advancedStages?: Array<{
+    id: string;
+    code: string;
+    name: string;
+    sequenceNo: number;
+  }>;
 }
 
 export interface TaskPage {

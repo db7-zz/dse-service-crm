@@ -26,10 +26,12 @@ import {
   AssignResponsiblePersonDto,
   BulkAssignUnassignedTasksDto,
   CreateStudentDto,
+  CreateManualTaskDto,
   ListStudentsQueryDto,
   UpdateStudentDto,
 } from "./students.dto.js";
 import { StudentWorkflowService } from "./student-workflow.service.js";
+import { ServiceProgressService } from "./service-progress.service.js";
 import { StudentsService } from "./students.service.js";
 
 @ApiTags("students")
@@ -41,6 +43,9 @@ export class StudentsController {
 
   @Inject(StudentWorkflowService)
   private readonly studentWorkflowService!: StudentWorkflowService;
+
+  @Inject(ServiceProgressService)
+  private readonly serviceProgressService!: ServiceProgressService;
 
   @Get("responsible-person-options")
   @RequiresPermission(PermissionCode.STUDENTS_READ)
@@ -65,6 +70,37 @@ export class StudentsController {
   @RequiresPermission(PermissionCode.STUDENTS_READ)
   public detail(@Param("studentId", new ParseUUIDPipe({ version: "4" })) studentId: string) {
     return this.studentsService.detail(studentId);
+  }
+
+  @Get(":studentId/service-progress")
+  @RequiresPermission(PermissionCode.STUDENTS_READ)
+  public serviceProgress(
+    @Param("studentId", new ParseUUIDPipe({ version: "4" })) studentId: string,
+  ) {
+    return this.studentsService.serviceProgress(studentId);
+  }
+
+  @Post(":studentId/service-progress/recalculate")
+  @RequiresPermission(PermissionCode.STUDENTS_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public recalculateServiceProgress(
+    @Param("studentId", new ParseUUIDPipe({ version: "4" })) studentId: string,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Req() request: RequestContext,
+  ) {
+    return this.serviceProgressService.recalculate(studentId, idempotencyKey, request);
+  }
+
+  @Post(":studentId/manual-tasks")
+  @RequiresPermission(PermissionCode.TASK_SUPERVISION_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public createManualTask(
+    @Param("studentId", new ParseUUIDPipe({ version: "4" })) studentId: string,
+    @Body() body: CreateManualTaskDto,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Req() request: RequestContext,
+  ) {
+    return this.studentWorkflowService.createManualTask(studentId, body, idempotencyKey, request);
   }
 
   @Patch(":studentId")
@@ -121,5 +157,37 @@ export class StudentsController {
     @Req() request: RequestContext,
   ) {
     return this.studentWorkflowService.bulkAssign(studentId, body, idempotencyKey, request);
+  }
+}
+
+@ApiTags("my-students")
+@ApiCookieAuth()
+@Controller("my/students")
+@UseGuards(SessionAuthGuard, PermissionGuard)
+export class MyStudentsController {
+  public constructor(@Inject(StudentsService) private readonly studentsService: StudentsService) {}
+
+  @Get()
+  @RequiresPermission(PermissionCode.STUDENTS_OWN_READ)
+  public list(@Query() query: ListStudentsQueryDto, @Req() request: RequestContext) {
+    return this.studentsService.listMine(query, request);
+  }
+
+  @Get(":studentId")
+  @RequiresPermission(PermissionCode.STUDENTS_OWN_READ)
+  public detail(
+    @Param("studentId", new ParseUUIDPipe({ version: "4" })) studentId: string,
+    @Req() request: RequestContext,
+  ) {
+    return this.studentsService.detailMine(studentId, request);
+  }
+
+  @Get(":studentId/service-progress")
+  @RequiresPermission(PermissionCode.STUDENTS_OWN_READ)
+  public serviceProgress(
+    @Param("studentId", new ParseUUIDPipe({ version: "4" })) studentId: string,
+    @Req() request: RequestContext,
+  ) {
+    return this.studentsService.serviceProgressMine(studentId, request);
   }
 }

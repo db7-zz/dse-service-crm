@@ -8,6 +8,7 @@ export interface SopTaskTemplate {
   completionCriteria: string | null;
   completionWindowHours: number;
   ownerRole: "BUTLER";
+  isBlocking: boolean;
 }
 
 export interface SopStageTemplate {
@@ -50,7 +51,7 @@ export interface SopVersionList {
 
 export interface SopValidationResult {
   valid: boolean;
-  errors: Array<{ path: string; message: string }>;
+  errors: Array<{ path: string; message: string; code?: string }>;
   stageCount: number;
   taskCount: number;
 }

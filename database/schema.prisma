@@ -37,6 +37,43 @@ enum TaskStatus {
   CANCELED
 }
 
+enum StageStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum TaskSourceType {
+  SOP
+  MANUAL
+}
+
+enum ProgressCalculationStatus {
+  NORMAL
+  RECALCULATING
+  ERROR
+}
+
+enum StageTransitionTriggerType {
+  SERVICE_ACTIVATION
+  TASK_COMPLETED
+  TASK_CANCELED
+  CONTINUOUS_ADVANCE
+  MIGRATION
+  RECALCULATION
+}
+
+enum ProgressCalculationRunType {
+  MIGRATION
+  RECALCULATION
+}
+
+enum ProgressCalculationRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
 enum OverdueAlertStatus {
   OPEN
   HANDLED
@@ -59,39 +96,41 @@ enum TaskTimelineEventType {
 }
 
 model User {
-  id                         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  username                   String      @unique @db.VarChar(64)
-  displayName                String      @map("display_name") @db.VarChar(100)
-  passwordHash               String      @map("password_hash") @db.VarChar(255)
-  status                     UserStatus  @default(ACTIVE)
-  failedLoginCount           Int         @default(0) @map("failed_login_count")
-  failedLoginWindowStartedAt DateTime?   @map("failed_login_window_started_at")
-  lockedUntil                DateTime?   @map("locked_until")
-  lastLoginAt                DateTime?   @map("last_login_at")
-  createdAt                  DateTime    @default(now()) @map("created_at")
-  updatedAt                  DateTime    @updatedAt @map("updated_at")
+  id                         String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username                   String                          @unique @db.VarChar(64)
+  displayName                String                          @map("display_name") @db.VarChar(100)
+  passwordHash               String                          @map("password_hash") @db.VarChar(255)
+  status                     UserStatus                      @default(ACTIVE)
+  failedLoginCount           Int                             @default(0) @map("failed_login_count")
+  failedLoginWindowStartedAt DateTime?                       @map("failed_login_window_started_at")
+  lockedUntil                DateTime?                       @map("locked_until")
+  lastLoginAt                DateTime?                       @map("last_login_at")
+  createdAt                  DateTime                        @default(now()) @map("created_at")
+  updatedAt                  DateTime                        @updatedAt @map("updated_at")
   roles                      UserRole[]
   sessions                   Session[]
-  auditLogs                  AuditLog[]  @relation("AuditOperator")
-  studentsCreated            Student[]   @relation("StudentCreator")
-  studentsAsDefaultButler    Student[]   @relation("StudentDefaultButler")
-  studentsAsPlanner          Student[]   @relation("StudentPlanner")
-  responsibilityChangesMade StudentResponsibilityChange[] @relation("ResponsibilityChangeOperator")
-  responsibilityChangesFrom StudentResponsibilityChange[] @relation("ResponsibilityChangePreviousUser")
-  responsibilityChangesTo   StudentResponsibilityChange[] @relation("ResponsibilityChangeNewUser")
-  sopVersionsCreated         SopVersion[]                  @relation("SopVersionCreator")
-  serviceActivationsEnabled  StudentServiceActivation[]    @relation("ServiceActivationOperator")
-  tasksOwned                 TaskInstance[]                 @relation("TaskOwner")
-  taskProgressCreated        TaskProgressRecord[]           @relation("TaskProgressOperator")
-  taskExtensionsReported     TaskExtensionReport[]          @relation("TaskExtensionReporter")
-  taskDueDatesChanged        TaskDueDateChange[]            @relation("TaskDueDateOperator")
-  taskReassignmentsOperated  TaskReassignment[]             @relation("TaskReassignmentOperator")
-  taskReassignmentsFrom      TaskReassignment[]             @relation("TaskReassignmentPreviousOwner")
-  taskReassignmentsTo        TaskReassignment[]             @relation("TaskReassignmentNewOwner")
-  tasksCanceled              TaskInstance[]                 @relation("TaskCancellationOperator")
-  overdueAlertsHandled       OverdueAlert[]                 @relation("OverdueAlertHandler")
-  taskTimelineEvents         TaskTimelineEvent[]            @relation("TaskTimelineActor")
-  taskOperationReceipts      TaskOperationReceipt[]         @relation("TaskOperationActor")
+  auditLogs                  AuditLog[]                      @relation("AuditOperator")
+  studentsCreated            Student[]                       @relation("StudentCreator")
+  studentsAsDefaultButler    Student[]                       @relation("StudentDefaultButler")
+  studentsAsPlanner          Student[]                       @relation("StudentPlanner")
+  responsibilityChangesMade  StudentResponsibilityChange[]   @relation("ResponsibilityChangeOperator")
+  responsibilityChangesFrom  StudentResponsibilityChange[]   @relation("ResponsibilityChangePreviousUser")
+  responsibilityChangesTo    StudentResponsibilityChange[]   @relation("ResponsibilityChangeNewUser")
+  sopVersionsCreated         SopVersion[]                    @relation("SopVersionCreator")
+  serviceActivationsEnabled  StudentServiceActivation[]      @relation("ServiceActivationOperator")
+  tasksOwned                 TaskInstance[]                  @relation("TaskOwner")
+  taskProgressCreated        TaskProgressRecord[]            @relation("TaskProgressOperator")
+  taskExtensionsReported     TaskExtensionReport[]           @relation("TaskExtensionReporter")
+  taskDueDatesChanged        TaskDueDateChange[]             @relation("TaskDueDateOperator")
+  taskReassignmentsOperated  TaskReassignment[]              @relation("TaskReassignmentOperator")
+  taskReassignmentsFrom      TaskReassignment[]              @relation("TaskReassignmentPreviousOwner")
+  taskReassignmentsTo        TaskReassignment[]              @relation("TaskReassignmentNewOwner")
+  tasksCanceled              TaskInstance[]                  @relation("TaskCancellationOperator")
+  overdueAlertsHandled       OverdueAlert[]                  @relation("OverdueAlertHandler")
+  taskTimelineEvents         TaskTimelineEvent[]             @relation("TaskTimelineActor")
+  taskOperationReceipts      TaskOperationReceipt[]          @relation("TaskOperationActor")
+  manualTasksCreated         TaskInstance[]                  @relation("TaskCreator")
+  progressCalculationRuns    ServiceProgressCalculationRun[] @relation("ProgressCalculationInitiator")
 
   @@map("users")
 }
@@ -120,12 +159,12 @@ model Permission {
 }
 
 model UserRole {
-  userId      String   @map("user_id") @db.Uuid
-  roleId      String   @map("role_id") @db.Uuid
-  effectiveAt DateTime @default(now()) @map("effective_at")
+  userId      String    @map("user_id") @db.Uuid
+  roleId      String    @map("role_id") @db.Uuid
+  effectiveAt DateTime  @default(now()) @map("effective_at")
   expiredAt   DateTime? @map("expired_at")
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role        Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@id([userId, roleId])
   @@index([roleId])
@@ -133,10 +172,10 @@ model UserRole {
 }
 
 model RolePermission {
-  roleId      String     @map("role_id") @db.Uuid
-  permissionId String    @map("permission_id") @db.Uuid
-  role        Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission  Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  roleId       String     @map("role_id") @db.Uuid
+  permissionId String     @map("permission_id") @db.Uuid
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
   @@index([permissionId])
@@ -185,25 +224,25 @@ model AuditLog {
 }
 
 model Student {
-  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  studentNo          String               @unique @map("student_no") @db.VarChar(24)
-  name               String               @db.VarChar(100)
-  phone              String?              @db.VarChar(32)
-  email              String?              @db.VarChar(254)
-  defaultButlerId    String?              @map("default_butler_id") @db.Uuid
-  plannerId          String?              @map("planner_id") @db.Uuid
-  serviceStatus      StudentServiceStatus @default(NOT_ENABLED) @map("service_status")
-  version            Int                  @default(1)
-  createdById        String               @map("created_by") @db.Uuid
-  createdAt          DateTime             @default(now()) @map("created_at")
-  updatedAt          DateTime             @default(now()) @updatedAt @map("updated_at")
-  defaultButler      User?                @relation("StudentDefaultButler", fields: [defaultButlerId], references: [id], onDelete: SetNull)
-  planner            User?                @relation("StudentPlanner", fields: [plannerId], references: [id], onDelete: SetNull)
-  createdBy          User                 @relation("StudentCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  id                    String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentNo             String                        @unique @map("student_no") @db.VarChar(24)
+  name                  String                        @db.VarChar(100)
+  phone                 String?                       @db.VarChar(32)
+  email                 String?                       @db.VarChar(254)
+  defaultButlerId       String?                       @map("default_butler_id") @db.Uuid
+  plannerId             String?                       @map("planner_id") @db.Uuid
+  serviceStatus         StudentServiceStatus          @default(NOT_ENABLED) @map("service_status")
+  version               Int                           @default(1)
+  createdById           String                        @map("created_by") @db.Uuid
+  createdAt             DateTime                      @default(now()) @map("created_at")
+  updatedAt             DateTime                      @default(now()) @updatedAt @map("updated_at")
+  defaultButler         User?                         @relation("StudentDefaultButler", fields: [defaultButlerId], references: [id], onDelete: SetNull)
+  planner               User?                         @relation("StudentPlanner", fields: [plannerId], references: [id], onDelete: SetNull)
+  createdBy             User                          @relation("StudentCreator", fields: [createdById], references: [id], onDelete: Restrict)
   responsibilityChanges StudentResponsibilityChange[]
-  serviceActivation  StudentServiceActivation?
-  stageInstances     StageInstance[]
-  taskInstances      TaskInstance[]
+  serviceActivation     StudentServiceActivation?
+  stageInstances        StageInstance[]
+  taskInstances         TaskInstance[]
 
   @@index([name])
   @@index([serviceStatus, createdAt])
@@ -254,13 +293,13 @@ model SopVersion {
 }
 
 model SopStageTemplate {
-  id             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  sopVersionId   String             @map("sop_version_id") @db.Uuid
-  stageCode      String             @map("stage_code") @db.VarChar(32)
-  name           String             @db.VarChar(100)
-  sequenceNo     Int                @map("sequence_no")
-  description    String?            @db.VarChar(1000)
-  sopVersion     SopVersion         @relation(fields: [sopVersionId], references: [id], onDelete: Cascade)
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sopVersionId   String            @map("sop_version_id") @db.Uuid
+  stageCode      String            @map("stage_code") @db.VarChar(32)
+  name           String            @db.VarChar(100)
+  sequenceNo     Int               @map("sequence_no")
+  description    String?           @db.VarChar(1000)
+  sopVersion     SopVersion        @relation(fields: [sopVersionId], references: [id], onDelete: Cascade)
   tasks          SopTaskTemplate[]
   stageInstances StageInstance[]
 
@@ -270,15 +309,16 @@ model SopStageTemplate {
 }
 
 model SopTaskTemplate {
-  id                    String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  stageTemplateId       String            @map("stage_template_id") @db.Uuid
-  name                  String            @db.VarChar(150)
-  sequenceNo            Int               @map("sequence_no")
-  description           String?           @db.VarChar(2000)
-  completionCriteria    String?           @map("completion_criteria") @db.VarChar(2000)
-  completionWindowHours Int               @map("completion_window_hours")
-  ownerRole             String            @default("BUTLER") @map("owner_role") @db.VarChar(32)
-  stageTemplate         SopStageTemplate  @relation(fields: [stageTemplateId], references: [id], onDelete: Cascade)
+  id                    String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  stageTemplateId       String           @map("stage_template_id") @db.Uuid
+  name                  String           @db.VarChar(150)
+  sequenceNo            Int              @map("sequence_no")
+  description           String?          @db.VarChar(2000)
+  completionCriteria    String?          @map("completion_criteria") @db.VarChar(2000)
+  completionWindowHours Int              @map("completion_window_hours")
+  ownerRole             String           @default("BUTLER") @map("owner_role") @db.VarChar(32)
+  isBlocking            Boolean          @default(true) @map("is_blocking")
+  stageTemplate         SopStageTemplate @relation(fields: [stageTemplateId], references: [id], onDelete: Cascade)
   taskInstances         TaskInstance[]
 
   @@unique([stageTemplateId, sequenceNo])
@@ -286,75 +326,95 @@ model SopTaskTemplate {
 }
 
 model StudentServiceActivation {
-  id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  studentId    String          @unique @map("student_id") @db.Uuid
-  sopVersionId String          @map("sop_version_id") @db.Uuid
-  enabledById  String          @map("enabled_by") @db.Uuid
-  enabledAt    DateTime        @map("enabled_at")
-  student      Student         @relation(fields: [studentId], references: [id], onDelete: Restrict)
-  sopVersion   SopVersion      @relation(fields: [sopVersionId], references: [id], onDelete: Restrict)
-  enabledBy    User            @relation("ServiceActivationOperator", fields: [enabledById], references: [id], onDelete: Restrict)
-  stages       StageInstance[]
-  tasks        TaskInstance[]
+  id                     String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId              String                          @unique @map("student_id") @db.Uuid
+  sopVersionId           String                          @map("sop_version_id") @db.Uuid
+  enabledById            String                          @map("enabled_by") @db.Uuid
+  enabledAt              DateTime                        @map("enabled_at")
+  currentStageInstanceId String?                         @unique @map("current_stage_instance_id") @db.Uuid
+  completedStageCount    Int                             @default(0) @map("completed_stage_count")
+  progressVersion        Int                             @default(0) @map("progress_version")
+  calculationStatus      ProgressCalculationStatus       @default(NORMAL) @map("calculation_status")
+  calculationErrorCode   String?                         @map("calculation_error_code") @db.VarChar(64)
+  lastCalculatedAt       DateTime?                       @map("last_calculated_at")
+  student                Student                         @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  sopVersion             SopVersion                      @relation(fields: [sopVersionId], references: [id], onDelete: Restrict)
+  enabledBy              User                            @relation("ServiceActivationOperator", fields: [enabledById], references: [id], onDelete: Restrict)
+  currentStage           StageInstance?                  @relation("CurrentStage", fields: [currentStageInstanceId], references: [id], onDelete: SetNull)
+  stages                 StageInstance[]                 @relation("ActivationStages")
+  tasks                  TaskInstance[]
+  calculationRuns        ServiceProgressCalculationRun[]
 
   @@index([sopVersionId])
   @@map("student_service_activations")
 }
 
 model StageInstance {
-  id                  String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  studentId           String                    @map("student_id") @db.Uuid
-  serviceActivationId String                    @map("service_activation_id") @db.Uuid
-  sopVersionId        String                    @map("sop_version_id") @db.Uuid
-  stageTemplateId     String                    @map("stage_template_id") @db.Uuid
-  stageCodeSnapshot   String                    @map("stage_code_snapshot") @db.VarChar(32)
-  nameSnapshot        String                    @map("name_snapshot") @db.VarChar(100)
-  sequenceNoSnapshot  Int                       @map("sequence_no_snapshot")
-  descriptionSnapshot String?                   @map("description_snapshot") @db.VarChar(1000)
-  student             Student                   @relation(fields: [studentId], references: [id], onDelete: Restrict)
-  serviceActivation   StudentServiceActivation  @relation(fields: [serviceActivationId], references: [id], onDelete: Restrict)
-  sopVersion          SopVersion                @relation(fields: [sopVersionId], references: [id], onDelete: Restrict)
-  stageTemplate       SopStageTemplate          @relation(fields: [stageTemplateId], references: [id], onDelete: Restrict)
-  tasks               TaskInstance[]
+  id                   String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId            String                    @map("student_id") @db.Uuid
+  serviceActivationId  String                    @map("service_activation_id") @db.Uuid
+  sopVersionId         String                    @map("sop_version_id") @db.Uuid
+  stageTemplateId      String                    @map("stage_template_id") @db.Uuid
+  stageCodeSnapshot    String                    @map("stage_code_snapshot") @db.VarChar(32)
+  nameSnapshot         String                    @map("name_snapshot") @db.VarChar(100)
+  sequenceNoSnapshot   Int                       @map("sequence_no_snapshot")
+  descriptionSnapshot  String?                   @map("description_snapshot") @db.VarChar(1000)
+  status               StageStatus               @default(NOT_STARTED)
+  startedAt            DateTime?                 @map("started_at")
+  completedAt          DateTime?                 @map("completed_at")
+  completionReason     String?                   @map("completion_reason") @db.VarChar(500)
+  version              Int                       @default(0)
+  student              Student                   @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  serviceActivation    StudentServiceActivation  @relation("ActivationStages", fields: [serviceActivationId], references: [id], onDelete: Restrict)
+  currentForActivation StudentServiceActivation? @relation("CurrentStage")
+  sopVersion           SopVersion                @relation(fields: [sopVersionId], references: [id], onDelete: Restrict)
+  stageTemplate        SopStageTemplate          @relation(fields: [stageTemplateId], references: [id], onDelete: Restrict)
+  tasks                TaskInstance[]
+  transitions          StageTransition[]
 
   @@unique([serviceActivationId, stageTemplateId])
   @@unique([serviceActivationId, sequenceNoSnapshot])
   @@index([studentId, sequenceNoSnapshot])
+  @@index([serviceActivationId, status, sequenceNoSnapshot])
   @@map("stage_instances")
 }
 
 model TaskInstance {
-  id                            String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  studentId                     String                    @map("student_id") @db.Uuid
-  serviceActivationId           String                    @map("service_activation_id") @db.Uuid
-  stageInstanceId               String                    @map("stage_instance_id") @db.Uuid
-  taskTemplateId                String                    @map("task_template_id") @db.Uuid
-  sopVersionId                  String                    @map("sop_version_id") @db.Uuid
-  titleSnapshot                 String                    @map("title_snapshot") @db.VarChar(150)
-  descriptionSnapshot           String?                   @map("description_snapshot") @db.VarChar(2000)
-  completionCriteriaSnapshot    String?                   @map("completion_criteria_snapshot") @db.VarChar(2000)
-  completionWindowHoursSnapshot Int                       @map("completion_window_hours_snapshot")
-  ownerId                       String?                   @map("owner_id") @db.Uuid
-  status                        TaskStatus                @default(TODO)
-  progressPercent               Int?                      @map("progress_percent")
-  originalDueAt                 DateTime                  @map("original_due_at")
-  currentDueAt                  DateTime                  @map("current_due_at")
-  startedAt                     DateTime?                 @map("started_at")
-  completedAt                   DateTime?                 @map("completed_at")
-  completionNote                String?                   @map("completion_note") @db.VarChar(2000)
-  canceledAt                    DateTime?                 @map("canceled_at")
-  canceledById                  String?                   @map("canceled_by") @db.Uuid
-  cancelReason                  String?                   @map("cancel_reason") @db.VarChar(500)
-  version                       Int                       @default(1)
-  createdAt                     DateTime                  @default(now()) @map("created_at")
-  updatedAt                     DateTime                  @updatedAt @map("updated_at")
-  student                       Student                   @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  id                            String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId                     String                   @map("student_id") @db.Uuid
+  serviceActivationId           String                   @map("service_activation_id") @db.Uuid
+  stageInstanceId               String                   @map("stage_instance_id") @db.Uuid
+  taskTemplateId                String?                  @map("task_template_id") @db.Uuid
+  sopVersionId                  String                   @map("sop_version_id") @db.Uuid
+  sourceType                    TaskSourceType           @default(SOP) @map("source_type")
+  isBlockingSnapshot            Boolean                  @default(true) @map("is_blocking_snapshot")
+  createdById                   String?                  @map("created_by") @db.Uuid
+  titleSnapshot                 String                   @map("title_snapshot") @db.VarChar(150)
+  descriptionSnapshot           String?                  @map("description_snapshot") @db.VarChar(2000)
+  completionCriteriaSnapshot    String?                  @map("completion_criteria_snapshot") @db.VarChar(2000)
+  completionWindowHoursSnapshot Int?                     @map("completion_window_hours_snapshot")
+  ownerId                       String?                  @map("owner_id") @db.Uuid
+  status                        TaskStatus               @default(TODO)
+  progressPercent               Int?                     @map("progress_percent")
+  originalDueAt                 DateTime                 @map("original_due_at")
+  currentDueAt                  DateTime                 @map("current_due_at")
+  startedAt                     DateTime?                @map("started_at")
+  completedAt                   DateTime?                @map("completed_at")
+  completionNote                String?                  @map("completion_note") @db.VarChar(2000)
+  canceledAt                    DateTime?                @map("canceled_at")
+  canceledById                  String?                  @map("canceled_by") @db.Uuid
+  cancelReason                  String?                  @map("cancel_reason") @db.VarChar(500)
+  version                       Int                      @default(1)
+  createdAt                     DateTime                 @default(now()) @map("created_at")
+  updatedAt                     DateTime                 @updatedAt @map("updated_at")
+  student                       Student                  @relation(fields: [studentId], references: [id], onDelete: Restrict)
   serviceActivation             StudentServiceActivation @relation(fields: [serviceActivationId], references: [id], onDelete: Restrict)
-  stageInstance                 StageInstance             @relation(fields: [stageInstanceId], references: [id], onDelete: Restrict)
-  taskTemplate                  SopTaskTemplate           @relation(fields: [taskTemplateId], references: [id], onDelete: Restrict)
-  sopVersion                    SopVersion                @relation(fields: [sopVersionId], references: [id], onDelete: Restrict)
-  owner                         User?                     @relation("TaskOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-  canceledBy                    User?                     @relation("TaskCancellationOperator", fields: [canceledById], references: [id], onDelete: SetNull)
+  stageInstance                 StageInstance            @relation(fields: [stageInstanceId], references: [id], onDelete: Restrict)
+  taskTemplate                  SopTaskTemplate?         @relation(fields: [taskTemplateId], references: [id], onDelete: Restrict)
+  sopVersion                    SopVersion               @relation(fields: [sopVersionId], references: [id], onDelete: Restrict)
+  owner                         User?                    @relation("TaskOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  createdBy                     User?                    @relation("TaskCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  canceledBy                    User?                    @relation("TaskCancellationOperator", fields: [canceledById], references: [id], onDelete: SetNull)
   progressRecords               TaskProgressRecord[]
   extensionReports              TaskExtensionReport[]
   dueDateChanges                TaskDueDateChange[]
@@ -362,13 +422,60 @@ model TaskInstance {
   overdueAlerts                 OverdueAlert[]
   timelineEvents                TaskTimelineEvent[]
   operationReceipts             TaskOperationReceipt[]
+  stageTransitionsTriggered     StageTransition[]        @relation("StageTransitionTriggerTask")
 
   @@unique([serviceActivationId, taskTemplateId])
   @@index([ownerId, status, currentDueAt])
   @@index([studentId, status])
   @@index([stageInstanceId])
+  @@index([stageInstanceId, isBlockingSnapshot, status])
+  @@index([sourceType, status])
   @@index([status, currentDueAt])
   @@map("task_instances")
+}
+
+model StageTransition {
+  id               String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  stageInstanceId  String                         @map("stage_instance_id") @db.Uuid
+  fromStatus       StageStatus?                   @map("from_status")
+  toStatus         StageStatus                    @map("to_status")
+  triggerType      StageTransitionTriggerType     @map("trigger_type")
+  triggerTaskId    String?                        @map("trigger_task_id") @db.Uuid
+  summary          String                         @db.VarChar(500)
+  calculationRunId String?                        @map("calculation_run_id") @db.Uuid
+  deduplicationKey String                         @unique @map("deduplication_key") @db.VarChar(255)
+  createdAt        DateTime                       @default(now()) @map("created_at")
+  stageInstance    StageInstance                  @relation(fields: [stageInstanceId], references: [id], onDelete: Restrict)
+  triggerTask      TaskInstance?                  @relation("StageTransitionTriggerTask", fields: [triggerTaskId], references: [id], onDelete: SetNull)
+  calculationRun   ServiceProgressCalculationRun? @relation(fields: [calculationRunId], references: [id], onDelete: SetNull)
+
+  @@index([stageInstanceId, createdAt])
+  @@index([calculationRunId])
+  @@map("stage_transitions")
+}
+
+model ServiceProgressCalculationRun {
+  id                  String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  serviceActivationId String                       @map("service_activation_id") @db.Uuid
+  type                ProgressCalculationRunType
+  status              ProgressCalculationRunStatus @default(RUNNING)
+  initiatedById       String?                      @map("initiated_by") @db.Uuid
+  requestId           String                       @map("request_id") @db.VarChar(64)
+  idempotencyKey      String?                      @map("idempotency_key") @db.VarChar(128)
+  changeSummary       Json?                        @map("change_summary")
+  errorCode           String?                      @map("error_code") @db.VarChar(64)
+  errorSummary        String?                      @map("error_summary") @db.VarChar(1000)
+  startedAt           DateTime                     @default(now()) @map("started_at")
+  completedAt         DateTime?                    @map("completed_at")
+  activation          StudentServiceActivation     @relation(fields: [serviceActivationId], references: [id], onDelete: Restrict)
+  initiatedBy         User?                        @relation("ProgressCalculationInitiator", fields: [initiatedById], references: [id], onDelete: SetNull)
+  transitions         StageTransition[]
+
+  @@unique([serviceActivationId, type, requestId], map: "service_progress_run_request_key")
+  @@unique([serviceActivationId, type, idempotencyKey], map: "service_progress_run_idempotency_key")
+  @@index([serviceActivationId, startedAt])
+  @@index([status, startedAt])
+  @@map("service_progress_calculation_runs")
 }
 
 model TaskProgressRecord {
@@ -451,18 +558,18 @@ model OverdueAlert {
 }
 
 model TaskTimelineEvent {
-  id         String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  taskId     String                    @map("task_id") @db.Uuid
-  eventType  TaskTimelineEventType     @map("event_type")
-  actorId    String?                   @map("actor_id") @db.Uuid
-  actorRole  String?                   @map("actor_role") @db.VarChar(32)
-  summary    String                    @db.VarChar(500)
-  reason     String?                   @db.VarChar(500)
-  beforeData Json?                     @map("before_data")
-  afterData  Json?                     @map("after_data")
-  createdAt  DateTime                  @default(now()) @map("created_at")
-  task       TaskInstance              @relation(fields: [taskId], references: [id], onDelete: Restrict)
-  actor      User?                     @relation("TaskTimelineActor", fields: [actorId], references: [id], onDelete: SetNull)
+  id         String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  taskId     String                @map("task_id") @db.Uuid
+  eventType  TaskTimelineEventType @map("event_type")
+  actorId    String?               @map("actor_id") @db.Uuid
+  actorRole  String?               @map("actor_role") @db.VarChar(32)
+  summary    String                @db.VarChar(500)
+  reason     String?               @db.VarChar(500)
+  beforeData Json?                 @map("before_data")
+  afterData  Json?                 @map("after_data")
+  createdAt  DateTime              @default(now()) @map("created_at")
+  task       TaskInstance          @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  actor      User?                 @relation("TaskTimelineActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([taskId, createdAt])
   @@map("task_timeline_events")

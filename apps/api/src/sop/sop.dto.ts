@@ -2,6 +2,7 @@ import { Type } from "class-transformer";
 import {
   ArrayMaxSize,
   ArrayMinSize,
+  IsBoolean,
   IsArray,
   IsInt,
   IsOptional,
@@ -36,6 +37,10 @@ export class SopTaskTemplateInputDto {
   @IsInt()
   @Min(1)
   completionWindowHours!: number;
+
+  @ApiProperty({ default: true, description: "是否阻止所属阶段自动完成" })
+  @IsBoolean()
+  isBlocking = true;
 }
 
 export class SopStageTemplateInputDto {

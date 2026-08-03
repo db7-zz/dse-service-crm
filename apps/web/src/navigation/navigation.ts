@@ -9,6 +9,7 @@ export interface NavigationItem {
   label: string;
   href: string;
   permission?: PermissionCodeType;
+  anyPermissions?: PermissionCodeType[];
 }
 
 const NAVIGATION: NavigationItem[] = [
@@ -22,7 +23,7 @@ const NAVIGATION: NavigationItem[] = [
     key: "students",
     label: "学生管理",
     href: "/workspace/students",
-    permission: PermissionCode.STUDENTS_READ,
+    anyPermissions: [PermissionCode.STUDENTS_READ, PermissionCode.STUDENTS_OWN_READ],
   },
   {
     key: "sop",
@@ -58,7 +59,10 @@ const NAVIGATION: NavigationItem[] = [
 
 export function navigationFor(user: AuthenticatedUser): NavigationItem[] {
   return NAVIGATION.filter(
-    (item) => !item.permission || user.permissions.includes(item.permission),
+    (item) =>
+      (!item.permission || user.permissions.includes(item.permission)) &&
+      (!item.anyPermissions ||
+        item.anyPermissions.some((permission) => user.permissions.includes(permission))),
   );
 }
 

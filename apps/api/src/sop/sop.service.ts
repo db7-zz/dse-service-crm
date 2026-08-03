@@ -5,6 +5,7 @@ import { ApiException } from "../common/api-exception.js";
 import type { RequestContext } from "../common/request-context.js";
 import { PRISMA } from "../database/database.module.js";
 import type { PublishSopVersionDto, UpdateSopVersionDto } from "./sop.dto.js";
+import { blockingStageValidationErrors } from "./sop-blocking.logic.js";
 
 const BASELINE_STAGES = [
   ["PROFILE", "建档阶段"],
@@ -89,6 +90,7 @@ export class SopService {
                   completionCriteria: task.completionCriteria,
                   completionWindowHours: task.completionWindowHours,
                   ownerRole: "BUTLER",
+                  isBlocking: task.isBlocking,
                 })),
               },
             }))
@@ -187,6 +189,7 @@ export class SopService {
                   completionCriteria: this.optionalText(task.completionCriteria),
                   completionWindowHours: task.completionWindowHours,
                   ownerRole: "BUTLER",
+                  isBlocking: task.isBlocking,
                 })),
               },
             })),
@@ -205,6 +208,19 @@ export class SopService {
           afterData: this.auditSnapshot(updated),
         }),
       });
+      const beforeBlocking = this.blockingSnapshot(existing as SopWithContent);
+      const afterBlocking = this.blockingSnapshot(updated);
+      if (JSON.stringify(beforeBlocking) !== JSON.stringify(afterBlocking)) {
+        await transaction.auditLog.create({
+          data: this.auditData(request, {
+            action: "SOP_TASK_BLOCKING_CONFIGURATION_CHANGED",
+            objectId: versionId,
+            beforeData: { tasks: beforeBlocking },
+            afterData: { tasks: afterBlocking },
+            reason: "管理员保存 SOP 草稿阻塞任务配置",
+          }),
+        });
+      }
       return this.serialize(updated);
     });
   }
@@ -233,10 +249,15 @@ export class SopService {
         this.assertEditable(draft, body.version);
         const errors = this.validationErrors(draft as SopWithContent);
         if (errors.length > 0) {
+          const blockingError = errors.find(
+            (error) => error.code === ErrorCode.STAGE_BLOCKING_TASK_REQUIRED,
+          );
           throw new ApiException(
             HttpStatus.UNPROCESSABLE_ENTITY,
-            ErrorCode.SOP_VALIDATION_FAILED,
-            "SOP 完整性校验未通过",
+            blockingError
+              ? ErrorCode.STAGE_BLOCKING_TASK_REQUIRED
+              : ErrorCode.SOP_VALIDATION_FAILED,
+            blockingError ? blockingError.message : "SOP 完整性校验未通过",
             { errors },
           );
         }
@@ -296,6 +317,16 @@ export class SopService {
         return this.serialize(published);
       });
     } catch (error) {
+      if (error instanceof ApiException && error.code === ErrorCode.STAGE_BLOCKING_TASK_REQUIRED) {
+        await this.prisma.auditLog.create({
+          data: this.auditData(request, {
+            action: "SOP_PUBLISH_REJECTED_NO_BLOCKING_TASK",
+            objectId: versionId,
+            afterData: (error.details ?? {}) as Prisma.InputJsonObject,
+            reason: error.message,
+          }),
+        });
+      }
       if (this.isUniqueConstraintError(error)) {
         throw new ApiException(
           HttpStatus.CONFLICT,
@@ -367,7 +398,7 @@ export class SopService {
   }
 
   private validationErrors(version: SopWithContent) {
-    const errors: Array<{ path: string; message: string }> = [];
+    const errors: Array<{ path: string; message: string; code?: string }> = [];
     if (version.stages.length !== 8) {
       errors.push({ path: "stages", message: "SOP 必须包含且只能包含八个阶段" });
     }
@@ -378,6 +409,7 @@ export class SopService {
     ) {
       errors.push({ path: "stages.sequenceNo", message: "阶段顺序必须唯一覆盖 1–8" });
     }
+    errors.push(...blockingStageValidationErrors(version.stages));
     for (const stage of version.stages) {
       if (!stage.name.trim() || !stage.stageCode.trim()) {
         errors.push({
@@ -444,6 +476,7 @@ export class SopService {
           completionCriteria: task.completionCriteria,
           completionWindowHours: task.completionWindowHours,
           ownerRole: task.ownerRole,
+          isBlocking: task.isBlocking,
         })),
       })),
     };
@@ -456,7 +489,27 @@ export class SopService {
       version: version.version,
       stageCount: version.stages.length,
       taskCount: version.stages.reduce((total, stage) => total + stage.tasks.length, 0),
+      blockingTaskCount: version.stages.reduce(
+        (total, stage) => total + stage.tasks.filter((task) => task.isBlocking).length,
+        0,
+      ),
+      blockingTasksByStage: version.stages.map((stage) => ({
+        stageCode: stage.stageCode,
+        count: stage.tasks.filter((task) => task.isBlocking).length,
+      })),
     };
+  }
+
+  private blockingSnapshot(version: SopWithContent): Prisma.InputJsonArray {
+    return version.stages.flatMap((stage) =>
+      stage.tasks.map((task) => ({
+        stageCode: stage.stageCode,
+        stageSequenceNo: stage.sequenceNo,
+        taskSequenceNo: task.sequenceNo,
+        taskName: task.name,
+        isBlocking: task.isBlocking,
+      })),
+    );
   }
 
   private versionConflict(currentVersion: number) {

@@ -8,13 +8,19 @@ import { useAuth } from "./auth-context";
 
 export function PermissionPage({
   permission,
+  anyPermissions,
   children,
 }: {
-  permission: PermissionCode;
+  permission?: PermissionCode;
+  anyPermissions?: PermissionCode[];
   children: ReactNode;
 }) {
   const { user } = useAuth();
-  if (!user?.permissions.includes(permission)) {
+  const allowed =
+    Boolean(user) &&
+    (!permission || user!.permissions.includes(permission)) &&
+    (!anyPermissions || anyPermissions.some((candidate) => user!.permissions.includes(candidate)));
+  if (!allowed) {
     return (
       <PermissionDenied
         description="当前角色没有访问此页面的权限"

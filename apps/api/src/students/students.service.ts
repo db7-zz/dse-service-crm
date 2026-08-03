@@ -23,6 +23,38 @@ const STUDENT_INCLUDE = {
   createdBy: { select: { id: true, displayName: true } },
 } as const;
 
+const STUDENT_LIST_INCLUDE = {
+  ...STUDENT_INCLUDE,
+  serviceActivation: {
+    include: {
+      currentStage: {
+        select: {
+          id: true,
+          stageCodeSnapshot: true,
+          nameSnapshot: true,
+          sequenceNoSnapshot: true,
+          status: true,
+          version: true,
+        },
+      },
+    },
+  },
+  stageInstances: {
+    select: {
+      id: true,
+      status: true,
+      tasks: {
+        select: {
+          stageInstanceId: true,
+          status: true,
+          currentDueAt: true,
+          isBlockingSnapshot: true,
+        },
+      },
+    },
+  },
+} as const;
+
 const STUDENT_DETAIL_INCLUDE = {
   ...STUDENT_INCLUDE,
   serviceActivation: {
@@ -35,16 +67,33 @@ const STUDENT_DETAIL_INCLUDE = {
         },
       },
       enabledBy: { select: { id: true, displayName: true } },
+      currentStage: {
+        select: {
+          id: true,
+          stageCodeSnapshot: true,
+          nameSnapshot: true,
+          sequenceNoSnapshot: true,
+          status: true,
+          version: true,
+        },
+      },
     },
   },
   stageInstances: {
     orderBy: { sequenceNoSnapshot: "asc" as const },
     include: {
       tasks: {
-        orderBy: { taskTemplate: { sequenceNo: "asc" as const } },
+        orderBy: { createdAt: "asc" as const },
         include: {
           owner: { select: { id: true, displayName: true } },
           taskTemplate: { select: { sequenceNo: true } },
+        },
+      },
+      transitions: {
+        orderBy: { createdAt: "asc" as const },
+        include: {
+          triggerTask: { select: { id: true, titleSnapshot: true } },
+          calculationRun: { select: { id: true, type: true } },
         },
       },
     },
@@ -60,47 +109,118 @@ const STUDENT_DETAIL_INCLUDE = {
 } as const;
 
 type StudentWithPeople = Prisma.StudentGetPayload<{ include: typeof STUDENT_INCLUDE }>;
+type StudentWithProgress = Prisma.StudentGetPayload<{ include: typeof STUDENT_LIST_INCLUDE }>;
 type StudentWithHistory = Prisma.StudentGetPayload<{ include: typeof STUDENT_DETAIL_INCLUDE }>;
 
 @Injectable()
 export class StudentsService {
   public constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
-  public async list(input: ListStudentsQueryDto) {
+  public async list(input: ListStudentsQueryDto, forcedButlerId?: string) {
     const requestedPage = Math.max(1, Number(input.page) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(input.pageSize) || 20));
     const search = input.search?.trim();
-    const where: Prisma.StudentWhereInput = {
-      ...(input.serviceStatus ? { serviceStatus: input.serviceStatus } : {}),
-      ...(input.defaultButlerId ? { defaultButlerId: input.defaultButlerId } : {}),
-      ...(input.plannerId ? { plannerId: input.plannerId } : {}),
-      ...(search
-        ? {
-            OR: [
-              { studentNo: { contains: search, mode: "insensitive" } },
-              { name: { contains: search, mode: "insensitive" } },
-              { phone: { contains: search, mode: "insensitive" } },
-              { email: { contains: search, mode: "insensitive" } },
-            ],
-          }
-        : {}),
-    };
-    const total = await this.prisma.student.count({ where });
-    const lastPage = Math.max(1, Math.ceil(total / pageSize));
-    const page = Math.min(requestedPage, lastPage);
-    const items = await this.prisma.student.findMany({
-      where,
-      include: STUDENT_INCLUDE,
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+    const baseConditions: Prisma.Sql[] = [Prisma.sql`TRUE`];
+    if (input.serviceStatus) {
+      baseConditions.push(
+        Prisma.sql`student."service_status" = ${input.serviceStatus}::"StudentServiceStatus"`,
+      );
+    }
+    const butlerId = forcedButlerId ?? input.defaultButlerId;
+    if (butlerId) {
+      baseConditions.push(Prisma.sql`student."default_butler_id" = ${butlerId}::uuid`);
+    }
+    if (input.plannerId) {
+      baseConditions.push(Prisma.sql`student."planner_id" = ${input.plannerId}::uuid`);
+    }
+    if (search) {
+      baseConditions.push(Prisma.sql`(
+        student."student_no" ILIKE ${`%${search}%`}
+        OR student."name" ILIKE ${`%${search}%`}
+        OR student."phone" ILIKE ${`%${search}%`}
+        OR student."email" ILIKE ${`%${search}%`}
+      )`);
+    }
+
+    const metricConditions: Prisma.Sql[] = [Prisma.sql`TRUE`];
+    if (input.currentStageCode) {
+      metricConditions.push(Prisma.sql`metrics."current_stage_code" = ${input.currentStageCode}`);
+    }
+    if (input.hasCurrentBlockers !== undefined) {
+      metricConditions.push(
+        input.hasCurrentBlockers
+          ? Prisma.sql`metrics."current_blocker_count" > 0`
+          : Prisma.sql`metrics."completed_stage_count" IS NOT NULL AND metrics."current_blocker_count" = 0`,
+      );
+    }
+
+    const metricsCte = Prisma.sql`
+      WITH student_metrics AS (
+        SELECT
+          student."id",
+          student."created_at",
+          activation."completed_stage_count",
+          current_stage."stage_code_snapshot" AS "current_stage_code",
+          COUNT(task."id") FILTER (
+            WHERE task."stage_instance_id" = activation."current_stage_instance_id"
+              AND task."is_blocking_snapshot" = TRUE
+              AND task."status" IN ('TODO', 'IN_PROGRESS')
+          )::INTEGER AS "current_blocker_count",
+          COUNT(task."id") FILTER (
+            WHERE task."status" IN ('TODO', 'IN_PROGRESS')
+              AND task."current_due_at" < CURRENT_TIMESTAMP
+          )::INTEGER AS "overdue_count"
+        FROM "students" student
+        LEFT JOIN "student_service_activations" activation
+          ON activation."student_id" = student."id"
+        LEFT JOIN "stage_instances" current_stage
+          ON current_stage."id" = activation."current_stage_instance_id"
+        LEFT JOIN "task_instances" task
+          ON task."student_id" = student."id"
+        WHERE ${Prisma.join(baseConditions, " AND ")}
+        GROUP BY
+          student."id",
+          student."created_at",
+          activation."completed_stage_count",
+          current_stage."stage_code_snapshot"
+      )
+    `;
+    const orderBy = this.studentProgressOrder(input.sortBy, input.sortOrder);
+
+    return this.prisma.$transaction(async (transaction) => {
+      const countRows = await transaction.$queryRaw<Array<{ total: bigint }>>(Prisma.sql`
+        ${metricsCte}
+        SELECT COUNT(*)::BIGINT AS "total"
+        FROM student_metrics metrics
+        WHERE ${Prisma.join(metricConditions, " AND ")}
+      `);
+      const total = Number(countRows[0]?.total ?? 0n);
+      const lastPage = Math.max(1, Math.ceil(total / pageSize));
+      const page = Math.min(requestedPage, lastPage);
+      const idRows = await transaction.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+        ${metricsCte}
+        SELECT metrics."id"
+        FROM student_metrics metrics
+        WHERE ${Prisma.join(metricConditions, " AND ")}
+        ORDER BY ${orderBy}
+        LIMIT ${pageSize}
+        OFFSET ${(page - 1) * pageSize}
+      `);
+      if (idRows.length === 0) return { items: [], page, pageSize, total };
+
+      const students = await transaction.student.findMany({
+        where: { id: { in: idRows.map(({ id }) => id) } },
+        include: STUDENT_LIST_INCLUDE,
+      });
+      const byId = new Map(students.map((student) => [student.id, student]));
+      const items = idRows.map(({ id }) => byId.get(id)).filter((student) => student !== undefined);
+      return {
+        items: items.map((student) => this.serializeStudentWithProgress(student)),
+        page,
+        pageSize,
+        total,
+      };
     });
-    return {
-      items: items.map((student) => this.serializeStudent(student)),
-      page,
-      pageSize,
-      total,
-    };
   }
 
   public async responsiblePersonOptions() {
@@ -253,14 +373,66 @@ export class StudentsService {
   }
 
   public async detail(studentId: string) {
-    const student = await this.prisma.student.findUnique({
-      where: { id: studentId },
-      include: STUDENT_DETAIL_INCLUDE,
-    });
-    if (!student) {
-      throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND, "学生不存在");
-    }
-    return this.serializeStudentDetail(student);
+    return this.serializeStudentDetail(await this.loadDetail(studentId));
+  }
+
+  public async listMine(input: ListStudentsQueryDto, request: RequestContext) {
+    const actor = request.authenticatedUser as AuthenticatedUser;
+    const result = await this.list(input, actor.id);
+    return {
+      ...result,
+      items: result.items.map((student) => ({
+        id: student.id,
+        studentNo: student.studentNo,
+        name: student.name,
+        defaultButler: student.defaultButler,
+        serviceStatus: student.serviceStatus,
+        version: student.version,
+        progress: student.progress,
+        createdAt: student.createdAt,
+        updatedAt: student.updatedAt,
+      })),
+    };
+  }
+
+  public async detailMine(studentId: string, request: RequestContext) {
+    const actor = request.authenticatedUser as AuthenticatedUser;
+    const student = await this.loadDetail(studentId, actor.id, request);
+    const detail = this.redactTaskDetailsForButler(
+      this.serializeStudentDetail(student),
+      student,
+      actor.id,
+    );
+    return {
+      id: detail.id,
+      studentNo: detail.studentNo,
+      name: detail.name,
+      defaultButler: detail.defaultButler,
+      serviceStatus: detail.serviceStatus,
+      version: detail.version,
+      createdAt: detail.createdAt,
+      updatedAt: detail.updatedAt,
+      activation: detail.activation,
+      sopVersion: detail.sopVersion,
+      taskSummary: detail.taskSummary,
+      progress: detail.progress,
+      stages: detail.stages,
+    };
+  }
+
+  public async serviceProgress(studentId: string) {
+    return this.progressResponse(this.serializeStudentDetail(await this.loadDetail(studentId)));
+  }
+
+  public async serviceProgressMine(studentId: string, request: RequestContext) {
+    const actor = request.authenticatedUser as AuthenticatedUser;
+    const student = await this.loadDetail(studentId, actor.id, request);
+    const detail = this.redactTaskDetailsForButler(
+      this.serializeStudentDetail(student),
+      student,
+      actor.id,
+    );
+    return this.progressResponse(detail);
   }
 
   public async update(studentId: string, body: UpdateStudentDto, request: RequestContext) {
@@ -461,6 +633,13 @@ export class StudentsService {
     };
   }
 
+  private serializeStudentWithProgress(student: StudentWithProgress) {
+    return {
+      ...this.serializeStudent(student),
+      progress: this.progressSummary(student),
+    };
+  }
+
   private serializeStudentDetail(student: StudentWithHistory) {
     const tasks = student.stageInstances.flatMap((stage) => stage.tasks);
     const now = Date.now();
@@ -486,6 +665,7 @@ export class StudentsService {
         todo: tasks.filter((task) => task.status === "TODO").length,
         inProgress: tasks.filter((task) => task.status === "IN_PROGRESS").length,
         completed: tasks.filter((task) => task.status === "COMPLETED").length,
+        canceled: tasks.filter((task) => task.status === "CANCELED").length,
         overdue: tasks.filter(
           (task) =>
             (task.status === "TODO" || task.status === "IN_PROGRESS") &&
@@ -494,17 +674,46 @@ export class StudentsService {
         unassigned: tasks.filter(
           (task) => !task.ownerId && (task.status === "TODO" || task.status === "IN_PROGRESS"),
         ).length,
+        completionRate: this.taskCompletionRate(tasks),
       },
+      progress: this.progressSummary(student),
       stages: student.stageInstances.map((stage) => ({
         id: stage.id,
         stageCode: stage.stageCodeSnapshot,
         name: stage.nameSnapshot,
         sequenceNo: stage.sequenceNoSnapshot,
         description: stage.descriptionSnapshot,
+        status: stage.status,
+        startedAt: stage.startedAt?.toISOString() ?? null,
+        completedAt: stage.completedAt?.toISOString() ?? null,
+        completionReason: stage.completionReason,
+        version: stage.version,
+        openBlockingTaskCount: stage.tasks.filter(
+          (task) =>
+            task.isBlockingSnapshot && (task.status === "TODO" || task.status === "IN_PROGRESS"),
+        ).length,
+        transitions: stage.transitions.map((transition) => ({
+          id: transition.id,
+          fromStatus: transition.fromStatus,
+          toStatus: transition.toStatus,
+          triggerType: transition.triggerType,
+          summary: transition.summary,
+          triggerTask: transition.triggerTask
+            ? { id: transition.triggerTask.id, title: transition.triggerTask.titleSnapshot }
+            : null,
+          calculationRun: transition.calculationRun,
+          createdAt: transition.createdAt.toISOString(),
+        })),
         tasks: stage.tasks.map((task) => ({
           id: task.id,
           title: task.titleSnapshot,
-          sequenceNo: task.taskTemplate.sequenceNo,
+          sequenceNo: task.taskTemplate?.sequenceNo ?? null,
+          sourceType: task.sourceType,
+          isBlocking: task.isBlockingSnapshot,
+          isLegacy:
+            stage.status === "COMPLETED" &&
+            !task.isBlockingSnapshot &&
+            (task.status === "TODO" || task.status === "IN_PROGRESS"),
           status: task.status,
           owner: task.owner,
           currentDueAt: task.currentDueAt.toISOString(),
@@ -522,6 +731,150 @@ export class StudentsService {
         reason: change.reason,
         operator: change.operator,
         createdAt: change.createdAt.toISOString(),
+      })),
+    };
+  }
+
+  private progressSummary(student: StudentWithProgress | StudentWithHistory) {
+    const activation = student.serviceActivation;
+    if (!activation) return null;
+    const tasks = student.stageInstances.flatMap((stage) => stage.tasks);
+    const now = Date.now();
+    const currentStageId = activation.currentStageInstanceId;
+    return {
+      calculationStatus: activation.calculationStatus,
+      calculationErrorCode: activation.calculationErrorCode,
+      lastCalculatedAt: activation.lastCalculatedAt?.toISOString() ?? null,
+      progressVersion: activation.progressVersion,
+      completedStageCount: activation.completedStageCount,
+      totalStageCount: 8,
+      currentStage: activation.currentStage
+        ? {
+            id: activation.currentStage.id,
+            code: activation.currentStage.stageCodeSnapshot,
+            name: activation.currentStage.nameSnapshot,
+            sequenceNo: activation.currentStage.sequenceNoSnapshot,
+            status: activation.currentStage.status,
+            version: activation.currentStage.version,
+          }
+        : null,
+      currentBlockingTaskCount: tasks.filter(
+        (task) =>
+          task.stageInstanceId === currentStageId &&
+          task.isBlockingSnapshot &&
+          (task.status === "TODO" || task.status === "IN_PROGRESS"),
+      ).length,
+      overdueTaskCount: tasks.filter(
+        (task) =>
+          (task.status === "TODO" || task.status === "IN_PROGRESS") &&
+          task.currentDueAt.getTime() < now,
+      ).length,
+      legacyTaskCount: student.stageInstances.reduce(
+        (total, stage) =>
+          total +
+          (stage.status === "COMPLETED"
+            ? stage.tasks.filter(
+                (task) =>
+                  !task.isBlockingSnapshot &&
+                  (task.status === "TODO" || task.status === "IN_PROGRESS"),
+              ).length
+            : 0),
+        0,
+      ),
+      taskCompletionRate: this.taskCompletionRate(tasks),
+    };
+  }
+
+  private taskCompletionRate(tasks: Array<{ status: string }>) {
+    const denominator = tasks.filter((task) => task.status !== "CANCELED").length;
+    if (denominator === 0) return null;
+    return tasks.filter((task) => task.status === "COMPLETED").length / denominator;
+  }
+
+  private studentProgressOrder(
+    sortBy: ListStudentsQueryDto["sortBy"],
+    sortOrder: ListStudentsQueryDto["sortOrder"],
+  ) {
+    if (!sortBy) return Prisma.sql`metrics."created_at" DESC, metrics."id" DESC`;
+    const ascending = sortOrder === "asc";
+    if (sortBy === "stageProgress") {
+      return ascending
+        ? Prisma.sql`metrics."completed_stage_count" ASC NULLS FIRST, metrics."created_at" DESC, metrics."id" DESC`
+        : Prisma.sql`metrics."completed_stage_count" DESC NULLS LAST, metrics."created_at" DESC, metrics."id" DESC`;
+    }
+    if (sortBy === "currentBlockers") {
+      return ascending
+        ? Prisma.sql`metrics."current_blocker_count" ASC, metrics."created_at" DESC, metrics."id" DESC`
+        : Prisma.sql`metrics."current_blocker_count" DESC, metrics."created_at" DESC, metrics."id" DESC`;
+    }
+    return ascending
+      ? Prisma.sql`metrics."overdue_count" ASC, metrics."created_at" DESC, metrics."id" DESC`
+      : Prisma.sql`metrics."overdue_count" DESC, metrics."created_at" DESC, metrics."id" DESC`;
+  }
+
+  private async loadDetail(studentId: string, forcedButlerId?: string, request?: RequestContext) {
+    const student = await this.prisma.student.findFirst({
+      where: { id: studentId, ...(forcedButlerId ? { defaultButlerId: forcedButlerId } : {}) },
+      include: STUDENT_DETAIL_INCLUDE,
+    });
+    if (student) return student;
+    const exists = await this.prisma.student.count({ where: { id: studentId } });
+    if (exists > 0 && forcedButlerId) {
+      if (request) {
+        const actor = request.authenticatedUser as AuthenticatedUser;
+        await this.prisma.auditLog.create({
+          data: {
+            operatorId: actor.id,
+            operatorRole: actor.roles[0] ?? null,
+            objectType: "student_service_progress",
+            objectId: studentId,
+            action: "STUDENT_PROGRESS_ACCESS_DENIED",
+            reason: "当前用户不是学生的默认管家",
+            requestId: request.requestId,
+            ipAddress: request.ip,
+            deviceInfo: request.header("User-Agent"),
+          },
+        });
+      }
+      throw new ApiException(HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN, "无权查看该学生服务进度");
+    }
+    throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND, "学生不存在");
+  }
+
+  private progressResponse(detail: ReturnType<StudentsService["serializeStudentDetail"]>) {
+    return {
+      student: { id: detail.id, studentNo: detail.studentNo, name: detail.name },
+      serviceStatus: detail.serviceStatus,
+      activation: detail.activation,
+      sopVersion: detail.sopVersion,
+      progress: detail.progress,
+      taskSummary: detail.taskSummary,
+      stages: detail.stages,
+    };
+  }
+
+  private redactTaskDetailsForButler(
+    detail: ReturnType<StudentsService["serializeStudentDetail"]>,
+    student: StudentWithHistory,
+    butlerId: string,
+  ) {
+    const allowedTaskIds = new Set(
+      student.stageInstances.flatMap((stage) =>
+        stage.tasks.filter((task) => task.ownerId === butlerId).map((task) => task.id),
+      ),
+    );
+    return {
+      ...detail,
+      stages: detail.stages.map((stage) => ({
+        ...stage,
+        tasks: stage.tasks.filter((task) => allowedTaskIds.has(task.id)),
+        transitions: stage.transitions.map((transition) => ({
+          ...transition,
+          triggerTask:
+            transition.triggerTask && allowedTaskIds.has(transition.triggerTask.id)
+              ? transition.triggerTask
+              : null,
+        })),
       })),
     };
   }

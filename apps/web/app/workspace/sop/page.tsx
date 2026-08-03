@@ -8,7 +8,7 @@ import {
   RocketOutlined,
   SaveOutlined,
 } from "@ant-design/icons";
-import { Alert, App, Button, Input, InputNumber, Modal, Skeleton, Tag } from "antd";
+import { Alert, App, Button, Input, InputNumber, Modal, Skeleton, Switch, Tag } from "antd";
 import { PermissionCode } from "@dse/shared";
 import { PermissionPage } from "../../../src/auth/permission-page";
 import {
@@ -211,7 +211,7 @@ export default function SopPage() {
                     title={validation.valid ? "SOP 完整性校验通过" : "SOP 还不能发布"}
                     description={
                       validation.valid
-                        ? "八个阶段均已配置至少一项任务，所有完成时限均为整数小时。"
+                        ? "八个阶段均至少有一项阻塞任务，所有完成时限均为整数小时。"
                         : validation.errors.map((item) => item.message).join("；")
                     }
                   />
@@ -306,6 +306,24 @@ export default function SopPage() {
                                 }))
                               }
                             />
+                            <label className={styles.blockingControl}>
+                              <Switch
+                                checked={task.isBlocking}
+                                disabled={!editable}
+                                onChange={(checked) =>
+                                  changeStage(stageIndex, (current) => ({
+                                    ...current,
+                                    tasks: current.tasks.map((item, index) =>
+                                      index === taskIndex ? { ...item, isBlocking: checked } : item,
+                                    ),
+                                  }))
+                                }
+                              />
+                              <span>
+                                阻塞阶段
+                                <small>全部阻塞任务完成或取消后自动推进</small>
+                              </span>
+                            </label>
                             {editable ? (
                               <Button
                                 danger
@@ -339,6 +357,7 @@ export default function SopPage() {
                                     completionCriteria: null,
                                     completionWindowHours: 24,
                                     ownerRole: "BUTLER",
+                                    isBlocking: true,
                                   },
                                 ],
                               }))

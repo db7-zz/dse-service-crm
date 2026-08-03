@@ -763,6 +763,49 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "currentStageCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 32,
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasCurrentBlockers",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "stageProgress",
+                "currentBlockers",
+                "overdueTasks"
+              ]
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
           }
         ],
         "responses": {
@@ -879,6 +922,121 @@
         },
         "responses": {
           "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "students"
+        ]
+      }
+    },
+    "/api/v1/students/{studentId}/service-progress": {
+      "get": {
+        "operationId": "StudentsController_serviceProgress",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "students"
+        ]
+      }
+    },
+    "/api/v1/students/{studentId}/service-progress/recalculate": {
+      "post": {
+        "operationId": "StudentsController_recalculateServiceProgress",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "students"
+        ]
+      }
+    },
+    "/api/v1/students/{studentId}/manual-tasks": {
+      "post": {
+        "operationId": "StudentsController_createManualTask",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateManualTaskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
             "description": "",
             "content": {
               "application/json": {
@@ -1076,6 +1234,214 @@
         ],
         "tags": [
           "students"
+        ]
+      }
+    },
+    "/api/v1/my/students": {
+      "get": {
+        "operationId": "MyStudentsController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "serviceStatus",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NOT_ENABLED",
+                "ENABLED"
+              ]
+            }
+          },
+          {
+            "name": "defaultButlerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "plannerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "currentStageCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 32,
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasCurrentBlockers",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "stageProgress",
+                "currentBlockers",
+                "overdueTasks"
+              ]
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "my-students"
+        ]
+      }
+    },
+    "/api/v1/my/students/{studentId}": {
+      "get": {
+        "operationId": "MyStudentsController_detail",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "my-students"
+        ]
+      }
+    },
+    "/api/v1/my/students/{studentId}/service-progress": {
+      "get": {
+        "operationId": "MyStudentsController_serviceProgress",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "my-students"
         ]
       }
     },
@@ -2186,11 +2552,17 @@
           "completionWindowHours": {
             "type": "number",
             "minimum": 1
+          },
+          "isBlocking": {
+            "type": "object",
+            "default": true,
+            "description": "是否阻止所属阶段自动完成"
           }
         },
         "required": [
           "name",
-          "completionWindowHours"
+          "completionWindowHours",
+          "isBlocking"
         ]
       },
       "SopStageTemplateInputDto": {
@@ -2294,6 +2666,55 @@
         },
         "required": [
           "name"
+        ]
+      },
+      "CreateManualTaskDto": {
+        "type": "object",
+        "properties": {
+          "stageInstanceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "description": {
+            "type": "object",
+            "maxLength": 2000,
+            "nullable": true
+          },
+          "completionCriteria": {
+            "type": "object",
+            "maxLength": 2000,
+            "nullable": true
+          },
+          "currentDueAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "精确到分钟且晚于当前时间"
+          },
+          "ownerId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "isBlocking": {
+            "type": "object",
+            "default": false
+          },
+          "stageVersion": {
+            "type": "number",
+            "minimum": 0,
+            "description": "所属阶段乐观锁版本号"
+          }
+        },
+        "required": [
+          "stageInstanceId",
+          "title",
+          "currentDueAt",
+          "isBlocking",
+          "stageVersion"
         ]
       },
       "UpdateStudentDto": {

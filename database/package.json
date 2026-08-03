@@ -1,6 +1,6 @@
 {
   "name": "@dse/database",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -21,7 +21,9 @@
     "db:diff": "prisma migrate diff --from-empty --to-schema schema.prisma --script",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
-    "db:seed": "tsx seed.ts"
+    "db:seed": "tsx seed.ts",
+    "s2:migration:preview": "tsx scripts/s2-progress-migration.ts --preview",
+    "s2:migration:verify": "tsx scripts/s2-progress-migration.ts --verify"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.0.0",

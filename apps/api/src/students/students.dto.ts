@@ -1,7 +1,9 @@
-import { Type } from "class-transformer";
+import { Transform, Type } from "class-transformer";
 import {
   ArrayMinSize,
   IsArray,
+  IsBoolean,
+  IsDateString,
   IsDefined,
   IsEmail,
   IsIn,
@@ -20,6 +22,8 @@ import {
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 const SERVICE_STATUSES = ["NOT_ENABLED", "ENABLED"] as const;
+const STUDENT_PROGRESS_SORTS = ["stageProgress", "currentBlockers", "overdueTasks"] as const;
+const SORT_ORDERS = ["asc", "desc"] as const;
 
 export class ListStudentsQueryDto {
   @ApiPropertyOptional({ default: 1, minimum: 1 })
@@ -57,6 +61,28 @@ export class ListStudentsQueryDto {
   @IsOptional()
   @IsUUID()
   plannerId?: string;
+
+  @ApiPropertyOptional({ maxLength: 32 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  currentStageCode?: string;
+
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @Transform(({ value }) => (value === "true" ? true : value === "false" ? false : value))
+  @IsBoolean()
+  hasCurrentBlockers?: boolean;
+
+  @ApiPropertyOptional({ enum: STUDENT_PROGRESS_SORTS })
+  @IsOptional()
+  @IsIn(STUDENT_PROGRESS_SORTS)
+  sortBy?: (typeof STUDENT_PROGRESS_SORTS)[number];
+
+  @ApiPropertyOptional({ enum: SORT_ORDERS, default: "desc" })
+  @IsOptional()
+  @IsIn(SORT_ORDERS)
+  sortOrder: (typeof SORT_ORDERS)[number] = "desc";
 }
 
 export class CreateStudentDto {
@@ -185,4 +211,47 @@ export class BulkAssignUnassignedTasksDto {
   @ValidateNested({ each: true })
   @Type(() => BulkAssignTaskItemDto)
   tasks!: BulkAssignTaskItemDto[];
+}
+
+export class CreateManualTaskDto {
+  @ApiProperty({ format: "uuid" })
+  @IsUUID()
+  stageInstanceId!: string;
+
+  @ApiProperty({ maxLength: 150 })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(150)
+  title!: string;
+
+  @ApiPropertyOptional({ maxLength: 2000, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  description?: string | null;
+
+  @ApiPropertyOptional({ maxLength: 2000, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  completionCriteria?: string | null;
+
+  @ApiProperty({ format: "date-time", description: "精确到分钟且晚于当前时间" })
+  @IsDateString()
+  currentDueAt!: string;
+
+  @ApiPropertyOptional({ format: "uuid", nullable: true })
+  @IsOptional()
+  @ValidateIf((_object, value) => value !== null)
+  @IsUUID()
+  ownerId?: string | null;
+
+  @ApiProperty({ default: false })
+  @IsBoolean()
+  isBlocking = false;
+
+  @ApiProperty({ minimum: 0, description: "所属阶段乐观锁版本号" })
+  @IsInt()
+  @Min(0)
+  stageVersion!: number;
 }

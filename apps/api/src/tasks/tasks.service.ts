@@ -5,6 +5,7 @@ import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { ApiException } from "../common/api-exception.js";
 import type { RequestContext } from "../common/request-context.js";
 import { PRISMA } from "../database/database.module.js";
+import { ServiceProgressService } from "../students/service-progress.service.js";
 import type {
   AddTaskProgressDto,
   CancelTaskDto,
@@ -90,6 +91,8 @@ export class TasksService {
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(OverdueScannerService)
     private readonly overdueScanner: OverdueScannerService,
+    @Inject(ServiceProgressService)
+    private readonly serviceProgress: ServiceProgressService,
   ) {}
 
   public async listMine(query: ListTasksQueryDto, request: RequestContext) {
@@ -375,7 +378,13 @@ export class TasksService {
             version: body.version + 1,
           },
         });
-        return this.loadSerializedDetail(transaction, taskId);
+        const stageProgress = await this.serviceProgress.advanceAfterTaskTerminal(
+          transaction,
+          taskId,
+          "TASK_COMPLETED",
+          request,
+        );
+        return { ...(await this.loadSerializedDetail(transaction, taskId)), ...stageProgress };
       },
     );
   }
@@ -562,7 +571,13 @@ export class TasksService {
           afterData: { status: "CANCELED", version: body.version + 1 },
           reason: body.reason.trim(),
         });
-        return this.loadSerializedDetail(transaction, taskId);
+        const stageProgress = await this.serviceProgress.advanceAfterTaskTerminal(
+          transaction,
+          taskId,
+          "TASK_CANCELED",
+          request,
+        );
+        return { ...(await this.loadSerializedDetail(transaction, taskId)), ...stageProgress };
       },
     );
   }
@@ -945,6 +960,61 @@ export class TasksService {
       if (receipt && receipt.taskId === taskId && receipt.requestFingerprint === fingerprint) {
         return receipt.responseData as T;
       }
+      if (
+        error instanceof ApiException &&
+        (
+          [
+            ErrorCode.STAGE_VERSION_CONFLICT,
+            ErrorCode.SERVICE_PROGRESS_INCONSISTENT,
+            ErrorCode.SERVICE_PROGRESS_RECALCULATING,
+          ] as readonly string[]
+        ).includes(error.code)
+      ) {
+        await this.prisma.$transaction(async (transaction) => {
+          if (error.code === ErrorCode.SERVICE_PROGRESS_INCONSISTENT) {
+            const task = await transaction.taskInstance.findUnique({
+              where: { id: taskId },
+              select: { serviceActivationId: true, studentId: true },
+            });
+            if (task) {
+              await transaction.studentServiceActivation.update({
+                where: { id: task.serviceActivationId },
+                data: {
+                  calculationStatus: "ERROR",
+                  calculationErrorCode: ErrorCode.SERVICE_PROGRESS_INCONSISTENT,
+                },
+              });
+              await transaction.auditLog.create({
+                data: this.auditData(request, {
+                  action: "SERVICE_PROGRESS_CALCULATION_FAILED",
+                  objectType: "student_service_activation",
+                  objectId: task.serviceActivationId,
+                  afterData: {
+                    studentId: task.studentId,
+                    triggerTaskId: taskId,
+                    errorCode: error.code,
+                    details: (error.details ?? {}) as Prisma.InputJsonObject,
+                  },
+                  reason: error.message,
+                }),
+              });
+            }
+          }
+          await transaction.auditLog.create({
+            data: this.auditData(request, {
+              action: "SERVICE_PROGRESS_CONFLICT",
+              objectType: "task",
+              objectId: taskId,
+              afterData: {
+                operation,
+                errorCode: error.code,
+                details: (error.details ?? {}) as Prisma.InputJsonObject,
+              },
+              reason: error.message,
+            }),
+          });
+        });
+      }
       throw error;
     }
   }
@@ -971,7 +1041,9 @@ export class TasksService {
         name: task.stageInstance.nameSnapshot,
         sequenceNo: task.stageInstance.sequenceNoSnapshot,
       },
-      taskSequenceNo: task.taskTemplate.sequenceNo,
+      taskSequenceNo: task.taskTemplate?.sequenceNo ?? null,
+      sourceType: task.sourceType,
+      isBlocking: task.isBlockingSnapshot,
       owner: task.owner,
       originalDueAt: task.originalDueAt.toISOString(),
       currentDueAt: task.currentDueAt.toISOString(),

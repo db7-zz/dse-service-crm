@@ -1,7 +1,7 @@
 # DSE升学服务CRM
 
-DSE升学服务CRM的阶段0技术底座。当前版本只包含认证、权限、管理员账号、审计、管理端布局、
-公共组件和工程质量体系。
+DSE升学服务CRM v0.3.0。当前版本包含认证与权限底座、学生管理、固定八阶段SOP、任务监督闭环，
+以及S2学生服务进度、自动阶段推进、临时任务和管家本人负责学生只读视图。
 
 ## 前置条件
 
@@ -45,6 +45,8 @@ pnpm format:check
 pnpm openapi:generate
 pnpm db:validate
 pnpm db:diff
+pnpm --filter @dse/database s2:migration:preview
+pnpm --filter @dse/database s2:migration:verify
 pnpm check
 ```
 
@@ -82,6 +84,9 @@ pnpm test:e2e
 
 ## 当前范围
 
-S0不会创建学生、任务、资料、申请或学生端业务。路线图见
-`docs/product/ROADMAP.md`，S0验收见
-`docs/releases/S0-技术底座/INCREMENT_PRD_S0.md`。
+S2以任务终态计算学生八阶段服务进度：每个阶段至少有一项阻塞任务，最后一项阻塞任务完成或取消后，
+系统在同一事务中自动推进，并继续处理已提前完成的后续阶段。管理员可创建临时管家任务；管家通过
+“学生管理”仅查看当前由本人担任默认管家的学生。
+
+S2不包含服务暂停/恢复、手工推进或回退阶段、资料与申请阻塞、规划老师进度页、学生端、数据导出或
+外部消息通知。增量规格见 `docs/releases/S2/INCREMENT_PRD_S2.md`。

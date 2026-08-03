@@ -10,6 +10,7 @@ import {
   TaskSupervisionController,
 } from "./tasks.controller.js";
 import { TasksService } from "./tasks.service.js";
+import { ServiceProgressService } from "../students/service-progress.service.js";
 
 @Module({
   imports: [AuthModule, DatabaseModule],
@@ -20,7 +21,7 @@ import { TasksService } from "./tasks.service.js";
     AdminTasksController,
     OverdueAlertsController,
   ],
-  providers: [TasksService, OverdueScannerService],
+  providers: [TasksService, OverdueScannerService, ServiceProgressService],
   exports: [TasksService, OverdueScannerService],
 })
 export class TasksModule {}

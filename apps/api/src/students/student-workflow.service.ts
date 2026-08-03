@@ -5,7 +5,11 @@ import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { ApiException } from "../common/api-exception.js";
 import type { RequestContext } from "../common/request-context.js";
 import { PRISMA } from "../database/database.module.js";
-import type { ActivateStudentServiceDto, BulkAssignUnassignedTasksDto } from "./students.dto.js";
+import type {
+  ActivateStudentServiceDto,
+  BulkAssignUnassignedTasksDto,
+  CreateManualTaskDto,
+} from "./students.dto.js";
 
 const ACTIVE_TASK_STATUSES = ["TODO", "IN_PROGRESS"] as const;
 
@@ -75,6 +79,7 @@ export class StudentWorkflowService {
         sop.stages.some(
           (stage) =>
             stage.tasks.length === 0 ||
+            !stage.tasks.some((task) => task.isBlocking) ||
             stage.tasks.some(
               (task) =>
                 !Number.isInteger(task.completionWindowHours) || task.completionWindowHours < 1,
@@ -84,7 +89,7 @@ export class StudentWorkflowService {
         throw new ApiException(
           HttpStatus.UNPROCESSABLE_ENTITY,
           ErrorCode.SERVICE_ACTIVATION_UNAVAILABLE,
-          "已发布 SOP 不满足八阶段和任务时限规则，无法启用服务",
+          "已发布 SOP 不满足八阶段、阻塞任务和任务时限规则，无法启用服务",
         );
       }
 
@@ -128,7 +133,14 @@ export class StudentWorkflowService {
       });
 
       let taskCount = 0;
+      let firstStage: null | {
+        id: string;
+        stageCode: string;
+        name: string;
+        sequenceNo: number;
+      } = null;
       for (const stage of sop.stages) {
+        const isFirstStage = stage.sequenceNo === 1;
         const stageInstance = await transaction.stageInstance.create({
           data: {
             studentId,
@@ -139,8 +151,30 @@ export class StudentWorkflowService {
             nameSnapshot: stage.name,
             sequenceNoSnapshot: stage.sequenceNo,
             descriptionSnapshot: stage.description,
+            status: isFirstStage ? "IN_PROGRESS" : "NOT_STARTED",
+            startedAt: isFirstStage ? enabledAt : null,
+            version: isFirstStage ? 1 : 0,
           },
         });
+        if (isFirstStage) {
+          firstStage = {
+            id: stageInstance.id,
+            stageCode: stageInstance.stageCodeSnapshot,
+            name: stageInstance.nameSnapshot,
+            sequenceNo: stageInstance.sequenceNoSnapshot,
+          };
+          await transaction.stageTransition.create({
+            data: {
+              stageInstanceId: stageInstance.id,
+              fromStatus: null,
+              toStatus: "IN_PROGRESS",
+              triggerType: "SERVICE_ACTIVATION",
+              summary: "服务启用，系统启动第一阶段",
+              deduplicationKey: `${stageInstance.id}:IN_PROGRESS:SERVICE_ACTIVATION`,
+              createdAt: enabledAt,
+            },
+          });
+        }
         for (const taskTemplate of stage.tasks) {
           const dueAt = this.calculateDueAt(enabledAt, taskTemplate.completionWindowHours);
           const task = await transaction.taskInstance.create({
@@ -150,6 +184,8 @@ export class StudentWorkflowService {
               stageInstanceId: stageInstance.id,
               taskTemplateId: taskTemplate.id,
               sopVersionId: sop.id,
+              sourceType: "SOP",
+              isBlockingSnapshot: taskTemplate.isBlocking,
               titleSnapshot: taskTemplate.name,
               descriptionSnapshot: taskTemplate.description,
               completionCriteriaSnapshot: taskTemplate.completionCriteria,
@@ -191,6 +227,40 @@ export class StudentWorkflowService {
         }
       }
 
+      if (!firstStage) {
+        throw new ApiException(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          ErrorCode.SERVICE_PROGRESS_INCONSISTENT,
+          "SOP 第一阶段缺失，无法初始化服务进度",
+        );
+      }
+      await transaction.studentServiceActivation.update({
+        where: { id: activation.id },
+        data: {
+          currentStageInstanceId: firstStage.id,
+          completedStageCount: 0,
+          progressVersion: 1,
+          calculationStatus: "NORMAL",
+          lastCalculatedAt: enabledAt,
+        },
+      });
+      await transaction.auditLog.create({
+        data: this.auditData(request, {
+          action: "SERVICE_STAGE_STARTED",
+          objectType: "stage_instance",
+          objectId: firstStage.id,
+          beforeData: { status: null },
+          afterData: {
+            status: "IN_PROGRESS",
+            stageCode: firstStage.stageCode,
+            stageName: firstStage.name,
+            sequenceNo: firstStage.sequenceNo,
+            triggerType: "SERVICE_ACTIVATION",
+          },
+          reason: "服务启用，系统启动第一阶段",
+        }),
+      });
+
       await transaction.auditLog.create({
         data: this.auditData(request, {
           action: "STUDENT_SERVICE_ENABLED",
@@ -230,6 +300,9 @@ export class StudentWorkflowService {
         taskCount,
         assignedTaskCount: student.defaultButlerId ? taskCount : 0,
         unassignedTaskCount: student.defaultButlerId ? 0 : taskCount,
+        currentStage: firstStage,
+        completedStageCount: 0,
+        progressVersion: 1,
       };
     });
   }
@@ -458,10 +531,346 @@ export class StudentWorkflowService {
     }
   }
 
+  public async createManualTask(
+    studentId: string,
+    body: CreateManualTaskDto,
+    idempotencyKey: string | undefined,
+    request: RequestContext,
+  ) {
+    const actor = request.authenticatedUser as AuthenticatedUser;
+    const key = idempotencyKey?.trim();
+    if (!key || key.length > 128) {
+      throw new ApiException(
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.VALIDATION_ERROR,
+        "创建临时任务必须提供长度不超过 128 字符的 Idempotency-Key",
+      );
+    }
+    const operation = "MANUAL_TASK_CREATE";
+    const fingerprint = createHash("sha256")
+      .update(JSON.stringify({ studentId, ...body }))
+      .digest("hex");
+    const receiptKey = {
+      actorId_operation_idempotencyKey: {
+        actorId: actor.id,
+        operation,
+        idempotencyKey: key,
+      },
+    } as const;
+
+    try {
+      return await this.prisma.$transaction(async (transaction) => {
+        const existingReceipt = await transaction.taskOperationReceipt.findUnique({
+          where: receiptKey,
+        });
+        if (existingReceipt) {
+          if (existingReceipt.requestFingerprint !== fingerprint) {
+            throw new ApiException(
+              HttpStatus.CONFLICT,
+              ErrorCode.IDEMPOTENCY_KEY_REUSED,
+              "该 Idempotency-Key 已用于不同的临时任务请求",
+            );
+          }
+          return existingReceipt.responseData;
+        }
+
+        const student = await transaction.student.findUnique({
+          where: { id: studentId },
+          select: {
+            id: true,
+            name: true,
+            serviceStatus: true,
+            serviceActivation: {
+              select: {
+                id: true,
+                sopVersionId: true,
+                calculationStatus: true,
+                progressVersion: true,
+              },
+            },
+          },
+        });
+        if (!student) {
+          throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND, "学生不存在");
+        }
+        if (student.serviceStatus !== "ENABLED" || !student.serviceActivation) {
+          throw new ApiException(
+            HttpStatus.CONFLICT,
+            ErrorCode.SERVICE_NOT_ENABLED,
+            "学生尚未启用服务，不能创建临时任务",
+          );
+        }
+        await transaction.$queryRaw<Array<{ lock: string }>>`
+          SELECT pg_advisory_xact_lock(hashtext(${student.serviceActivation.id}))::text AS lock
+        `;
+
+        const activation = await transaction.studentServiceActivation.findUniqueOrThrow({
+          where: { id: student.serviceActivation.id },
+          select: { calculationStatus: true, progressVersion: true },
+        });
+        if (activation.calculationStatus === "RECALCULATING") {
+          throw new ApiException(
+            HttpStatus.CONFLICT,
+            ErrorCode.SERVICE_PROGRESS_RECALCULATING,
+            "服务进度正在重算，请稍后再创建任务",
+          );
+        }
+        if (activation.calculationStatus === "ERROR") {
+          throw new ApiException(
+            HttpStatus.CONFLICT,
+            ErrorCode.SERVICE_PROGRESS_INCONSISTENT,
+            "服务进度数据异常，请先重算后再创建任务",
+          );
+        }
+
+        const stage = await transaction.stageInstance.findFirst({
+          where: {
+            id: body.stageInstanceId,
+            studentId,
+            serviceActivationId: student.serviceActivation.id,
+          },
+          select: {
+            id: true,
+            stageCodeSnapshot: true,
+            nameSnapshot: true,
+            sequenceNoSnapshot: true,
+            status: true,
+            version: true,
+          },
+        });
+        if (!stage) {
+          throw new ApiException(
+            HttpStatus.NOT_FOUND,
+            ErrorCode.RESOURCE_NOT_FOUND,
+            "所属阶段不存在",
+          );
+        }
+        if (stage.version !== body.stageVersion) {
+          throw new ApiException(
+            HttpStatus.CONFLICT,
+            ErrorCode.STAGE_VERSION_CONFLICT,
+            "阶段状态已变化，请保留表单并重新加载阶段状态",
+            { currentVersion: stage.version, currentStatus: stage.status },
+          );
+        }
+        if (body.isBlocking && stage.status === "COMPLETED") {
+          throw new ApiException(
+            HttpStatus.CONFLICT,
+            ErrorCode.STAGE_ALREADY_COMPLETED,
+            "已完成阶段只能新增非阻塞跟进任务",
+          );
+        }
+
+        const dueAt = new Date(body.currentDueAt);
+        if (
+          Number.isNaN(dueAt.getTime()) ||
+          dueAt <= new Date() ||
+          dueAt.getUTCSeconds() !== 0 ||
+          dueAt.getUTCMilliseconds() !== 0
+        ) {
+          throw new ApiException(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.VALIDATION_ERROR,
+            "当前截止时间必须晚于现在并精确到分钟",
+          );
+        }
+        const title = body.title.trim();
+        if (!title) {
+          throw new ApiException(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.VALIDATION_ERROR,
+            "任务名称不能为空",
+          );
+        }
+
+        let owner: null | { id: string; displayName: string } = null;
+        if (body.ownerId) {
+          owner = await transaction.user.findFirst({
+            where: {
+              id: body.ownerId,
+              status: "ACTIVE",
+              roles: { some: { expiredAt: null, role: { code: RoleCode.BUTLER } } },
+            },
+            select: { id: true, displayName: true },
+          });
+          if (!owner) {
+            throw new ApiException(
+              HttpStatus.BAD_REQUEST,
+              ErrorCode.RESPONSIBLE_PERSON_INVALID,
+              "请选择有效的管家账号",
+            );
+          }
+        }
+
+        const task = await transaction.taskInstance.create({
+          data: {
+            studentId,
+            serviceActivationId: student.serviceActivation.id,
+            stageInstanceId: stage.id,
+            taskTemplateId: null,
+            sopVersionId: student.serviceActivation.sopVersionId,
+            sourceType: "MANUAL",
+            isBlockingSnapshot: body.isBlocking,
+            createdById: actor.id,
+            titleSnapshot: title,
+            descriptionSnapshot: this.optionalText(body.description),
+            completionCriteriaSnapshot: this.optionalText(body.completionCriteria),
+            completionWindowHoursSnapshot: null,
+            ownerId: owner?.id ?? null,
+            originalDueAt: dueAt,
+            currentDueAt: dueAt,
+          },
+        });
+        await transaction.taskTimelineEvent.createMany({
+          data: [
+            {
+              taskId: task.id,
+              eventType: "CREATED",
+              actorId: actor.id,
+              actorRole: actor.roles[0] ?? null,
+              summary: "管理员创建临时任务",
+              afterData: {
+                status: "TODO",
+                sourceType: "MANUAL",
+                isBlocking: body.isBlocking,
+                stageInstanceId: stage.id,
+                currentDueAt: dueAt.toISOString(),
+              },
+            },
+            ...(owner
+              ? [
+                  {
+                    taskId: task.id,
+                    eventType: "ASSIGNED" as const,
+                    actorId: actor.id,
+                    actorRole: actor.roles[0] ?? null,
+                    summary: `创建时分配给 ${owner.displayName}`,
+                    afterData: { ownerId: owner.id },
+                  },
+                ]
+              : []),
+          ],
+        });
+
+        if (body.isBlocking) {
+          const changed = await transaction.stageInstance.updateMany({
+            where: { id: stage.id, version: body.stageVersion, status: stage.status },
+            data: { version: { increment: 1 } },
+          });
+          if (changed.count !== 1) {
+            throw new ApiException(
+              HttpStatus.CONFLICT,
+              ErrorCode.STAGE_VERSION_CONFLICT,
+              "阶段状态在提交期间发生变化，本次任务未创建",
+            );
+          }
+        }
+        const progressChanged = await transaction.studentServiceActivation.updateMany({
+          where: {
+            id: student.serviceActivation.id,
+            progressVersion: activation.progressVersion,
+          },
+          data: { progressVersion: { increment: 1 }, lastCalculatedAt: new Date() },
+        });
+        if (progressChanged.count !== 1) {
+          throw new ApiException(
+            HttpStatus.CONFLICT,
+            ErrorCode.STAGE_VERSION_CONFLICT,
+            "服务进度已变化，本次任务未创建",
+          );
+        }
+
+        await transaction.auditLog.create({
+          data: this.auditData(request, {
+            action: "MANUAL_TASK_CREATED",
+            objectType: "task",
+            objectId: task.id,
+            afterData: {
+              studentId,
+              stageInstanceId: stage.id,
+              stageCode: stage.stageCodeSnapshot,
+              sourceType: "MANUAL",
+              isBlocking: body.isBlocking,
+              ownerId: owner?.id ?? null,
+              currentDueAt: dueAt.toISOString(),
+            },
+          }),
+        });
+
+        const response = {
+          id: task.id,
+          studentId,
+          title: task.titleSnapshot,
+          sourceType: task.sourceType,
+          isBlocking: task.isBlockingSnapshot,
+          status: task.status,
+          owner,
+          stage: {
+            id: stage.id,
+            code: stage.stageCodeSnapshot,
+            name: stage.nameSnapshot,
+            sequenceNo: stage.sequenceNoSnapshot,
+            status: stage.status,
+            version: stage.version + (body.isBlocking ? 1 : 0),
+          },
+          currentDueAt: dueAt.toISOString(),
+          version: task.version,
+          progressVersion: activation.progressVersion + 1,
+        };
+        await transaction.taskOperationReceipt.create({
+          data: {
+            taskId: task.id,
+            actorId: actor.id,
+            operation,
+            idempotencyKey: key,
+            requestFingerprint: fingerprint,
+            responseData: response,
+          },
+        });
+        return response;
+      });
+    } catch (error) {
+      const receipt = await this.prisma.taskOperationReceipt.findUnique({ where: receiptKey });
+      if (receipt?.requestFingerprint === fingerprint) return receipt.responseData;
+      if (
+        error instanceof ApiException &&
+        (
+          [
+            ErrorCode.STAGE_ALREADY_COMPLETED,
+            ErrorCode.STAGE_VERSION_CONFLICT,
+            ErrorCode.SERVICE_PROGRESS_INCONSISTENT,
+            ErrorCode.SERVICE_PROGRESS_RECALCULATING,
+          ] as readonly string[]
+        ).includes(error.code)
+      ) {
+        await this.prisma.auditLog.create({
+          data: this.auditData(request, {
+            action: "SERVICE_PROGRESS_CONFLICT",
+            objectType: "student",
+            objectId: studentId,
+            afterData: {
+              operation,
+              stageInstanceId: body.stageInstanceId,
+              isBlocking: body.isBlocking,
+              errorCode: error.code,
+            },
+            reason: error.message,
+          }),
+        });
+      }
+      throw error;
+    }
+  }
+
   private calculateDueAt(enabledAt: Date, hours: number) {
     const dueAt = new Date(enabledAt.getTime() + hours * 60 * 60 * 1000);
     dueAt.setUTCSeconds(0, 0);
     return dueAt;
+  }
+
+  private optionalText(value: string | null | undefined) {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : null;
   }
 
   private auditData(

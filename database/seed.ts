@@ -24,6 +24,7 @@ const PERMISSION_DEFINITIONS = [
   ["system.audit.read", "查看审计日志"],
   ["portal.access", "访问学生入口"],
   ["students.read", "查看学生最小档案"],
+  ["students.own.read", "查看本人负责学生的服务进度"],
   ["students.write", "维护学生最小档案与负责人"],
   ["sop.read", "查看SOP版本"],
   ["sop.write", "维护和发布SOP版本"],
@@ -53,7 +54,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "overdue-alerts.write",
   ],
   ERIC_MANAGER: [],
-  BUTLER: ["workspace.access", "tasks.own.read", "tasks.own.write"],
+  BUTLER: ["workspace.access", "students.own.read", "tasks.own.read", "tasks.own.write"],
   PLANNER: ["workspace.access"],
   SPECIALIST: ["workspace.access"],
   STUDENT: ["portal.access"],
@@ -295,6 +296,7 @@ async function main(): Promise<void> {
                   ...SOP_BASELINE_TASKS[stageCode],
                   sequenceNo: 1,
                   ownerRole: "BUTLER",
+                  isBlocking: true,
                 },
               },
             })),
@@ -330,6 +332,7 @@ async function main(): Promise<void> {
               ...SOP_BASELINE_TASKS[stageCode],
               sequenceNo: 1,
               ownerRole: "BUTLER",
+              isBlocking: true,
             },
           });
         }

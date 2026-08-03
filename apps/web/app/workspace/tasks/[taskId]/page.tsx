@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   ArrowLeftOutlined,
   CheckOutlined,
@@ -97,6 +97,9 @@ export default function TaskDetailPage() {
   const { user } = useAuth();
   const { message, modal } = App.useApp();
   const params = useParams<{ taskId: string }>();
+  const searchParams = useSearchParams();
+  const requestedReturnTo = searchParams.get("returnTo");
+  const returnStage = searchParams.get("stage");
   const [task, setTask] = useState<TaskDetail>();
   const [butlers, setButlers] = useState<ResponsiblePersonOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,6 +113,15 @@ export default function TaskDetailPage() {
   const canRead =
     user?.permissions.includes(PermissionCode.TASK_SUPERVISION_READ) ||
     user?.permissions.includes(PermissionCode.TASKS_OWN_READ);
+  const backHref = requestedReturnTo?.startsWith("/workspace/students/")
+    ? `${requestedReturnTo}${
+        returnStage
+          ? `${requestedReturnTo.includes("?") ? "&" : "?"}stage=${encodeURIComponent(returnStage)}`
+          : ""
+      }`
+    : canSupervise
+      ? "/workspace/supervision"
+      : "/workspace/my-tasks";
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -214,7 +226,15 @@ export default function TaskDetailPage() {
       setTask(updated);
       setAction(undefined);
       form.resetFields();
-      await message.success(`${ACTION_TITLES[action]}成功`);
+      await message.success(
+        updated.stageChanged
+          ? `${ACTION_TITLES[action]}成功，服务进度已推进至 ${
+              updated.completedStageCount === 8
+                ? "8/8，全部阶段已完成"
+                : `${updated.completedStageCount}/8`
+            }`
+          : `${ACTION_TITLES[action]}成功`,
+      );
     } catch (exception) {
       await message.error(exception instanceof Error ? exception.message : "操作失败");
       await load();
@@ -233,12 +253,14 @@ export default function TaskDetailPage() {
 
   return (
     <main className={styles.page}>
-      <Link
-        className={styles.back}
-        href={canSupervise ? "/workspace/supervision" : "/workspace/my-tasks"}
-      >
+      <Link className={styles.back} href={backHref}>
         <ArrowLeftOutlined />
-        返回{canSupervise ? "监督看板" : "我的任务"}
+        返回
+        {requestedReturnTo?.startsWith("/workspace/students/")
+          ? "学生服务进度"
+          : canSupervise
+            ? "监督看板"
+            : "我的任务"}
       </Link>
 
       {error ? (
@@ -375,7 +397,12 @@ export default function TaskDetailPage() {
               <p style={{ lineHeight: 1.7 }}>
                 {task.completionCriteria || "该任务未设置额外完成标准。"}
               </p>
-              <span className={styles.subtle}>标准时限 {task.completionWindowHours} 小时</span>
+              <span className={styles.subtle}>
+                {task.sourceType === "MANUAL"
+                  ? "管理员创建的临时任务"
+                  : `标准时限 ${task.completionWindowHours} 小时`}
+                {task.isBlocking ? " · 阻塞所属阶段" : " · 不阻塞阶段"}
+              </span>
               {task.completionNote ? (
                 <Alert
                   style={{ marginTop: 16 }}

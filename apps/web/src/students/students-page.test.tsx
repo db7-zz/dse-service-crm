@@ -7,6 +7,18 @@ vi.mock("../auth/permission-page", () => ({
   PermissionPage: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+vi.mock("../auth/auth-context", () => ({
+  useAuth: () => ({
+    user: {
+      permissions: ["students.read"],
+    },
+  }),
+}));
+
 vi.mock("./student-api", () => ({
   getResponsiblePersonOptions: vi.fn(),
   listStudents: vi.fn(),
@@ -32,7 +44,7 @@ describe("student list states", () => {
 
     render(<StudentsPage />);
 
-    expect(await screen.findByText("还没有学生档案")).toBeInTheDocument();
+    expect(await screen.findByText("暂无学生")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "新建第一位学生" })).toBeEnabled();
   });
 
