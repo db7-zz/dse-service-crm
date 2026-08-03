@@ -285,11 +285,20 @@ export default function StudentDetailPage() {
                   }`}
                 >
                   <span className={styles.statusDot} aria-hidden />
-                  服务{student.serviceStatus === "ENABLED" ? "已启用" : "未启用"}
+                  服务
+                  {{
+                    NOT_ENABLED: "未启用",
+                    ENABLED: "已启用",
+                    PAUSED: "已暂停",
+                    TERMINATED: "已终止",
+                  }[student.serviceStatus] ?? student.serviceStatus}
                 </span>
               </div>
               {administratorView ? (
                 <div className={styles.detailActions}>
+                  <Link href={`/workspace/students/${student.id}/record`}>
+                    <Button className={styles.secondaryButton}>完整档案</Button>
+                  </Link>
                   <Link href={`/workspace/students/${student.id}/edit`}>
                     <Button className={styles.secondaryButton} icon={<EditOutlined />}>
                       编辑资料
@@ -299,7 +308,7 @@ export default function StudentDetailPage() {
                     className={styles.primaryButton}
                     type="primary"
                     icon={<ThunderboltOutlined />}
-                    disabled={student.serviceStatus === "ENABLED"}
+                    disabled={student.serviceStatus !== "NOT_ENABLED"}
                     loading={submitting}
                     onClick={() =>
                       modal.confirm({
@@ -325,7 +334,7 @@ export default function StudentDetailPage() {
                       })
                     }
                   >
-                    {student.serviceStatus === "ENABLED" ? "服务已启用" : "启用服务"}
+                    {student.serviceStatus === "NOT_ENABLED" ? "启用服务" : "服务已经初始化"}
                   </Button>
                   <Button
                     className={styles.secondaryButton}
@@ -364,7 +373,13 @@ export default function StudentDetailPage() {
                     新建临时任务
                   </Button>
                 </div>
-              ) : null}
+              ) : (
+                <div className={styles.detailActions}>
+                  <Link href={`/workspace/students/${student.id}/record`}>
+                    <Button className={styles.secondaryButton}>完整档案</Button>
+                  </Link>
+                </div>
+              )}
             </section>
 
             {student.progress && student.progress.calculationStatus !== "NORMAL" ? (

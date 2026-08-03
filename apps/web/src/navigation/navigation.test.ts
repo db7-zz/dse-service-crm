@@ -62,7 +62,7 @@ describe("role navigation", () => {
       roles: [RoleCode.STUDENT],
       permissions: [PermissionCode.PORTAL_ACCESS],
     };
-    expect(defaultRouteFor(current)).toBe("/forbidden");
+    expect(defaultRouteFor(current)).toBe("/portal");
     expect(navigationFor(current)).toEqual([]);
   });
 });

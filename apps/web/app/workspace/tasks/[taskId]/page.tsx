@@ -11,19 +11,35 @@ import {
   PlayCircleOutlined,
   StopOutlined,
   SwapOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
-import { Alert, App, Button, Form, Input, InputNumber, Modal, Select, Skeleton, Tag } from "antd";
+import {
+  Alert,
+  App,
+  Button,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Select,
+  Skeleton,
+  Tag,
+  Upload,
+} from "antd";
 import { PermissionCode } from "@dse/shared";
 import { PermissionDenied } from "@dse/ui";
 import { useAuth } from "../../../../src/auth/auth-context";
 import { getResponsiblePersonOptions } from "../../../../src/students/student-api";
 import type { ResponsiblePersonOption } from "../../../../src/students/student-types";
 import {
+  addTaskEvidence,
   cancelTask,
   completeTask,
   getTask,
   handleOverdueAlert,
+  markTaskNotApplicable,
   reassignTask,
+  reopenTask,
   reportTaskExtension,
   rescheduleTask,
   startTask,
@@ -47,6 +63,7 @@ const STATUS = {
   IN_PROGRESS: { label: "进行中", color: "blue" },
   COMPLETED: { label: "已完成", color: "green" },
   CANCELED: { label: "已取消", color: "default" },
+  NOT_APPLICABLE: { label: "不适用", color: "default" },
 } as const;
 
 const ACTION_TITLES: Record<Action, string> = {
@@ -323,6 +340,55 @@ export default function TaskDetailPage() {
                   </Button>
                 </>
               ) : null}
+              {canExecute &&
+              (task.status === "TODO" || task.status === "IN_PROGRESS") &&
+              task.owner?.id === user?.id ? (
+                <>
+                  <Upload
+                    showUploadList={false}
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    beforeUpload={(file) => {
+                      void addTaskEvidence({ taskId: task.id, version: task.version, file })
+                        .then((updated) => {
+                          setTask(updated);
+                          return message.success("完成凭证已上传");
+                        })
+                        .catch((exception: unknown) =>
+                          message.error(
+                            exception instanceof Error ? exception.message : "凭证上传失败",
+                          ),
+                        );
+                      return false;
+                    }}
+                  >
+                    <Button icon={<UploadOutlined />}>上传凭证</Button>
+                  </Upload>
+                  <Button
+                    onClick={() => {
+                      const reason = window.prompt(
+                        "请输入不适用原因；该原因会进入任务时间线和审计记录",
+                      );
+                      if (!reason) return;
+                      void markTaskNotApplicable({
+                        taskId: task.id,
+                        version: task.version,
+                        reason,
+                      })
+                        .then((updated) => {
+                          setTask(updated);
+                          return message.success("任务已标记为不适用");
+                        })
+                        .catch((exception: unknown) =>
+                          message.error(
+                            exception instanceof Error ? exception.message : "操作失败",
+                          ),
+                        );
+                    }}
+                  >
+                    标记不适用
+                  </Button>
+                </>
+              ) : null}
               {canSupervise && (task.status === "TODO" || task.status === "IN_PROGRESS") ? (
                 <>
                   <Button icon={<ClockCircleOutlined />} onClick={() => openAction("reschedule")}>
@@ -352,6 +418,26 @@ export default function TaskDetailPage() {
                   }}
                 >
                   处理逾期提醒
+                </Button>
+              ) : null}
+              {canSupervise && ["COMPLETED", "CANCELED", "NOT_APPLICABLE"].includes(task.status) ? (
+                <Button
+                  onClick={() => {
+                    const reason = window.prompt("请输入重新打开任务的原因");
+                    if (!reason) return;
+                    void reopenTask({ taskId: task.id, version: task.version, reason })
+                      .then((updated) => {
+                        setTask(updated);
+                        return message.success("任务已重新打开");
+                      })
+                      .catch((exception: unknown) =>
+                        message.error(
+                          exception instanceof Error ? exception.message : "重新打开失败",
+                        ),
+                      );
+                  }}
+                >
+                  重新打开
                 </Button>
               ) : null}
             </div>
@@ -403,6 +489,29 @@ export default function TaskDetailPage() {
                   : `标准时限 ${task.completionWindowHours} 小时`}
                 {task.isBlocking ? " · 阻塞所属阶段" : " · 不阻塞阶段"}
               </span>
+              {task.evidenceRequired ? (
+                <Alert
+                  type="info"
+                  showIcon
+                  title="该任务必须上传至少一份完成凭证后才能完成"
+                  style={{ marginTop: 14 }}
+                />
+              ) : null}
+              <div style={{ marginTop: 16 }}>
+                <strong>完成凭证</strong>
+                {task.evidence.length ? (
+                  task.evidence.map((item) => (
+                    <p key={item.id} style={{ margin: "8px 0 0" }}>
+                      <a href={`/api/v1/tasks/${task.id}/evidence/${item.id}/download`}>
+                        {item.fileName}
+                      </a>{" "}
+                      · {item.uploadedBy.displayName} · {hk(item.createdAt)}
+                    </p>
+                  ))
+                ) : (
+                  <p className={styles.subtle}>尚未上传凭证</p>
+                )}
+              </div>
               {task.completionNote ? (
                 <Alert
                   style={{ marginTop: 16 }}

@@ -32,6 +32,24 @@ const NAVIGATION: NavigationItem[] = [
     permission: PermissionCode.SOP_READ,
   },
   {
+    key: "materials",
+    label: "资料管理",
+    href: "/workspace/materials",
+    permission: PermissionCode.MATERIALS_READ,
+  },
+  {
+    key: "applications",
+    label: "申请管理",
+    href: "/workspace/applications",
+    permission: PermissionCode.APPLICATIONS_READ,
+  },
+  {
+    key: "issues",
+    label: "问题协同",
+    href: "/workspace/issues",
+    permission: PermissionCode.ISSUES_READ,
+  },
+  {
     key: "my-tasks",
     label: "我的任务",
     href: "/workspace/my-tasks",
@@ -55,6 +73,12 @@ const NAVIGATION: NavigationItem[] = [
     href: "/workspace/system/audit-logs",
     permission: PermissionCode.SYSTEM_AUDIT_READ,
   },
+  {
+    key: "notifications",
+    label: "消息与待办",
+    href: "/workspace/notifications",
+    permission: PermissionCode.NOTIFICATIONS_READ,
+  },
 ];
 
 export function navigationFor(user: AuthenticatedUser): NavigationItem[] {
@@ -67,6 +91,9 @@ export function navigationFor(user: AuthenticatedUser): NavigationItem[] {
 }
 
 export function defaultRouteFor(user: AuthenticatedUser): string {
+  if (user.permissions.includes(PermissionCode.PORTAL_ACCESS)) {
+    return "/portal";
+  }
   if (user.permissions.includes(PermissionCode.TASKS_OWN_READ)) {
     return "/workspace/my-tasks";
   }
@@ -74,6 +101,9 @@ export function defaultRouteFor(user: AuthenticatedUser): string {
     return "/workspace/supervision";
   }
   if (user.permissions.includes(PermissionCode.STUDENTS_READ)) {
+    return "/workspace/students";
+  }
+  if (user.permissions.includes(PermissionCode.STUDENTS_OWN_READ)) {
     return "/workspace/students";
   }
   if (user.permissions.includes(PermissionCode.SYSTEM_USERS_READ)) {

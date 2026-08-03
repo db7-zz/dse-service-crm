@@ -10,9 +10,12 @@ import {
   Post,
   Query,
   Req,
+  Res,
+  StreamableFile,
   UseGuards,
 } from "@nestjs/common";
 import { ApiCookieAuth, ApiTags } from "@nestjs/swagger";
+import type { Response } from "express";
 import { CsrfGuard } from "../auth/csrf.guard.js";
 import { OriginGuard } from "../auth/origin.guard.js";
 import { PermissionGuard } from "../auth/permission.guard.js";
@@ -21,13 +24,16 @@ import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestContext } from "../common/request-context.js";
 import {
   AddTaskProgressDto,
+  AddTaskEvidenceDto,
   CancelTaskDto,
   CompleteTaskDto,
   HandleOverdueAlertDto,
   ListOverdueAlertsQueryDto,
   ListTasksQueryDto,
+  MarkTaskNotApplicableDto,
   ReassignTaskDto,
   ReportTaskExtensionDto,
+  ReopenTaskDto,
   RescheduleTaskDto,
   TaskVersionDto,
 } from "./task.dto.js";
@@ -103,6 +109,46 @@ export class TasksController {
   ) {
     return this.tasksService.complete(taskId, body, idempotencyKey, request);
   }
+
+  @Post(":taskId/not-applicable")
+  @RequiresPermission(PermissionCode.TASKS_OWN_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public markNotApplicable(
+    @Param("taskId", new ParseUUIDPipe({ version: "4" })) taskId: string,
+    @Body() body: MarkTaskNotApplicableDto,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Req() request: RequestContext,
+  ) {
+    return this.tasksService.markNotApplicable(taskId, body, idempotencyKey, request);
+  }
+
+  @Post(":taskId/evidence")
+  @RequiresPermission(PermissionCode.TASKS_OWN_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public addEvidence(
+    @Param("taskId", new ParseUUIDPipe({ version: "4" })) taskId: string,
+    @Body() body: AddTaskEvidenceDto,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Req() request: RequestContext,
+  ) {
+    return this.tasksService.addEvidence(taskId, body, idempotencyKey, request);
+  }
+
+  @Get(":taskId/evidence/:evidenceId/download")
+  public async downloadEvidence(
+    @Param("taskId", new ParseUUIDPipe({ version: "4" })) taskId: string,
+    @Param("evidenceId", new ParseUUIDPipe({ version: "4" })) evidenceId: string,
+    @Req() request: RequestContext,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const file = await this.tasksService.downloadEvidence(taskId, evidenceId, request);
+    response.setHeader("Content-Type", file.mimeType);
+    response.setHeader(
+      "Content-Disposition",
+      `attachment; filename*=UTF-8''${encodeURIComponent(file.fileName)}`,
+    );
+    return new StreamableFile(file.buffer);
+  }
 }
 
 @ApiTags("my-tasks")
@@ -177,6 +223,17 @@ export class AdminTasksController {
     @Req() request: RequestContext,
   ) {
     return this.tasksService.cancel(taskId, body, idempotencyKey, request);
+  }
+
+  @Post(":taskId/reopen")
+  @RequiresPermission(PermissionCode.TASK_SUPERVISION_WRITE)
+  public reopen(
+    @Param("taskId", new ParseUUIDPipe({ version: "4" })) taskId: string,
+    @Body() body: ReopenTaskDto,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Req() request: RequestContext,
+  ) {
+    return this.tasksService.reopen(taskId, body, idempotencyKey, request);
   }
 }
 

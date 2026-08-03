@@ -1,4 +1,5 @@
-export type ProgressTaskStatus = "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELED";
+export type ProgressTaskStatus =
+  "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELED" | "NOT_APPLICABLE";
 
 export interface StageProgressFact {
   id: string;

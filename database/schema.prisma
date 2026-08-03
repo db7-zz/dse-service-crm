@@ -17,6 +17,26 @@ enum UserStatus {
 enum StudentServiceStatus {
   NOT_ENABLED
   ENABLED
+  PAUSED
+  TERMINATED
+}
+
+enum StudentRiskLevel {
+  NORMAL
+  ATTENTION
+  HIGH
+}
+
+enum ScoreType {
+  CURRENT
+  PREDICTED
+}
+
+enum TargetLevel {
+  ASPIRATIONAL
+  MATCH
+  SAFE
+  OTHER
 }
 
 enum StudentResponsibilityType {
@@ -35,6 +55,7 @@ enum TaskStatus {
   IN_PROGRESS
   COMPLETED
   CANCELED
+  NOT_APPLICABLE
 }
 
 enum StageStatus {
@@ -46,6 +67,98 @@ enum StageStatus {
 enum TaskSourceType {
   SOP
   MANUAL
+  MATERIAL
+  APPLICATION
+  ISSUE
+}
+
+enum MaterialStatus {
+  REQUIRED
+  PENDING_REVIEW
+  APPROVED
+  PARTIALLY_MISSING
+  RESUBMISSION_REQUIRED
+  AWAITING_CONFIRMATION
+  NOT_APPLICABLE
+}
+
+enum MaterialReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum MaterialArchiveStatus {
+  NOT_ARCHIVED
+  ARCHIVED
+  ARCHIVE_FAILED
+}
+
+enum ApplicationChannel {
+  HK_DIRECT
+  JUPAS
+}
+
+enum ApplicationStatus {
+  PLANNING
+  CONFIRMED
+  MATERIAL_PREPARATION
+  PENDING_SUBMISSION
+  SUBMITTED
+  WAITING_RESULT
+  SUPPLEMENT
+  INTERVIEW
+  OFFER
+  REJECTED
+  ENROLLED
+  WITHDRAWN
+}
+
+enum ApplicationRequirementStatus {
+  OPEN
+  COMPLETED
+  WAIVED
+}
+
+enum IssueStatus {
+  OPEN
+  NEEDS_INFO
+  RESPONDED
+  CONVERTED_TO_TASK
+  RESOLVED
+  CLOSED
+}
+
+enum IssueLogAction {
+  CREATED
+  INFORMATION_ADDED
+  INFORMATION_REQUESTED
+  RESPONDED
+  CONVERTED_TO_TASK
+  RESOLVED
+  CLOSED
+  REOPENED
+}
+
+enum NotificationEventType {
+  TASK_ASSIGNED
+  TASK_DUE_SOON
+  TASK_OVERDUE
+  TASK_EXTENSION_REPORTED
+  TASK_REASSIGNED
+  MATERIAL_UPLOADED
+  MATERIAL_MISSING
+  STAGE_CHANGED
+  APPLICATION_STATUS_CHANGED
+  ISSUE_SUBMITTED
+  SPECIALIST_TASK_ASSIGNED
+  STUDENT_RESPONSIBILITY_CHANGED
+}
+
+enum ConfirmationStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
 }
 
 enum ProgressCalculationStatus {
@@ -58,6 +171,7 @@ enum StageTransitionTriggerType {
   SERVICE_ACTIVATION
   TASK_COMPLETED
   TASK_CANCELED
+  TASK_NOT_APPLICABLE
   CONTINUOUS_ADVANCE
   MIGRATION
   RECALCULATION
@@ -90,6 +204,9 @@ enum TaskTimelineEventType {
   REASSIGNED
   COMPLETED
   CANCELED
+  MARKED_NOT_APPLICABLE
+  REOPENED
+  EVIDENCE_ADDED
   OVERDUE_ALERT_GENERATED
   OVERDUE_ALERT_HANDLED
   OVERDUE_ALERT_RESOLVED
@@ -131,6 +248,20 @@ model User {
   taskOperationReceipts      TaskOperationReceipt[]          @relation("TaskOperationActor")
   manualTasksCreated         TaskInstance[]                  @relation("TaskCreator")
   progressCalculationRuns    ServiceProgressCalculationRun[] @relation("ProgressCalculationInitiator")
+  portalStudent              Student?                        @relation("StudentPortalUser")
+  studentScoresUpdated       StudentScore[]                  @relation("StudentScoreUpdater")
+  studentTargetsUpdated      StudentTarget[]                 @relation("StudentTargetUpdater")
+  materialItemsOwned         MaterialItem[]                  @relation("MaterialOwner")
+  materialVersionsUploaded   MaterialVersion[]               @relation("MaterialVersionUploader")
+  materialVersionsReviewed   MaterialVersion[]               @relation("MaterialVersionReviewer")
+  materialFollowupsCreated   MaterialFollowup[]              @relation("MaterialFollowupOperator")
+  applicationsOwned          Application[]                   @relation("ApplicationOwner")
+  applicationStatusChanges   ApplicationStatusLog[]          @relation("ApplicationStatusOperator")
+  issuesSubmitted            Issue[]                         @relation("IssueSubmitter")
+  issueLogsCreated           IssueLog[]                      @relation("IssueLogOperator")
+  notifications              Notification[]                  @relation("NotificationRecipient")
+  confirmationsResponded     StudentConfirmation[]           @relation("ConfirmationResponder")
+  taskEvidenceUploaded       TaskEvidence[]                  @relation("TaskEvidenceUploader")
 
   @@map("users")
 }
@@ -229,6 +360,14 @@ model Student {
   name                  String                        @db.VarChar(100)
   phone                 String?                       @db.VarChar(32)
   email                 String?                       @db.VarChar(254)
+  englishName           String?                       @map("english_name") @db.VarChar(100)
+  school                String?                       @db.VarChar(150)
+  grade                 String?                       @db.VarChar(32)
+  cohortYear            Int?                          @map("cohort_year")
+  nextMilestone         String?                       @map("next_milestone") @db.VarChar(500)
+  riskLevel             StudentRiskLevel              @default(NORMAL) @map("risk_level")
+  riskNote              String?                       @map("risk_note") @db.VarChar(1000)
+  portalUserId          String?                       @unique @map("portal_user_id") @db.Uuid
   defaultButlerId       String?                       @map("default_butler_id") @db.Uuid
   plannerId             String?                       @map("planner_id") @db.Uuid
   serviceStatus         StudentServiceStatus          @default(NOT_ENABLED) @map("service_status")
@@ -238,16 +377,25 @@ model Student {
   updatedAt             DateTime                      @default(now()) @updatedAt @map("updated_at")
   defaultButler         User?                         @relation("StudentDefaultButler", fields: [defaultButlerId], references: [id], onDelete: SetNull)
   planner               User?                         @relation("StudentPlanner", fields: [plannerId], references: [id], onDelete: SetNull)
+  portalUser            User?                         @relation("StudentPortalUser", fields: [portalUserId], references: [id], onDelete: SetNull)
   createdBy             User                          @relation("StudentCreator", fields: [createdById], references: [id], onDelete: Restrict)
   responsibilityChanges StudentResponsibilityChange[]
   serviceActivation     StudentServiceActivation?
   stageInstances        StageInstance[]
   taskInstances         TaskInstance[]
+  scores                StudentScore[]
+  targets               StudentTarget[]
+  materialItems         MaterialItem[]
+  applications          Application[]
+  issues                Issue[]
+  confirmations         StudentConfirmation[]
 
   @@index([name])
   @@index([serviceStatus, createdAt])
   @@index([defaultButlerId])
   @@index([plannerId])
+  @@index([school, grade, cohortYear])
+  @@index([riskLevel, updatedAt])
   @@map("students")
 }
 
@@ -387,7 +535,10 @@ model TaskInstance {
   taskTemplateId                String?                  @map("task_template_id") @db.Uuid
   sopVersionId                  String                   @map("sop_version_id") @db.Uuid
   sourceType                    TaskSourceType           @default(SOP) @map("source_type")
+  sourceObjectId                String?                  @map("source_object_id") @db.Uuid
   isBlockingSnapshot            Boolean                  @default(true) @map("is_blocking_snapshot")
+  evidenceRequiredSnapshot      Boolean                  @default(false) @map("evidence_required_snapshot")
+  externalVisible               Boolean                  @default(false) @map("external_visible")
   createdById                   String?                  @map("created_by") @db.Uuid
   titleSnapshot                 String                   @map("title_snapshot") @db.VarChar(150)
   descriptionSnapshot           String?                  @map("description_snapshot") @db.VarChar(2000)
@@ -423,6 +574,11 @@ model TaskInstance {
   timelineEvents                TaskTimelineEvent[]
   operationReceipts             TaskOperationReceipt[]
   stageTransitionsTriggered     StageTransition[]        @relation("StageTransitionTriggerTask")
+  materialFollowups             MaterialFollowup[]
+  applicationRequirements       ApplicationRequirement[]
+  issuesLinked                  Issue[]                  @relation("IssueLinkedTask")
+  issuesConvertedFrom           Issue[]                  @relation("IssueConvertedTask")
+  evidence                      TaskEvidence[]
 
   @@unique([serviceActivationId, taskTemplateId])
   @@index([ownerId, status, currentDueAt])
@@ -430,6 +586,7 @@ model TaskInstance {
   @@index([stageInstanceId])
   @@index([stageInstanceId, isBlockingSnapshot, status])
   @@index([sourceType, status])
+  @@index([sourceType, sourceObjectId])
   @@index([status, currentDueAt])
   @@map("task_instances")
 }
@@ -590,4 +747,291 @@ model TaskOperationReceipt {
   @@unique([actorId, operation, idempotencyKey])
   @@index([taskId, createdAt])
   @@map("task_operation_receipts")
+}
+
+model StudentScore {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId   String    @map("student_id") @db.Uuid
+  subjectName String    @map("subject_name") @db.VarChar(100)
+  scoreType   ScoreType @map("score_type")
+  scoreValue  String    @map("score_value") @db.VarChar(100)
+  updatedById String    @map("updated_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  updatedBy   User      @relation("StudentScoreUpdater", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@unique([studentId, subjectName, scoreType])
+  @@index([studentId, scoreType])
+  @@map("student_scores")
+}
+
+model StudentTarget {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId       String      @map("student_id") @db.Uuid
+  institutionName String      @map("institution_name") @db.VarChar(200)
+  programName     String?     @map("program_name") @db.VarChar(200)
+  targetLevel     TargetLevel @default(OTHER) @map("target_level")
+  status          String      @default("ACTIVE") @db.VarChar(32)
+  updatedById     String      @map("updated_by") @db.Uuid
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  student         Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  updatedBy       User        @relation("StudentTargetUpdater", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@index([studentId, status])
+  @@map("student_targets")
+}
+
+model MaterialType {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String         @unique @db.VarChar(64)
+  name        String         @db.VarChar(100)
+  description String?        @db.VarChar(500)
+  isCore      Boolean        @default(true) @map("is_core")
+  isActive    Boolean        @default(true) @map("is_active")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  items       MaterialItem[]
+
+  @@index([isActive, name])
+  @@map("material_types")
+}
+
+model MaterialItem {
+  id               String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId        String                @map("student_id") @db.Uuid
+  materialTypeId   String                @map("material_type_id") @db.Uuid
+  title            String                @db.VarChar(150)
+  requirement      String?               @db.VarChar(1000)
+  dueAt            DateTime?             @map("due_at")
+  ownerId          String?               @map("owner_id") @db.Uuid
+  status           MaterialStatus        @default(REQUIRED)
+  missingReason    String?               @map("missing_reason") @db.VarChar(1000)
+  expectedSubmitAt DateTime?             @map("expected_submit_at")
+  currentVersionId String?               @unique @map("current_version_id") @db.Uuid
+  archiveStatus    MaterialArchiveStatus @default(NOT_ARCHIVED) @map("archive_status")
+  archivedAt       DateTime?             @map("archived_at")
+  archiveNote      String?               @map("archive_note") @db.VarChar(500)
+  version          Int                   @default(1)
+  createdAt        DateTime              @default(now()) @map("created_at")
+  updatedAt        DateTime              @updatedAt @map("updated_at")
+  student          Student               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  materialType     MaterialType          @relation(fields: [materialTypeId], references: [id], onDelete: Restrict)
+  owner            User?                 @relation("MaterialOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  currentVersion   MaterialVersion?      @relation("CurrentMaterialVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+  versions         MaterialVersion[]     @relation("MaterialVersions")
+  followups        MaterialFollowup[]
+
+  @@unique([studentId, materialTypeId])
+  @@index([studentId, status, dueAt])
+  @@index([ownerId, status])
+  @@index([archiveStatus, updatedAt])
+  @@map("material_items")
+}
+
+model MaterialVersion {
+  id             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  materialItemId String               @map("material_item_id") @db.Uuid
+  versionNo      Int                  @map("version_no")
+  fileName       String               @map("file_name") @db.VarChar(255)
+  mimeType       String               @map("mime_type") @db.VarChar(100)
+  fileSize       Int                  @map("file_size")
+  storageKey     String               @unique @map("storage_key") @db.VarChar(500)
+  fileHash       String               @map("file_hash") @db.Char(64)
+  uploadedById   String               @map("uploaded_by") @db.Uuid
+  uploadedAt     DateTime             @default(now()) @map("uploaded_at")
+  reviewStatus   MaterialReviewStatus @default(PENDING) @map("review_status")
+  reviewedById   String?              @map("reviewed_by") @db.Uuid
+  reviewedAt     DateTime?            @map("reviewed_at")
+  reviewComment  String?              @map("review_comment") @db.VarChar(1000)
+  materialItem   MaterialItem         @relation("MaterialVersions", fields: [materialItemId], references: [id], onDelete: Cascade)
+  currentForItem MaterialItem?        @relation("CurrentMaterialVersion")
+  uploadedBy     User                 @relation("MaterialVersionUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  reviewedBy     User?                @relation("MaterialVersionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@unique([materialItemId, versionNo])
+  @@index([materialItemId, uploadedAt])
+  @@index([reviewStatus, uploadedAt])
+  @@map("material_versions")
+}
+
+model MaterialFollowup {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  materialItemId String        @map("material_item_id") @db.Uuid
+  taskId         String?       @map("task_id") @db.Uuid
+  followupNote   String        @map("followup_note") @db.VarChar(1000)
+  followedById   String        @map("followed_by") @db.Uuid
+  followedAt     DateTime      @default(now()) @map("followed_at")
+  materialItem   MaterialItem  @relation(fields: [materialItemId], references: [id], onDelete: Cascade)
+  task           TaskInstance? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  followedBy     User          @relation("MaterialFollowupOperator", fields: [followedById], references: [id], onDelete: Restrict)
+
+  @@index([materialItemId, followedAt])
+  @@index([taskId])
+  @@map("material_followups")
+}
+
+model Application {
+  id                   String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId            String                   @map("student_id") @db.Uuid
+  channel              ApplicationChannel
+  institutionName      String                   @map("institution_name") @db.VarChar(200)
+  programName          String?                  @map("program_name") @db.VarChar(200)
+  preferenceNo         Int?                     @map("preference_no")
+  roundName            String?                  @map("round_name") @db.VarChar(100)
+  deadlineAt           DateTime?                @map("deadline_at")
+  status               ApplicationStatus        @default(PLANNING)
+  submittedAt          DateTime?                @map("submitted_at")
+  applicationNo        String?                  @map("application_no") @db.VarChar(100)
+  result               String?                  @db.VarChar(500)
+  offerCondition       String?                  @map("offer_condition") @db.VarChar(1000)
+  confirmationDeadline DateTime?                @map("confirmation_deadline")
+  ownerId              String?                  @map("owner_id") @db.Uuid
+  intakeDecision       String?                  @map("intake_decision") @db.VarChar(500)
+  version              Int                      @default(1)
+  createdAt            DateTime                 @default(now()) @map("created_at")
+  updatedAt            DateTime                 @updatedAt @map("last_updated_at")
+  student              Student                  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  owner                User?                    @relation("ApplicationOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  statusLogs           ApplicationStatusLog[]
+  requirements         ApplicationRequirement[]
+
+  @@index([studentId, status, deadlineAt])
+  @@index([ownerId, status])
+  @@index([channel, status, updatedAt])
+  @@map("applications")
+}
+
+model ApplicationStatusLog {
+  id            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId String             @map("application_id") @db.Uuid
+  fromStatus    ApplicationStatus? @map("from_status")
+  toStatus      ApplicationStatus  @map("to_status")
+  note          String?            @db.VarChar(1000)
+  beforeData    Json?              @map("before_data")
+  afterData     Json?              @map("after_data")
+  operatorId    String             @map("operator_id") @db.Uuid
+  changedAt     DateTime           @default(now()) @map("changed_at")
+  application   Application        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  operator      User               @relation("ApplicationStatusOperator", fields: [operatorId], references: [id], onDelete: Restrict)
+
+  @@index([applicationId, changedAt])
+  @@map("application_status_logs")
+}
+
+model ApplicationRequirement {
+  id              String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId   String                       @map("application_id") @db.Uuid
+  requirementType String                       @map("requirement_type") @db.VarChar(64)
+  description     String                       @db.VarChar(1000)
+  dueAt           DateTime?                    @map("due_at")
+  linkedTaskId    String?                      @map("linked_task_id") @db.Uuid
+  status          ApplicationRequirementStatus @default(OPEN)
+  createdAt       DateTime                     @default(now()) @map("created_at")
+  updatedAt       DateTime                     @updatedAt @map("updated_at")
+  application     Application                  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  linkedTask      TaskInstance?                @relation(fields: [linkedTaskId], references: [id], onDelete: SetNull)
+
+  @@index([applicationId, status, dueAt])
+  @@index([linkedTaskId])
+  @@map("application_requirements")
+}
+
+model Issue {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId       String        @map("student_id") @db.Uuid
+  linkedTaskId    String?       @map("linked_task_id") @db.Uuid
+  convertedTaskId String?       @map("converted_task_id") @db.Uuid
+  category        String        @db.VarChar(64)
+  description     String        @db.VarChar(2000)
+  context         String        @db.VarChar(4000)
+  priority        String?       @db.VarChar(32)
+  status          IssueStatus   @default(OPEN)
+  submittedById   String        @map("submitted_by") @db.Uuid
+  submittedAt     DateTime      @default(now()) @map("submitted_at")
+  managerResponse String?       @map("manager_response") @db.VarChar(4000)
+  respondedAt     DateTime?     @map("responded_at")
+  closedAt        DateTime?     @map("closed_at")
+  version         Int           @default(1)
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  student         Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  linkedTask      TaskInstance? @relation("IssueLinkedTask", fields: [linkedTaskId], references: [id], onDelete: SetNull)
+  convertedTask   TaskInstance? @relation("IssueConvertedTask", fields: [convertedTaskId], references: [id], onDelete: SetNull)
+  submittedBy     User          @relation("IssueSubmitter", fields: [submittedById], references: [id], onDelete: Restrict)
+  logs            IssueLog[]
+
+  @@index([studentId, status, updatedAt])
+  @@index([submittedById, status])
+  @@map("issues")
+}
+
+model IssueLog {
+  id         String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  issueId    String         @map("issue_id") @db.Uuid
+  action     IssueLogAction
+  note       String?        @db.VarChar(4000)
+  operatorId String         @map("operator_id") @db.Uuid
+  createdAt  DateTime       @default(now()) @map("created_at")
+  issue      Issue          @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  operator   User           @relation("IssueLogOperator", fields: [operatorId], references: [id], onDelete: Restrict)
+
+  @@index([issueId, createdAt])
+  @@map("issue_logs")
+}
+
+model Notification {
+  id          String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recipientId String                @map("recipient_id") @db.Uuid
+  eventType   NotificationEventType @map("event_type")
+  title       String                @db.VarChar(200)
+  content     String                @db.VarChar(1000)
+  objectType  String?               @map("object_type") @db.VarChar(64)
+  objectId    String?               @map("object_id") @db.Uuid
+  actionUrl   String?               @map("action_url") @db.VarChar(500)
+  eventKey    String?               @unique @map("event_key") @db.VarChar(255)
+  readAt      DateTime?             @map("read_at")
+  createdAt   DateTime              @default(now()) @map("created_at")
+  recipient   User                  @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, readAt, createdAt])
+  @@index([eventType, createdAt])
+  @@map("notifications")
+}
+
+model StudentConfirmation {
+  id            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId     String             @map("student_id") @db.Uuid
+  objectType    String             @map("object_type") @db.VarChar(64)
+  objectId      String?            @map("object_id") @db.Uuid
+  prompt        String             @db.VarChar(1000)
+  status        ConfirmationStatus @default(PENDING)
+  responseNote  String?            @map("response_note") @db.VarChar(1000)
+  respondedById String?            @map("responded_by") @db.Uuid
+  respondedAt   DateTime?          @map("responded_at")
+  dueAt         DateTime?          @map("due_at")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+  student       Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  respondedBy   User?              @relation("ConfirmationResponder", fields: [respondedById], references: [id], onDelete: SetNull)
+
+  @@index([studentId, status, dueAt])
+  @@map("student_confirmations")
+}
+
+model TaskEvidence {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  taskId       String       @map("task_id") @db.Uuid
+  fileName     String       @map("file_name") @db.VarChar(255)
+  mimeType     String       @map("mime_type") @db.VarChar(100)
+  fileSize     Int          @map("file_size")
+  storageKey   String       @unique @map("storage_key") @db.VarChar(500)
+  fileHash     String       @map("file_hash") @db.Char(64)
+  uploadedById String       @map("uploaded_by") @db.Uuid
+  createdAt    DateTime     @default(now()) @map("created_at")
+  task         TaskInstance @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedBy   User         @relation("TaskEvidenceUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@index([taskId, createdAt])
+  @@map("task_evidence")
 }

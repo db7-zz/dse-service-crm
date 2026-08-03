@@ -21,7 +21,8 @@ import {
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
-const SERVICE_STATUSES = ["NOT_ENABLED", "ENABLED"] as const;
+const SERVICE_STATUSES = ["NOT_ENABLED", "ENABLED", "PAUSED", "TERMINATED"] as const;
+const STUDENT_RISK_LEVELS = ["NORMAL", "ATTENTION", "HIGH"] as const;
 const STUDENT_PROGRESS_SORTS = ["stageProgress", "currentBlockers", "overdueTasks"] as const;
 const SORT_ORDERS = ["asc", "desc"] as const;
 
@@ -61,6 +62,37 @@ export class ListStudentsQueryDto {
   @IsOptional()
   @IsUUID()
   plannerId?: string;
+
+  @ApiPropertyOptional({ maxLength: 150 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  school?: string;
+
+  @ApiPropertyOptional({ maxLength: 32 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  grade?: string;
+
+  @ApiPropertyOptional({ minimum: 2000, maximum: 2200 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  @Max(2200)
+  cohortYear?: number;
+
+  @ApiPropertyOptional({ enum: STUDENT_RISK_LEVELS })
+  @IsOptional()
+  @IsIn(STUDENT_RISK_LEVELS)
+  riskLevel?: (typeof STUDENT_RISK_LEVELS)[number];
+
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @Transform(({ value }) => (value === "true" ? true : value === "false" ? false : value))
+  @IsBoolean()
+  hasMissingMaterials?: boolean;
 
   @ApiPropertyOptional({ maxLength: 32 })
   @IsOptional()

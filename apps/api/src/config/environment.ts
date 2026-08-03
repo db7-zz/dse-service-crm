@@ -18,6 +18,8 @@ const environmentSchema = z
       .default("false")
       .transform((value) => value === "true"),
     LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
+    FILE_STORAGE_ROOT: z.string().min(1).default("./tmp/uploads"),
+    MAX_UPLOAD_BYTES: z.coerce.number().int().positive().max(52_428_800).default(52_428_800),
   })
   .superRefine((value, context) => {
     if (

@@ -11,9 +11,10 @@ import {
 } from "./tasks.controller.js";
 import { TasksService } from "./tasks.service.js";
 import { ServiceProgressService } from "../students/service-progress.service.js";
+import { MaterialsModule } from "../materials/materials.module.js";
 
 @Module({
-  imports: [AuthModule, DatabaseModule],
+  imports: [AuthModule, DatabaseModule, MaterialsModule],
   controllers: [
     TasksController,
     MyTasksController,

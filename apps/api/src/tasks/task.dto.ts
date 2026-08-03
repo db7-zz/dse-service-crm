@@ -1,6 +1,7 @@
 import { Transform, Type } from "class-transformer";
 import {
   IsBoolean,
+  IsBase64,
   IsDateString,
   IsIn,
   IsInt,
@@ -14,7 +15,13 @@ import {
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
-export const TASK_STATUSES = ["TODO", "IN_PROGRESS", "COMPLETED", "CANCELED"] as const;
+export const TASK_STATUSES = [
+  "TODO",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "CANCELED",
+  "NOT_APPLICABLE",
+] as const;
 export const ALERT_STATUSES = ["OPEN", "HANDLED", "RESOLVED"] as const;
 
 export class ListTasksQueryDto {
@@ -155,6 +162,46 @@ export class CancelTaskDto extends TaskVersionDto {
   @MinLength(1)
   @MaxLength(500)
   reason!: string;
+}
+
+export class MarkTaskNotApplicableDto extends TaskVersionDto {
+  @ApiProperty({ maxLength: 500 })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(500)
+  reason!: string;
+}
+
+export class ReopenTaskDto extends TaskVersionDto {
+  @ApiProperty({ maxLength: 500 })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(500)
+  reason!: string;
+
+  @ApiPropertyOptional({ format: "date-time" })
+  @IsOptional()
+  @IsDateString()
+  newDueAt?: string;
+}
+
+export class AddTaskEvidenceDto extends TaskVersionDto {
+  @ApiProperty({ maxLength: 255 })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(255)
+  fileName!: string;
+
+  @ApiProperty({ maxLength: 100 })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  mimeType!: string;
+
+  @ApiProperty({ description: "Base64编码文件内容，解码后最大50MB" })
+  @IsString()
+  @IsBase64()
+  contentBase64!: string;
 }
 
 export class ListOverdueAlertsQueryDto {

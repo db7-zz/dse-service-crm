@@ -72,6 +72,19 @@ describe("deriveStageProgress", () => {
     expect(result.currentStageId).toBe("stage-2");
   });
 
+  it("treats not-applicable blockers as a traceable terminal state", () => {
+    const result = deriveStageProgress(
+      stages({
+        1: [
+          { status: "COMPLETED", isBlocking: true },
+          { status: "NOT_APPLICABLE", isBlocking: true },
+        ],
+      }),
+    );
+    expect(result.completedStageCount).toBe(1);
+    expect(result.currentStageId).toBe("stage-2");
+  });
+
   it("does not skip an incomplete earlier stage when later blockers finish early", () => {
     const result = deriveStageProgress(stages({ 3: [{ status: "COMPLETED", isBlocking: true }] }));
     expect(result.completedStageCount).toBe(0);

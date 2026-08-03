@@ -17,6 +17,13 @@ import { HealthModule } from "./health/health.module.js";
 import { SopModule } from "./sop/sop.module.js";
 import { StudentsModule } from "./students/students.module.js";
 import { TasksModule } from "./tasks/tasks.module.js";
+import { AccessModule } from "./access/access.module.js";
+import { ApplicationsModule } from "./applications/applications.module.js";
+import { IssuesModule } from "./issues/issues.module.js";
+import { MaterialsModule } from "./materials/materials.module.js";
+import { NotificationsModule } from "./notifications/notifications.module.js";
+import { PortalModule } from "./portal/portal.module.js";
+import { StudentRecordsModule } from "./student-records/student-records.module.js";
 
 const rootEnvironmentFile = fileURLToPath(new URL("../../../.env", import.meta.url));
 
@@ -50,12 +57,19 @@ const rootEnvironmentFile = fileURLToPath(new URL("../../../.env", import.meta.u
       }),
     }),
     DatabaseModule,
+    AccessModule,
     AuthModule,
+    NotificationsModule,
     AdminModule,
     AuditModule,
     SopModule,
     StudentsModule,
     TasksModule,
+    StudentRecordsModule,
+    MaterialsModule,
+    ApplicationsModule,
+    IssuesModule,
+    PortalModule,
     HealthModule,
   ],
   providers: [

@@ -8,7 +8,12 @@ const ACTIVE_STATUSES = ["TODO", "IN_PROGRESS"] as const;
 export class OverdueScannerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(OverdueScannerService.name);
   private timer?: ReturnType<typeof setInterval>;
-  private running?: Promise<{ generated: number; resolved: number; failed: number }>;
+  private running?: Promise<{
+    generated: number;
+    resolved: number;
+    dueSoonNotified: number;
+    failed: number;
+  }>;
 
   public constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
@@ -54,11 +59,28 @@ export class OverdueScannerService implements OnModuleInit, OnModuleDestroy {
       },
       select: { id: true },
     });
+    const dueSoonTasks = await this.prisma.taskInstance.findMany({
+      where: {
+        status: { in: [...ACTIVE_STATUSES] },
+        ownerId: { not: null },
+        currentDueAt: {
+          gte: now,
+          lte: new Date(now.getTime() + 24 * 60 * 60 * 1000),
+        },
+      },
+      select: {
+        id: true,
+        ownerId: true,
+        titleSnapshot: true,
+        currentDueAt: true,
+        student: { select: { name: true } },
+      },
+    });
     const alertsToResolve = await this.prisma.overdueAlert.findMany({
       where: {
         status: { in: ["OPEN", "HANDLED"] },
         OR: [
-          { task: { status: { in: ["COMPLETED", "CANCELED"] } } },
+          { task: { status: { in: ["COMPLETED", "CANCELED", "NOT_APPLICABLE"] } } },
           {
             task: {
               status: { in: [...ACTIVE_STATUSES] },
@@ -72,6 +94,7 @@ export class OverdueScannerService implements OnModuleInit, OnModuleDestroy {
 
     let generated = 0;
     let resolved = 0;
+    let dueSoonNotified = 0;
     let failed = 0;
     for (const task of overdueTasks) {
       try {
@@ -80,6 +103,31 @@ export class OverdueScannerService implements OnModuleInit, OnModuleDestroy {
       } catch (error) {
         failed += 1;
         this.logger.error(`Overdue scan failed for task ${task.id}`, error);
+      }
+    }
+    for (const task of dueSoonTasks) {
+      if (!task.ownerId) continue;
+      try {
+        const eventKey = `task-due-soon:${task.id}:${task.ownerId}:${task.currentDueAt.getTime()}`;
+        const existing = await this.prisma.notification.findUnique({ where: { eventKey } });
+        await this.prisma.notification.upsert({
+          where: { eventKey },
+          update: {},
+          create: {
+            recipientId: task.ownerId,
+            eventType: "TASK_DUE_SOON",
+            title: "任务将在24小时内到期",
+            content: `${task.student.name} · ${task.titleSnapshot}`,
+            objectType: "task",
+            objectId: task.id,
+            actionUrl: `/workspace/tasks/${task.id}`,
+            eventKey,
+          },
+        });
+        if (!existing) dueSoonNotified += 1;
+      } catch (error) {
+        failed += 1;
+        this.logger.error(`Due-soon notification failed for task ${task.id}`, error);
       }
     }
     for (const alert of alertsToResolve) {
@@ -91,7 +139,7 @@ export class OverdueScannerService implements OnModuleInit, OnModuleDestroy {
         this.logger.error(`Overdue resolution failed for alert ${alert.id}`, error);
       }
     }
-    return { generated, resolved, failed };
+    return { generated, resolved, dueSoonNotified, failed };
   }
 
   private async generateForTask(taskId: string, now: Date) {
@@ -103,6 +151,9 @@ export class OverdueScannerService implements OnModuleInit, OnModuleDestroy {
             id: true,
             status: true,
             currentDueAt: true,
+            ownerId: true,
+            titleSnapshot: true,
+            student: { select: { name: true, portalUserId: true } },
             overdueAlerts: {
               where: { status: { in: ["OPEN", "HANDLED"] } },
               select: { id: true },
@@ -157,6 +208,33 @@ export class OverdueScannerService implements OnModuleInit, OnModuleDestroy {
             requestId: `overdue-scan-${now.getTime()}`,
           },
         });
+        const recipients = new Set<string>();
+        if (task.ownerId) recipients.add(task.ownerId);
+        const managers = await transaction.user.findMany({
+          where: {
+            status: "ACTIVE",
+            roles: { some: { expiredAt: null, role: { code: "ADMINISTRATOR" } } },
+          },
+          select: { id: true },
+        });
+        for (const manager of managers) recipients.add(manager.id);
+        for (const recipientId of recipients) {
+          const eventKey = `task-overdue:${alert.id}:${recipientId}`;
+          await transaction.notification.upsert({
+            where: { eventKey },
+            update: {},
+            create: {
+              recipientId,
+              eventType: "TASK_OVERDUE",
+              title: "任务已经逾期",
+              content: `${task.student.name} · ${task.titleSnapshot}`,
+              objectType: "task",
+              objectId: task.id,
+              actionUrl: `/workspace/tasks/${task.id}`,
+              eventKey,
+            },
+          });
+        }
         return true;
       });
     } catch (error) {

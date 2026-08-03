@@ -121,6 +121,132 @@
         ]
       }
     },
+    "/api/v1/notifications": {
+      "get": {
+        "operationId": "NotificationsController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "unreadOnly",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/notifications/{notificationId}/read": {
+      "post": {
+        "operationId": "NotificationsController_markRead",
+        "parameters": [
+          {
+            "name": "notificationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/notifications/read-all": {
+      "post": {
+        "operationId": "NotificationsController_markAllRead",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/api/v1/admin/users": {
       "get": {
         "operationId": "UsersController_list",
@@ -742,7 +868,9 @@
               "type": "string",
               "enum": [
                 "NOT_ENABLED",
-                "ENABLED"
+                "ENABLED",
+                "PAUSED",
+                "TERMINATED"
               ]
             }
           },
@@ -762,6 +890,55 @@
             "schema": {
               "format": "uuid",
               "type": "string"
+            }
+          },
+          {
+            "name": "school",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 150,
+              "type": "string"
+            }
+          },
+          {
+            "name": "grade",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 32,
+              "type": "string"
+            }
+          },
+          {
+            "name": "cohortYear",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 2000,
+              "maximum": 2200,
+              "type": "number"
+            }
+          },
+          {
+            "name": "riskLevel",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NORMAL",
+                "ATTENTION",
+                "HIGH"
+              ]
+            }
+          },
+          {
+            "name": "hasMissingMaterials",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
             }
           },
           {
@@ -1287,7 +1464,9 @@
               "type": "string",
               "enum": [
                 "NOT_ENABLED",
-                "ENABLED"
+                "ENABLED",
+                "PAUSED",
+                "TERMINATED"
               ]
             }
           },
@@ -1307,6 +1486,55 @@
             "schema": {
               "format": "uuid",
               "type": "string"
+            }
+          },
+          {
+            "name": "school",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 150,
+              "type": "string"
+            }
+          },
+          {
+            "name": "grade",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 32,
+              "type": "string"
+            }
+          },
+          {
+            "name": "cohortYear",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 2000,
+              "maximum": 2200,
+              "type": "number"
+            }
+          },
+          {
+            "name": "riskLevel",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NORMAL",
+                "ATTENTION",
+                "HIGH"
+              ]
+            }
+          },
+          {
+            "name": "hasMissingMaterials",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
             }
           },
           {
@@ -1695,6 +1923,139 @@
         ]
       }
     },
+    "/api/v1/tasks/{taskId}/not-applicable": {
+      "post": {
+        "operationId": "TasksController_markNotApplicable",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkTaskNotApplicableDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/api/v1/tasks/{taskId}/evidence": {
+      "post": {
+        "operationId": "TasksController_addEvidence",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddTaskEvidenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/api/v1/tasks/{taskId}/evidence/{evidenceId}/download": {
+      "get": {
+        "operationId": "TasksController_downloadEvidence",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "evidenceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
     "/api/v1/my/tasks": {
       "get": {
         "operationId": "MyTasksController_list",
@@ -1738,7 +2099,8 @@
                 "TODO",
                 "IN_PROGRESS",
                 "COMPLETED",
-                "CANCELED"
+                "CANCELED",
+                "NOT_APPLICABLE"
               ]
             }
           },
@@ -1877,7 +2239,8 @@
                 "TODO",
                 "IN_PROGRESS",
                 "COMPLETED",
-                "CANCELED"
+                "CANCELED",
+                "NOT_APPLICABLE"
               ]
             }
           },
@@ -2016,7 +2379,8 @@
                 "TODO",
                 "IN_PROGRESS",
                 "COMPLETED",
-                "CANCELED"
+                "CANCELED",
+                "NOT_APPLICABLE"
               ]
             }
           },
@@ -2247,6 +2611,51 @@
         ]
       }
     },
+    "/api/v1/admin/tasks/{taskId}/reopen": {
+      "post": {
+        "operationId": "AdminTasksController_reopen",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReopenTaskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "admin-tasks"
+        ]
+      }
+    },
     "/api/v1/admin/overdue-alerts": {
       "get": {
         "operationId": "OverdueAlertsController_list",
@@ -2361,6 +2770,1527 @@
         ]
       }
     },
+    "/api/v1/material-types": {
+      "get": {
+        "operationId": "MaterialsController_types",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/students/{studentId}/materials": {
+      "get": {
+        "operationId": "MaterialsController_list",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      },
+      "post": {
+        "operationId": "MaterialsController_create",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMaterialItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/materials/{materialId}/versions": {
+      "post": {
+        "operationId": "MaterialsController_upload",
+        "parameters": [
+          {
+            "name": "materialId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadMaterialVersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/materials/{materialId}/review": {
+      "post": {
+        "operationId": "MaterialsController_review",
+        "parameters": [
+          {
+            "name": "materialId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewMaterialDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/materials/{materialId}/mark-missing": {
+      "post": {
+        "operationId": "MaterialsController_markMissing",
+        "parameters": [
+          {
+            "name": "materialId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkMaterialMissingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/materials/{materialId}/followups": {
+      "post": {
+        "operationId": "MaterialsController_followup",
+        "parameters": [
+          {
+            "name": "materialId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaterialFollowupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/materials/{materialId}/archive": {
+      "post": {
+        "operationId": "MaterialsController_archive",
+        "parameters": [
+          {
+            "name": "materialId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArchiveMaterialDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/materials/versions/{versionId}/download": {
+      "get": {
+        "operationId": "MaterialsController_download",
+        "parameters": [
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/students/{studentId}/record": {
+      "get": {
+        "operationId": "StudentRecordsController_detail",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-records"
+        ]
+      },
+      "put": {
+        "operationId": "StudentRecordsController_update",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStudentRecordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-records"
+        ]
+      }
+    },
+    "/api/v1/students/{studentId}/risk": {
+      "patch": {
+        "operationId": "StudentRecordsController_updateRisk",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStudentRiskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-records"
+        ]
+      }
+    },
+    "/api/v1/students/{studentId}/service-status": {
+      "patch": {
+        "operationId": "StudentRecordsController_updateServiceStatus",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStudentServiceStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-records"
+        ]
+      }
+    },
+    "/api/v1/applications": {
+      "get": {
+        "operationId": "ApplicationsController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maximum": 100,
+              "default": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "name": "studentId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "channel",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "HK_DIRECT",
+                "JUPAS"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PLANNING",
+                "CONFIRMED",
+                "MATERIAL_PREPARATION",
+                "PENDING_SUBMISSION",
+                "SUBMITTED",
+                "WAITING_RESULT",
+                "SUPPLEMENT",
+                "INTERVIEW",
+                "OFFER",
+                "REJECTED",
+                "ENROLLED",
+                "WITHDRAWN"
+              ]
+            }
+          },
+          {
+            "name": "overdueOnly",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "applications"
+        ]
+      },
+      "post": {
+        "operationId": "ApplicationsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApplicationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{applicationId}": {
+      "get": {
+        "operationId": "ApplicationsController_detail",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "applications"
+        ]
+      },
+      "patch": {
+        "operationId": "ApplicationsController_update",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateApplicationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{applicationId}/change-status": {
+      "post": {
+        "operationId": "ApplicationsController_changeStatus",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeApplicationStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/applications/{applicationId}/requirements": {
+      "post": {
+        "operationId": "ApplicationsController_createRequirement",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApplicationRequirementDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "applications"
+        ]
+      }
+    },
+    "/api/v1/issues": {
+      "get": {
+        "operationId": "IssuesController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maximum": 100,
+              "default": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "studentId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "NEEDS_INFO",
+                "RESPONDED",
+                "CONVERTED_TO_TASK",
+                "RESOLVED",
+                "CLOSED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "issues"
+        ]
+      },
+      "post": {
+        "operationId": "IssuesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIssueDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "issues"
+        ]
+      }
+    },
+    "/api/v1/issues/{issueId}": {
+      "get": {
+        "operationId": "IssuesController_detail",
+        "parameters": [
+          {
+            "name": "issueId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "issues"
+        ]
+      }
+    },
+    "/api/v1/issues/{issueId}/information": {
+      "post": {
+        "operationId": "IssuesController_addInformation",
+        "parameters": [
+          {
+            "name": "issueId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "issues"
+        ]
+      }
+    },
+    "/api/v1/issues/{issueId}/respond": {
+      "post": {
+        "operationId": "IssuesController_respond",
+        "parameters": [
+          {
+            "name": "issueId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RespondIssueDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "issues"
+        ]
+      }
+    },
+    "/api/v1/issues/{issueId}/convert-to-task": {
+      "post": {
+        "operationId": "IssuesController_convertToTask",
+        "parameters": [
+          {
+            "name": "issueId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvertIssueToTaskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "issues"
+        ]
+      }
+    },
+    "/api/v1/issues/{issueId}/resolve": {
+      "post": {
+        "operationId": "IssuesController_resolve",
+        "parameters": [
+          {
+            "name": "issueId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "issues"
+        ]
+      }
+    },
+    "/api/v1/issues/{issueId}/close": {
+      "post": {
+        "operationId": "IssuesController_close",
+        "parameters": [
+          {
+            "name": "issueId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "issues"
+        ]
+      }
+    },
+    "/api/v1/issues/{issueId}/reopen": {
+      "post": {
+        "operationId": "IssuesController_reopen",
+        "parameters": [
+          {
+            "name": "issueId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "issues"
+        ]
+      }
+    },
+    "/api/v1/portal/me/summary": {
+      "get": {
+        "operationId": "PortalController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-portal"
+        ]
+      }
+    },
+    "/api/v1/portal/me/materials": {
+      "get": {
+        "operationId": "PortalController_materials",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-portal"
+        ]
+      }
+    },
+    "/api/v1/portal/me/materials/{materialId}/upload": {
+      "post": {
+        "operationId": "PortalController_upload",
+        "parameters": [
+          {
+            "name": "materialId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalUploadMaterialDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-portal"
+        ]
+      }
+    },
+    "/api/v1/portal/me/material-versions/{versionId}/download": {
+      "get": {
+        "operationId": "PortalController_download",
+        "parameters": [
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-portal"
+        ]
+      }
+    },
+    "/api/v1/portal/me/progress": {
+      "get": {
+        "operationId": "PortalController_progress",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-portal"
+        ]
+      }
+    },
+    "/api/v1/portal/me/applications": {
+      "get": {
+        "operationId": "PortalController_applications",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-portal"
+        ]
+      }
+    },
+    "/api/v1/portal/me/confirmations": {
+      "get": {
+        "operationId": "PortalController_confirmations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-portal"
+        ]
+      }
+    },
+    "/api/v1/portal/me/confirmations/{confirmationId}": {
+      "post": {
+        "operationId": "PortalController_respondConfirmation",
+        "parameters": [
+          {
+            "name": "confirmationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RespondConfirmationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-portal"
+        ]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",
@@ -2438,6 +4368,10 @@
           "username",
           "password"
         ]
+      },
+      "Object": {
+        "type": "object",
+        "properties": {}
       },
       "CreateUserDto": {
         "type": "object",
@@ -2628,10 +4562,6 @@
         "required": [
           "version"
         ]
-      },
-      "Object": {
-        "type": "object",
-        "properties": {}
       },
       "CreateStudentDto": {
         "type": "object",
@@ -2900,6 +4830,50 @@
           "completionNote"
         ]
       },
+      "MarkTaskNotApplicableDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "version",
+          "reason"
+        ]
+      },
+      "AddTaskEvidenceDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "fileName": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "mimeType": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "contentBase64": {
+            "type": "string",
+            "description": "Base64编码文件内容，解码后最大50MB"
+          }
+        },
+        "required": [
+          "version",
+          "fileName",
+          "mimeType",
+          "contentBase64"
+        ]
+      },
       "RescheduleTaskDto": {
         "type": "object",
         "properties": {
@@ -2961,6 +4935,27 @@
           "reason"
         ]
       },
+      "ReopenTaskDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "newDueAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "version",
+          "reason"
+        ]
+      },
       "HandleOverdueAlertDto": {
         "type": "object",
         "properties": {
@@ -2969,6 +4964,680 @@
             "maxLength": 500
           }
         }
+      },
+      "CreateMaterialItemDto": {
+        "type": "object",
+        "properties": {
+          "materialTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "requirement": {
+            "type": "object",
+            "maxLength": 1000,
+            "nullable": true
+          },
+          "dueAt": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "ownerId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "materialTypeId",
+          "title"
+        ]
+      },
+      "UploadMaterialVersionDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "mimeType": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "contentBase64": {
+            "type": "string",
+            "description": "Base64编码文件内容，解码后最大50MB"
+          }
+        },
+        "required": [
+          "fileName",
+          "mimeType",
+          "contentBase64"
+        ]
+      },
+      "ReviewMaterialDto": {
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "APPROVED",
+              "PARTIALLY_MISSING",
+              "RESUBMISSION_REQUIRED",
+              "AWAITING_CONFIRMATION",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "comment": {
+            "type": "object",
+            "maxLength": 1000,
+            "nullable": true
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "outcome",
+          "version"
+        ]
+      },
+      "MarkMaterialMissingDto": {
+        "type": "object",
+        "properties": {
+          "missingReason": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "ownerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedSubmitAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "missingReason",
+          "ownerId",
+          "expectedSubmitAt",
+          "version"
+        ]
+      },
+      "MaterialFollowupDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "createTask": {
+            "type": "object",
+            "default": false
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "note"
+        ]
+      },
+      "ArchiveMaterialDto": {
+        "type": "object",
+        "properties": {
+          "archiveStatus": {
+            "type": "string",
+            "enum": [
+              "ARCHIVED",
+              "ARCHIVE_FAILED"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "archiveStatus",
+          "note"
+        ]
+      },
+      "StudentScoreInputDto": {
+        "type": "object",
+        "properties": {
+          "subjectName": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "scoreType": {
+            "type": "string",
+            "enum": [
+              "CURRENT",
+              "PREDICTED"
+            ]
+          },
+          "scoreValue": {
+            "type": "string",
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "subjectName",
+          "scoreType",
+          "scoreValue"
+        ]
+      },
+      "StudentTargetInputDto": {
+        "type": "object",
+        "properties": {
+          "institutionName": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "programName": {
+            "type": "object",
+            "maxLength": 200,
+            "nullable": true
+          },
+          "targetLevel": {
+            "type": "string",
+            "enum": [
+              "ASPIRATIONAL",
+              "MATCH",
+              "SAFE",
+              "OTHER"
+            ]
+          }
+        },
+        "required": [
+          "institutionName",
+          "targetLevel"
+        ]
+      },
+      "UpdateStudentRecordDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "englishName": {
+            "type": "object",
+            "maxLength": 100,
+            "nullable": true
+          },
+          "school": {
+            "type": "object",
+            "maxLength": 150,
+            "nullable": true
+          },
+          "grade": {
+            "type": "object",
+            "maxLength": 32,
+            "nullable": true
+          },
+          "cohortYear": {
+            "type": "object",
+            "minimum": 2020,
+            "maximum": 2100,
+            "nullable": true
+          },
+          "nextMilestone": {
+            "type": "object",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "scores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentScoreInputDto"
+            }
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentTargetInputDto"
+            }
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "version",
+          "reason"
+        ]
+      },
+      "UpdateStudentRiskDto": {
+        "type": "object",
+        "properties": {
+          "riskLevel": {
+            "type": "string",
+            "enum": [
+              "NORMAL",
+              "ATTENTION",
+              "HIGH"
+            ]
+          },
+          "riskNote": {
+            "type": "object",
+            "maxLength": 1000,
+            "nullable": true
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "riskLevel",
+          "version"
+        ]
+      },
+      "UpdateStudentServiceStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ENABLED",
+              "PAUSED",
+              "TERMINATED"
+            ]
+          },
+          "unfinishedTaskAction": {
+            "type": "string",
+            "enum": [
+              "KEEP",
+              "CANCEL"
+            ],
+            "default": "KEEP"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "status",
+          "unfinishedTaskAction",
+          "reason",
+          "version"
+        ]
+      },
+      "CreateApplicationDto": {
+        "type": "object",
+        "properties": {
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "HK_DIRECT",
+              "JUPAS"
+            ]
+          },
+          "institutionName": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "programName": {
+            "type": "object",
+            "maxLength": 200,
+            "nullable": true
+          },
+          "preferenceNo": {
+            "type": "object",
+            "minimum": 1,
+            "nullable": true
+          },
+          "roundName": {
+            "type": "object",
+            "maxLength": 100,
+            "nullable": true
+          },
+          "deadlineAt": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "ownerId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "confirmPastDeadline": {
+            "type": "object",
+            "default": false
+          }
+        },
+        "required": [
+          "studentId",
+          "channel",
+          "institutionName"
+        ]
+      },
+      "UpdateApplicationDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "institutionName": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "programName": {
+            "type": "object",
+            "maxLength": 200,
+            "nullable": true
+          },
+          "preferenceNo": {
+            "type": "object",
+            "minimum": 1,
+            "nullable": true
+          },
+          "roundName": {
+            "type": "object",
+            "maxLength": 100,
+            "nullable": true
+          },
+          "deadlineAt": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "ownerId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "version",
+          "reason"
+        ]
+      },
+      "ChangeApplicationStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "PLANNING",
+              "CONFIRMED",
+              "MATERIAL_PREPARATION",
+              "PENDING_SUBMISSION",
+              "SUBMITTED",
+              "WAITING_RESULT",
+              "SUPPLEMENT",
+              "INTERVIEW",
+              "OFFER",
+              "REJECTED",
+              "ENROLLED",
+              "WITHDRAWN"
+            ]
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "submittedAt": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "applicationNo": {
+            "type": "object",
+            "maxLength": 100,
+            "nullable": true
+          },
+          "result": {
+            "type": "object",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "offerCondition": {
+            "type": "object",
+            "maxLength": 1000,
+            "nullable": true
+          },
+          "confirmationDeadline": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "intakeDecision": {
+            "type": "object",
+            "maxLength": 500,
+            "nullable": true
+          }
+        },
+        "required": [
+          "status",
+          "version",
+          "note"
+        ]
+      },
+      "CreateApplicationRequirementDto": {
+        "type": "object",
+        "properties": {
+          "requirementType": {
+            "type": "string",
+            "enum": [
+              "SUPPLEMENT",
+              "INTERVIEW",
+              "OFFER_CONFIRMATION",
+              "ESSAY",
+              "OTHER"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ownerId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "createTask": {
+            "type": "object",
+            "default": true
+          },
+          "isBlocking": {
+            "type": "object",
+            "default": true
+          }
+        },
+        "required": [
+          "requirementType",
+          "description",
+          "dueAt"
+        ]
+      },
+      "CreateIssueDto": {
+        "type": "object",
+        "properties": {
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "linkedTaskId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "category": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "context": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "priority": {
+            "type": "object",
+            "maxLength": 32,
+            "nullable": true
+          }
+        },
+        "required": [
+          "studentId",
+          "category",
+          "description",
+          "context"
+        ]
+      },
+      "IssueActionDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "note",
+          "version"
+        ]
+      },
+      "RespondIssueDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "requestMoreInformation": {
+            "type": "object",
+            "default": false
+          }
+        },
+        "required": [
+          "note",
+          "version"
+        ]
+      },
+      "ConvertIssueToTaskDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "ownerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "stageInstanceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "evidenceRequired": {
+            "type": "object",
+            "default": false
+          }
+        },
+        "required": [
+          "note",
+          "version",
+          "ownerId",
+          "dueAt"
+        ]
+      },
+      "PortalUploadMaterialDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "mimeType": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "contentBase64": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "fileName",
+          "mimeType",
+          "contentBase64"
+        ]
+      },
+      "RespondConfirmationDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "CONFIRMED",
+              "DECLINED"
+            ]
+          },
+          "note": {
+            "type": "object",
+            "maxLength": 1000,
+            "nullable": true
+          }
+        },
+        "required": [
+          "status"
+        ]
       },
       "ApiError": {
         "type": "object",

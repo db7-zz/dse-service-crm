@@ -1,4 +1,5 @@
 import { apiClient } from "../auth/api";
+import { arrayBufferToBase64, validateUploadFile } from "../files/file-upload";
 import type {
   OverdueAlertPage,
   SupervisionSummary,
@@ -132,6 +133,32 @@ export function cancelTask(input: { taskId: string; version: number; reason: str
   return taskWrite(`/admin/tasks/${input.taskId}/cancel`, "cancel", input.taskId, {
     version: input.version,
     reason: input.reason.trim(),
+  });
+}
+
+export function markTaskNotApplicable(input: { taskId: string; version: number; reason: string }) {
+  return taskWrite(`/tasks/${input.taskId}/not-applicable`, "not-applicable", input.taskId, {
+    version: input.version,
+    reason: input.reason.trim(),
+  });
+}
+
+export function reopenTask(input: { taskId: string; version: number; reason: string }) {
+  return taskWrite(`/admin/tasks/${input.taskId}/reopen`, "reopen", input.taskId, {
+    version: input.version,
+    reason: input.reason.trim(),
+  });
+}
+
+export function addTaskEvidence(input: { taskId: string; version: number; file: File }) {
+  const { mimeType } = validateUploadFile(input.file);
+  return input.file.arrayBuffer().then((buffer) => {
+    return taskWrite(`/tasks/${input.taskId}/evidence`, "evidence", input.taskId, {
+      version: input.version,
+      fileName: input.file.name,
+      mimeType,
+      contentBase64: arrayBufferToBase64(buffer),
+    });
   });
 }
 

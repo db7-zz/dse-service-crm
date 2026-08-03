@@ -1,4 +1,4 @@
-export type TaskStatus = "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELED";
+export type TaskStatus = "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELED" | "NOT_APPLICABLE";
 export type AlertStatus = "OPEN" | "HANDLED" | "RESOLVED";
 
 export interface TaskPerson {
@@ -23,8 +23,11 @@ export interface TaskListItem {
     sequenceNo: number;
   };
   taskSequenceNo: number | null;
-  sourceType: "SOP" | "MANUAL";
+  sourceType: "SOP" | "MANUAL" | "MATERIAL" | "APPLICATION" | "ISSUE";
+  sourceObjectId: string | null;
   isBlocking: boolean;
+  evidenceRequired: boolean;
+  externalVisible: boolean;
   owner: TaskPerson | null;
   originalDueAt: string;
   currentDueAt: string;
@@ -70,6 +73,15 @@ export interface TaskDetail extends TaskListItem {
   completionNote: string | null;
   canceledAt: string | null;
   cancelReason: string | null;
+  evidence: Array<{
+    id: string;
+    fileName: string;
+    mimeType: string;
+    fileSize: number;
+    fileHash: string;
+    uploadedBy: TaskPerson;
+    createdAt: string;
+  }>;
   progressRecords: Array<{
     id: string;
     note: string;

@@ -139,6 +139,7 @@ export class StudentWorkflowService {
         name: string;
         sequenceNo: number;
       } = null;
+      let materialsStageInstanceId: string | null = null;
       for (const stage of sop.stages) {
         const isFirstStage = stage.sequenceNo === 1;
         const stageInstance = await transaction.stageInstance.create({
@@ -156,6 +157,9 @@ export class StudentWorkflowService {
             version: isFirstStage ? 1 : 0,
           },
         });
+        if (stage.stageCode === "MATERIALS") {
+          materialsStageInstanceId = stageInstance.id;
+        }
         if (isFirstStage) {
           firstStage = {
             id: stageInstance.id,
@@ -223,6 +227,88 @@ export class StudentWorkflowService {
                 : []),
             ],
           });
+          if (student.defaultButlerId) {
+            await transaction.notification.create({
+              data: {
+                recipientId: student.defaultButlerId,
+                eventType: "TASK_ASSIGNED",
+                title: "收到新的学生服务任务",
+                content: `${student.name} · ${task.titleSnapshot}`,
+                objectType: "task",
+                objectId: task.id,
+                actionUrl: `/workspace/tasks/${task.id}`,
+                eventKey: `task-assigned:${task.id}:${student.defaultButlerId}`,
+              },
+            });
+          }
+          taskCount += 1;
+        }
+      }
+
+      if (materialsStageInstanceId) {
+        const coreMaterialTypes = await transaction.materialType.findMany({
+          where: { isActive: true, isCore: true },
+          orderBy: { name: "asc" },
+        });
+        for (const materialType of coreMaterialTypes) {
+          const dueAt = this.calculateDueAt(enabledAt, 168);
+          const material = await transaction.materialItem.create({
+            data: {
+              studentId,
+              materialTypeId: materialType.id,
+              title: materialType.name,
+              requirement: materialType.description,
+              dueAt,
+              ownerId: student.defaultButlerId,
+            },
+          });
+          const task = await transaction.taskInstance.create({
+            data: {
+              studentId,
+              serviceActivationId: activation.id,
+              stageInstanceId: materialsStageInstanceId,
+              sopVersionId: sop.id,
+              sourceType: "MATERIAL",
+              sourceObjectId: material.id,
+              isBlockingSnapshot: true,
+              externalVisible: true,
+              titleSnapshot: `收集并审核：${materialType.name}`,
+              descriptionSnapshot: materialType.description,
+              completionCriteriaSnapshot: "资料已审核通过，或已记录不适用原因",
+              completionWindowHoursSnapshot: 168,
+              ownerId: student.defaultButlerId,
+              originalDueAt: dueAt,
+              currentDueAt: dueAt,
+            },
+          });
+          await transaction.taskTimelineEvent.create({
+            data: {
+              taskId: task.id,
+              eventType: "CREATED",
+              actorId: actor.id,
+              actorRole: actor.roles[0] ?? null,
+              summary: "启用服务时生成核心资料阻塞任务",
+              afterData: {
+                materialId: material.id,
+                materialTypeCode: materialType.code,
+                status: "TODO",
+              },
+            },
+          });
+          if (student.defaultButlerId) {
+            await transaction.notification.create({
+              data: {
+                recipientId: student.defaultButlerId,
+                eventType: "TASK_ASSIGNED",
+                title: "收到新的资料任务",
+                content: `${student.name} · ${task.titleSnapshot}`,
+                objectType: "task",
+                objectId: task.id,
+                actionUrl: `/workspace/tasks/${task.id}`,
+                eventKey: `task-assigned:${task.id}:${student.defaultButlerId}`,
+              },
+            });
+          }
           taskCount += 1;
         }
       }
@@ -361,7 +447,7 @@ export class StudentWorkflowService {
 
         const student = await transaction.student.findUnique({
           where: { id: studentId },
-          select: { id: true, serviceStatus: true },
+          select: { id: true, name: true, serviceStatus: true },
         });
         if (!student) {
           throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND, "学生不存在");
@@ -499,6 +585,18 @@ export class StudentWorkflowService {
               afterData: { ownerId: butler.id, version: requested.version + 1 },
               reason: body.reason.trim(),
             }),
+          });
+          await transaction.notification.create({
+            data: {
+              recipientId: butler.id,
+              eventType: "TASK_ASSIGNED",
+              title: "收到新的学生服务任务",
+              content: `${student.name} · ${task.titleSnapshot}`,
+              objectType: "task",
+              objectId: task.id,
+              actionUrl: `/workspace/tasks/${task.id}`,
+              eventKey: `task-assigned:${task.id}:${butler.id}`,
+            },
           });
         }
 
@@ -751,6 +849,20 @@ export class StudentWorkflowService {
               : []),
           ],
         });
+        if (owner) {
+          await transaction.notification.create({
+            data: {
+              recipientId: owner.id,
+              eventType: "TASK_ASSIGNED",
+              title: "收到新的临时任务",
+              content: `${student.name} · ${task.titleSnapshot}`,
+              objectType: "task",
+              objectId: task.id,
+              actionUrl: `/workspace/tasks/${task.id}`,
+              eventKey: `task-assigned:${task.id}:${owner.id}`,
+            },
+          });
+        }
 
         if (body.isBlocking) {
           const changed = await transaction.stageInstance.updateMany({

@@ -5,22 +5,27 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   AuditOutlined,
+  BellOutlined,
   DashboardOutlined,
   DownOutlined,
   FileDoneOutlined,
+  FileSearchOutlined,
+  FormOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   SafetyCertificateOutlined,
   SnippetsOutlined,
+  SolutionOutlined,
   TeamOutlined,
   UsergroupAddOutlined,
 } from "@ant-design/icons";
-import { Avatar, Button, Dropdown, Layout, Menu } from "antd";
+import { Avatar, Badge, Button, Dropdown, Layout, Menu } from "antd";
 import { PermissionCode, RoleCode } from "@dse/shared";
 import { LoadingState, PermissionDenied } from "@dse/ui";
 import { useAuth } from "../auth/auth-context";
 import { navigationFor } from "../navigation/navigation";
+import { apiClient } from "../auth/api";
 import styles from "./app-shell.module.css";
 
 const { Header, Sider, Content } = Layout;
@@ -33,6 +38,10 @@ const ICONS: Record<string, ReactNode> = {
   "my-tasks": <FileDoneOutlined />,
   users: <TeamOutlined />,
   audit: <AuditOutlined />,
+  materials: <FileSearchOutlined />,
+  applications: <FormOutlined />,
+  issues: <SolutionOutlined />,
+  notifications: <BellOutlined />,
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -48,6 +57,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -75,6 +85,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       router.replace(`/login?next=${encodeURIComponent(pathname)}`);
     }
   }, [loading, pathname, router, user]);
+
+  useEffect(() => {
+    if (!user?.permissions.includes(PermissionCode.NOTIFICATIONS_READ)) return;
+    void apiClient
+      .request<{ unreadCount: number }>("/notifications?page=1&pageSize=1")
+      .then((result) => setUnreadCount(result.unreadCount))
+      .catch(() => setUnreadCount(0));
+  }, [pathname, user]);
 
   const navigation = useMemo(() => (user ? navigationFor(user) : []), [user]);
   if (loading || !user) {
@@ -189,6 +207,17 @@ export function AppShell({ children }: { children: ReactNode }) {
               }
             }}
           />
+          <span style={{ flex: 1 }} />
+          {user.permissions.includes(PermissionCode.NOTIFICATIONS_READ) ? (
+            <Badge count={unreadCount} size="small" overflowCount={99}>
+              <Button
+                type="text"
+                aria-label={`消息与待办，${unreadCount} 条未读`}
+                icon={<BellOutlined />}
+                onClick={() => router.push("/workspace/notifications")}
+              />
+            </Badge>
+          ) : null}
           <Dropdown
             trigger={["click"]}
             menu={{

@@ -116,7 +116,11 @@ type StudentWithHistory = Prisma.StudentGetPayload<{ include: typeof STUDENT_DET
 export class StudentsService {
   public constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
-  public async list(input: ListStudentsQueryDto, forcedButlerId?: string) {
+  public async list(
+    input: ListStudentsQueryDto,
+    forcedButlerId?: string,
+    forcedPlannerId?: string,
+  ) {
     const requestedPage = Math.max(1, Number(input.page) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(input.pageSize) || 20));
     const search = input.search?.trim();
@@ -130,13 +134,43 @@ export class StudentsService {
     if (butlerId) {
       baseConditions.push(Prisma.sql`student."default_butler_id" = ${butlerId}::uuid`);
     }
-    if (input.plannerId) {
-      baseConditions.push(Prisma.sql`student."planner_id" = ${input.plannerId}::uuid`);
+    const plannerId = forcedPlannerId ?? input.plannerId;
+    if (plannerId) {
+      baseConditions.push(Prisma.sql`student."planner_id" = ${plannerId}::uuid`);
+    }
+    if (input.school?.trim()) {
+      baseConditions.push(Prisma.sql`student."school" ILIKE ${`%${input.school.trim()}%`}`);
+    }
+    if (input.grade?.trim()) {
+      baseConditions.push(Prisma.sql`student."grade" = ${input.grade.trim()}`);
+    }
+    if (input.cohortYear) {
+      baseConditions.push(Prisma.sql`student."cohort_year" = ${input.cohortYear}`);
+    }
+    if (input.riskLevel) {
+      baseConditions.push(
+        Prisma.sql`student."risk_level" = ${input.riskLevel}::"StudentRiskLevel"`,
+      );
+    }
+    if (input.hasMissingMaterials !== undefined) {
+      const missingMaterials = Prisma.sql`EXISTS (
+        SELECT 1
+        FROM "material_items" material
+        JOIN "material_types" material_type ON material_type."id" = material."material_type_id"
+        WHERE material."student_id" = student."id"
+          AND material_type."is_core" = TRUE
+          AND material."status" NOT IN ('APPROVED', 'NOT_APPLICABLE')
+      )`;
+      baseConditions.push(
+        input.hasMissingMaterials ? missingMaterials : Prisma.sql`NOT (${missingMaterials})`,
+      );
     }
     if (search) {
       baseConditions.push(Prisma.sql`(
         student."student_no" ILIKE ${`%${search}%`}
         OR student."name" ILIKE ${`%${search}%`}
+        OR student."english_name" ILIKE ${`%${search}%`}
+        OR student."school" ILIKE ${`%${search}%`}
         OR student."phone" ILIKE ${`%${search}%`}
         OR student."email" ILIKE ${`%${search}%`}
       )`);
@@ -230,7 +264,7 @@ export class StudentsService {
         roles: {
           some: {
             expiredAt: null,
-            role: { code: { in: [RoleCode.BUTLER, RoleCode.PLANNER] } },
+            role: { code: { in: [RoleCode.BUTLER, RoleCode.PLANNER, RoleCode.SPECIALIST] } },
           },
         },
       },
@@ -240,7 +274,7 @@ export class StudentsService {
         roles: {
           where: {
             expiredAt: null,
-            role: { code: { in: [RoleCode.BUTLER, RoleCode.PLANNER] } },
+            role: { code: { in: [RoleCode.BUTLER, RoleCode.PLANNER, RoleCode.SPECIALIST] } },
           },
           select: { role: { select: { code: true } } },
         },
@@ -255,6 +289,7 @@ export class StudentsService {
     return {
       butlers: options.filter((person) => person.roleCodes.includes(RoleCode.BUTLER)),
       planners: options.filter((person) => person.roleCodes.includes(RoleCode.PLANNER)),
+      specialists: options.filter((person) => person.roleCodes.includes(RoleCode.SPECIALIST)),
     };
   }
 
@@ -378,14 +413,24 @@ export class StudentsService {
 
   public async listMine(input: ListStudentsQueryDto, request: RequestContext) {
     const actor = request.authenticatedUser as AuthenticatedUser;
-    const result = await this.list(input, actor.id);
+    const isPlanner = actor.roles.includes(RoleCode.PLANNER);
+    const result = isPlanner
+      ? await this.list(input, undefined, actor.id)
+      : await this.list(input, actor.id);
     return {
       ...result,
       items: result.items.map((student) => ({
         id: student.id,
         studentNo: student.studentNo,
         name: student.name,
+        englishName: student.englishName,
+        school: student.school,
+        grade: student.grade,
+        cohortYear: student.cohortYear,
+        riskLevel: student.riskLevel,
+        nextMilestone: student.nextMilestone,
         defaultButler: student.defaultButler,
+        planner: student.planner,
         serviceStatus: student.serviceStatus,
         version: student.version,
         progress: student.progress,
@@ -397,17 +442,29 @@ export class StudentsService {
 
   public async detailMine(studentId: string, request: RequestContext) {
     const actor = request.authenticatedUser as AuthenticatedUser;
-    const student = await this.loadDetail(studentId, actor.id, request);
-    const detail = this.redactTaskDetailsForButler(
-      this.serializeStudentDetail(student),
-      student,
-      actor.id,
+    const isPlanner = actor.roles.includes(RoleCode.PLANNER);
+    const student = await this.loadDetail(
+      studentId,
+      isPlanner ? undefined : actor.id,
+      request,
+      isPlanner ? actor.id : undefined,
     );
+    const serialized = this.serializeStudentDetail(student);
+    const detail = isPlanner
+      ? this.redactTaskDetailsForPlanner(serialized)
+      : this.redactTaskDetailsForButler(serialized, student, actor.id);
     return {
       id: detail.id,
       studentNo: detail.studentNo,
       name: detail.name,
+      englishName: detail.englishName,
+      school: detail.school,
+      grade: detail.grade,
+      cohortYear: detail.cohortYear,
+      riskLevel: detail.riskLevel,
+      nextMilestone: detail.nextMilestone,
       defaultButler: detail.defaultButler,
+      planner: detail.planner,
       serviceStatus: detail.serviceStatus,
       version: detail.version,
       createdAt: detail.createdAt,
@@ -426,12 +483,17 @@ export class StudentsService {
 
   public async serviceProgressMine(studentId: string, request: RequestContext) {
     const actor = request.authenticatedUser as AuthenticatedUser;
-    const student = await this.loadDetail(studentId, actor.id, request);
-    const detail = this.redactTaskDetailsForButler(
-      this.serializeStudentDetail(student),
-      student,
-      actor.id,
+    const isPlanner = actor.roles.includes(RoleCode.PLANNER);
+    const student = await this.loadDetail(
+      studentId,
+      isPlanner ? undefined : actor.id,
+      request,
+      isPlanner ? actor.id : undefined,
     );
+    const serialized = this.serializeStudentDetail(student);
+    const detail = isPlanner
+      ? this.redactTaskDetailsForPlanner(serialized)
+      : this.redactTaskDetailsForButler(serialized, student, actor.id);
     return this.progressResponse(detail);
   }
 
@@ -503,7 +565,7 @@ export class StudentsService {
     const roleCode = responsibilityType === "DEFAULT_BUTLER" ? RoleCode.BUTLER : RoleCode.PLANNER;
     const field = responsibilityType === "DEFAULT_BUTLER" ? "defaultButlerId" : "plannerId";
     try {
-      const student = await this.prisma.$transaction(async (transaction) => {
+      const result = await this.prisma.$transaction(async (transaction) => {
         const existing = await transaction.student.findUnique({
           where: { id: studentId },
           include: STUDENT_INCLUDE,
@@ -519,7 +581,7 @@ export class StudentsService {
         }
         const previousUserId = existing[field];
         if (previousUserId === body.userId) {
-          return existing;
+          return { student: existing, transferredTaskCount: 0 };
         }
         const updateResult = await transaction.student.updateMany({
           where: { id: studentId, version: body.version },
@@ -545,6 +607,56 @@ export class StudentsService {
             operatorId: actor.id,
           },
         });
+        let transferredTaskCount = 0;
+        if (responsibilityType === "DEFAULT_BUTLER" && body.userId) {
+          const transferableTasks = await transaction.taskInstance.findMany({
+            where: {
+              studentId,
+              status: { in: ["TODO", "IN_PROGRESS"] },
+              OR: [{ ownerId: previousUserId }, { ownerId: null }],
+            },
+            select: { id: true, ownerId: true, version: true },
+          });
+          for (const task of transferableTasks) {
+            await transaction.taskInstance.update({
+              where: { id: task.id },
+              data: { ownerId: body.userId, version: { increment: 1 } },
+            });
+            await transaction.taskReassignment.create({
+              data: {
+                taskId: task.id,
+                oldOwnerId: task.ownerId,
+                newOwnerId: body.userId,
+                reassignReason: body.reason.trim(),
+                operatorId: actor.id,
+              },
+            });
+            await transaction.taskTimelineEvent.create({
+              data: {
+                taskId: task.id,
+                eventType: "REASSIGNED",
+                actorId: actor.id,
+                actorRole: actor.roles[0] ?? null,
+                summary: "学生默认管家变更，系统同步交接未完成任务",
+                reason: body.reason.trim(),
+                beforeData: { ownerId: task.ownerId, version: task.version },
+                afterData: { ownerId: body.userId, version: task.version + 1 },
+              },
+            });
+          }
+          transferredTaskCount = transferableTasks.length;
+          await transaction.notification.create({
+            data: {
+              recipientId: body.userId,
+              eventType: "STUDENT_RESPONSIBILITY_CHANGED",
+              title: "学生服务已交接给你",
+              content: `你已成为 ${existing.name} 的默认管家，共交接 ${transferredTaskCount} 项未完成任务。`,
+              objectType: "student",
+              objectId: studentId,
+              actionUrl: `/workspace/students/${studentId}`,
+            },
+          });
+        }
         const updated = await transaction.student.findUniqueOrThrow({
           where: { id: studentId },
           include: STUDENT_INCLUDE,
@@ -561,9 +673,12 @@ export class StudentsService {
             reason: body.reason.trim(),
           }),
         });
-        return updated;
+        return { student: updated, transferredTaskCount };
       });
-      return this.serializeStudent(student);
+      return {
+        ...this.serializeStudent(result.student),
+        transferredTaskCount: result.transferredTaskCount,
+      };
     } catch (error) {
       await this.auditConflictIfNeeded(studentId, error, request);
       throw error;
@@ -621,8 +736,15 @@ export class StudentsService {
       id: student.id,
       studentNo: student.studentNo,
       name: student.name,
+      englishName: student.englishName,
+      school: student.school,
+      grade: student.grade,
+      cohortYear: student.cohortYear,
       phone: student.phone,
       email: student.email,
+      nextMilestone: student.nextMilestone,
+      riskLevel: student.riskLevel,
+      riskNote: student.riskNote,
       defaultButler: student.defaultButler,
       planner: student.planner,
       serviceStatus: student.serviceStatus,
@@ -666,6 +788,7 @@ export class StudentsService {
         inProgress: tasks.filter((task) => task.status === "IN_PROGRESS").length,
         completed: tasks.filter((task) => task.status === "COMPLETED").length,
         canceled: tasks.filter((task) => task.status === "CANCELED").length,
+        notApplicable: tasks.filter((task) => task.status === "NOT_APPLICABLE").length,
         overdue: tasks.filter(
           (task) =>
             (task.status === "TODO" || task.status === "IN_PROGRESS") &&
@@ -786,7 +909,9 @@ export class StudentsService {
   }
 
   private taskCompletionRate(tasks: Array<{ status: string }>) {
-    const denominator = tasks.filter((task) => task.status !== "CANCELED").length;
+    const denominator = tasks.filter(
+      (task) => task.status !== "CANCELED" && task.status !== "NOT_APPLICABLE",
+    ).length;
     if (denominator === 0) return null;
     return tasks.filter((task) => task.status === "COMPLETED").length / denominator;
   }
@@ -812,14 +937,23 @@ export class StudentsService {
       : Prisma.sql`metrics."overdue_count" DESC, metrics."created_at" DESC, metrics."id" DESC`;
   }
 
-  private async loadDetail(studentId: string, forcedButlerId?: string, request?: RequestContext) {
+  private async loadDetail(
+    studentId: string,
+    forcedButlerId?: string,
+    request?: RequestContext,
+    forcedPlannerId?: string,
+  ) {
     const student = await this.prisma.student.findFirst({
-      where: { id: studentId, ...(forcedButlerId ? { defaultButlerId: forcedButlerId } : {}) },
+      where: {
+        id: studentId,
+        ...(forcedButlerId ? { defaultButlerId: forcedButlerId } : {}),
+        ...(forcedPlannerId ? { plannerId: forcedPlannerId } : {}),
+      },
       include: STUDENT_DETAIL_INCLUDE,
     });
     if (student) return student;
     const exists = await this.prisma.student.count({ where: { id: studentId } });
-    if (exists > 0 && forcedButlerId) {
+    if (exists > 0 && (forcedButlerId || forcedPlannerId)) {
       if (request) {
         const actor = request.authenticatedUser as AuthenticatedUser;
         await this.prisma.auditLog.create({
@@ -829,7 +963,7 @@ export class StudentsService {
             objectType: "student_service_progress",
             objectId: studentId,
             action: "STUDENT_PROGRESS_ACCESS_DENIED",
-            reason: "当前用户不是学生的默认管家",
+            reason: forcedPlannerId ? "当前用户不是学生的规划老师" : "当前用户不是学生的默认管家",
             requestId: request.requestId,
             ipAddress: request.ip,
             deviceInfo: request.header("User-Agent"),
@@ -874,6 +1008,22 @@ export class StudentsService {
             transition.triggerTask && allowedTaskIds.has(transition.triggerTask.id)
               ? transition.triggerTask
               : null,
+        })),
+      })),
+    };
+  }
+
+  private redactTaskDetailsForPlanner(
+    detail: ReturnType<StudentsService["serializeStudentDetail"]>,
+  ) {
+    return {
+      ...detail,
+      stages: detail.stages.map((stage) => ({
+        ...stage,
+        tasks: [],
+        transitions: stage.transitions.map((transition) => ({
+          ...transition,
+          triggerTask: null,
         })),
       })),
     };

@@ -32,12 +32,16 @@ export class ServiceProgressService {
   public async advanceAfterTaskTerminal(
     transaction: Prisma.TransactionClient,
     taskId: string,
-    triggerType: Extract<StageTransitionTriggerType, "TASK_COMPLETED" | "TASK_CANCELED">,
+    triggerType: Extract<
+      StageTransitionTriggerType,
+      "TASK_COMPLETED" | "TASK_CANCELED" | "TASK_NOT_APPLICABLE"
+    >,
     request: RequestContext,
   ): Promise<StageAdvanceResult> {
     const initialTask = await transaction.taskInstance.findUniqueOrThrow({
       where: { id: taskId },
       select: {
+        studentId: true,
         isBlockingSnapshot: true,
         stageInstanceId: true,
         serviceActivationId: true,
@@ -155,7 +159,9 @@ export class ServiceProgressService {
       const completionReason = isInitialStage
         ? triggerType === "TASK_COMPLETED"
           ? "最后一项阻塞任务已完成，系统自动推进"
-          : "最后一项阻塞任务已取消，系统自动推进"
+          : triggerType === "TASK_NOT_APPLICABLE"
+            ? "最后一项阻塞任务已标记为不适用，系统自动推进"
+            : "最后一项阻塞任务已取消，系统自动推进"
         : "前序阶段完成后，本阶段阻塞任务已全部进入终态";
       await this.completeStage(
         transaction,
@@ -203,6 +209,41 @@ export class ServiceProgressService {
         ErrorCode.STAGE_VERSION_CONFLICT,
         "阶段进度已被其他操作更新，请刷新后重试",
       );
+    }
+
+    if (advancedStages.length > 0) {
+      const student = await transaction.student.findUniqueOrThrow({
+        where: { id: initialTask.studentId },
+        select: {
+          id: true,
+          name: true,
+          defaultButlerId: true,
+          portalUserId: true,
+        },
+      });
+      const recipients = [student.defaultButlerId, student.portalUserId].filter(
+        (recipientId): recipientId is string => Boolean(recipientId),
+      );
+      for (const recipientId of new Set(recipients)) {
+        const eventKey = `stage-changed:${activation.id}:${activation.progressVersion + 1}:${recipientId}`;
+        await transaction.notification.upsert({
+          where: { eventKey },
+          update: {},
+          create: {
+            recipientId,
+            eventType: "STAGE_CHANGED",
+            title: nextCurrent ? `服务进入：${nextCurrent.name}` : "八阶段服务已完成",
+            content: `${student.name} · 已完成 ${completedStageCount}/8 个阶段`,
+            objectType: "student",
+            objectId: student.id,
+            actionUrl:
+              recipientId === student.portalUserId
+                ? "/portal/progress"
+                : `/workspace/students/${student.id}`,
+            eventKey,
+          },
+        });
+      }
     }
 
     return {
@@ -342,7 +383,10 @@ export class ServiceProgressService {
             throw this.inconsistent(`第 ${stage.sequenceNoSnapshot} 阶段缺少阻塞任务`);
           }
           const allTerminal = stage.tasks.every(
-            (task) => task.status === "COMPLETED" || task.status === "CANCELED",
+            (task) =>
+              task.status === "COMPLETED" ||
+              task.status === "CANCELED" ||
+              task.status === "NOT_APPLICABLE",
           );
           const desiredStatus = !reachedIncomplete
             ? allTerminal

@@ -1,7 +1,8 @@
 # DSE升学服务CRM
 
-DSE升学服务CRM v0.3.0。当前版本包含认证与权限底座、学生管理、固定八阶段SOP、任务监督闭环，
-以及S2学生服务进度、自动阶段推进、临时任务和管家本人负责学生只读视图。
+DSE升学服务CRM v1.0.0，产品规格以 `docs/product/MASTER_PRD.md` 为唯一业务基线。当前版本覆盖账号与关系权限、监督看板、任务闭环、学生档案、八阶段SOP、资料版本与缺失催收、香港/JUPAS申请、问题与专项任务、学生端、站内通知及结构化审计。
+
+完整角色操作说明见 `docs/operations/USER_GUIDE.md`，上线验收与需求映射见 `docs/releases/V1/V1_ACCEPTANCE.md` 和 `docs/product/V1_TRACEABILITY.md`。
 
 ## 前置条件
 
@@ -45,8 +46,6 @@ pnpm format:check
 pnpm openapi:generate
 pnpm db:validate
 pnpm db:diff
-pnpm --filter @dse/database s2:migration:preview
-pnpm --filter @dse/database s2:migration:verify
 pnpm check
 ```
 
@@ -82,11 +81,12 @@ pnpm test:e2e
 - 版本控制契约：`docs/api/openapi.json`
 - 所有业务接口使用 `/api/v1` 前缀和统一响应封装。
 
-## 当前范围
+## V1.0业务范围
 
-S2以任务终态计算学生八阶段服务进度：每个阶段至少有一项阻塞任务，最后一项阻塞任务完成或取消后，
-系统在同一事务中自动推进，并继续处理已提前完成的后续阶段。管理员可创建临时管家任务；管家通过
-“学生管理”仅查看当前由本人担任默认管家的学生。
+- 管理员：全局监督、账号权限、SOP、学生团队分配、异常处置和审计。
+- 管家：本人学生、任务执行、资料审核、申请跟进和问题提交。
+- 规划老师：本人学生的学情、成绩、目标院校和服务概览。
+- 专项老师：本人专项任务及完成任务所需的最小学生信息。
+- 学生/家长入口：本人资料、对外进度、申请状态、待确认事项和消息。
 
-S2不包含服务暂停/恢复、手工推进或回退阶段、资料与申请阻塞、规划老师进度页、学生端、数据导出或
-外部消息通知。增量规格见 `docs/releases/S2/INCREMENT_PRD_S2.md`。
+历史增量文档保留用于版本追溯，但不再作为当前开发规格。

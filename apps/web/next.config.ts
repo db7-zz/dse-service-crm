@@ -19,7 +19,9 @@ function normalizeCrossDriveEntry<T>(value: T): T {
 }
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Codex worktrees may live on a different Windows drive from their pnpm store.
+  // Next's standalone trace copier cannot represent a second drive inside its output path.
+  output: process.env.NEXT_DISABLE_STANDALONE === "true" ? undefined : "standalone",
   allowedDevOrigins: ["127.0.0.1"],
   transpilePackages: ["@dse/api-client", "@dse/config", "@dse/shared", "@dse/ui"],
   webpack(config) {

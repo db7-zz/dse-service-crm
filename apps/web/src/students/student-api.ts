@@ -24,6 +24,11 @@ export function listStudents(input: {
   hasCurrentBlockers?: boolean;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+  school?: string;
+  grade?: string;
+  cohortYear?: number;
+  riskLevel?: string;
+  hasMissingMaterials?: boolean;
   mine?: boolean;
 }) {
   const query = new URLSearchParams({
@@ -40,6 +45,12 @@ export function listStudents(input: {
   }
   if (input.sortBy) query.set("sortBy", input.sortBy);
   if (input.sortOrder) query.set("sortOrder", input.sortOrder);
+  if (input.school) query.set("school", input.school);
+  if (input.grade) query.set("grade", input.grade);
+  if (input.cohortYear) query.set("cohortYear", String(input.cohortYear));
+  if (input.riskLevel) query.set("riskLevel", input.riskLevel);
+  if (input.hasMissingMaterials !== undefined)
+    query.set("hasMissingMaterials", String(input.hasMissingMaterials));
   return apiClient.request<StudentPageData>(
     `${input.mine ? "/my/students" : "/students"}?${query.toString()}`,
   );

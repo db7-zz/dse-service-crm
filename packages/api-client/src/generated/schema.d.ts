@@ -69,6 +69,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NotificationsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/{notificationId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NotificationsController_markRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NotificationsController_markAllRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/users": {
         parameters: {
             query?: never;
@@ -277,6 +325,54 @@ export interface paths {
         patch: operations["StudentsController_update"];
         trace?: never;
     };
+    "/api/v1/students/{studentId}/service-progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StudentsController_serviceProgress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/students/{studentId}/service-progress/recalculate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StudentsController_recalculateServiceProgress"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/students/{studentId}/manual-tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StudentsController_createManualTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/students/{studentId}/default-butler": {
         parameters: {
             query?: never;
@@ -335,6 +431,54 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["StudentsController_bulkAssignUnassignedTasks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/my/students": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MyStudentsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/my/students/{studentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MyStudentsController_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/my/students/{studentId}/service-progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MyStudentsController_serviceProgress"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -437,6 +581,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tasks/{taskId}/not-applicable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TasksController_markNotApplicable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{taskId}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TasksController_addEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{taskId}/evidence/{evidenceId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TasksController_downloadEvidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/my/tasks": {
         parameters: {
             query?: never;
@@ -533,6 +725,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/tasks/{taskId}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AdminTasksController_reopen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/overdue-alerts": {
         parameters: {
             query?: never;
@@ -559,6 +767,502 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["OverdueAlertsController_handle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/material-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MaterialsController_types"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/students/{studentId}/materials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MaterialsController_list"];
+        put?: never;
+        post: operations["MaterialsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/materials/{materialId}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MaterialsController_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/materials/{materialId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MaterialsController_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/materials/{materialId}/mark-missing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MaterialsController_markMissing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/materials/{materialId}/followups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MaterialsController_followup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/materials/{materialId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MaterialsController_archive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/materials/versions/{versionId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MaterialsController_download"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/students/{studentId}/record": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StudentRecordsController_detail"];
+        put: operations["StudentRecordsController_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/students/{studentId}/risk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["StudentRecordsController_updateRisk"];
+        trace?: never;
+    };
+    "/api/v1/students/{studentId}/service-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["StudentRecordsController_updateServiceStatus"];
+        trace?: never;
+    };
+    "/api/v1/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ApplicationsController_list"];
+        put?: never;
+        post: operations["ApplicationsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{applicationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ApplicationsController_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["ApplicationsController_update"];
+        trace?: never;
+    };
+    "/api/v1/applications/{applicationId}/change-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ApplicationsController_changeStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{applicationId}/requirements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ApplicationsController_createRequirement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/issues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["IssuesController_list"];
+        put?: never;
+        post: operations["IssuesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/issues/{issueId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["IssuesController_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/issues/{issueId}/information": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["IssuesController_addInformation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/issues/{issueId}/respond": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["IssuesController_respond"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/issues/{issueId}/convert-to-task": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["IssuesController_convertToTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/issues/{issueId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["IssuesController_resolve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/issues/{issueId}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["IssuesController_close"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/issues/{issueId}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["IssuesController_reopen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PortalController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me/materials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PortalController_materials"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me/materials/{materialId}/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PortalController_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me/material-versions/{versionId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PortalController_download"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PortalController_progress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PortalController_applications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me/confirmations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PortalController_confirmations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me/confirmations/{confirmationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PortalController_respondConfirmation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -607,6 +1311,7 @@ export interface components {
             /** Format: password */
             password: string;
         };
+        Object: Record<string, never>;
         CreateUserDto: {
             /** @example staff.name */
             username: string;
@@ -634,6 +1339,11 @@ export interface components {
             description?: Record<string, never> | null;
             completionCriteria?: Record<string, never> | null;
             completionWindowHours: number;
+            /**
+             * @description 是否阻止所属阶段自动完成
+             * @default true
+             */
+            isBlocking: Record<string, never>;
         };
         SopStageTemplateInputDto: {
             stageCode: string;
@@ -650,7 +1360,6 @@ export interface components {
             /** @description 乐观锁版本号 */
             version: number;
         };
-        Object: Record<string, never>;
         CreateStudentDto: {
             /** @example 黄翰 */
             name: string;
@@ -662,6 +1371,24 @@ export interface components {
             defaultButlerId?: Record<string, never> | null;
             /** Format: uuid */
             plannerId?: Record<string, never> | null;
+        };
+        CreateManualTaskDto: {
+            /** Format: uuid */
+            stageInstanceId: string;
+            title: string;
+            description?: Record<string, never> | null;
+            completionCriteria?: Record<string, never> | null;
+            /**
+             * Format: date-time
+             * @description 精确到分钟且晚于当前时间
+             */
+            currentDueAt: string;
+            /** Format: uuid */
+            ownerId?: Record<string, never> | null;
+            /** @default false */
+            isBlocking: Record<string, never>;
+            /** @description 所属阶段乐观锁版本号 */
+            stageVersion: number;
         };
         UpdateStudentDto: {
             name?: string;
@@ -712,6 +1439,17 @@ export interface components {
             version: number;
             completionNote: string;
         };
+        MarkTaskNotApplicableDto: {
+            version: number;
+            reason: string;
+        };
+        AddTaskEvidenceDto: {
+            version: number;
+            fileName: string;
+            mimeType: string;
+            /** @description Base64编码文件内容，解码后最大50MB */
+            contentBase64: string;
+        };
         RescheduleTaskDto: {
             version: number;
             /** Format: date-time */
@@ -728,8 +1466,193 @@ export interface components {
             version: number;
             reason: string;
         };
+        ReopenTaskDto: {
+            version: number;
+            reason: string;
+            /** Format: date-time */
+            newDueAt?: string;
+        };
         HandleOverdueAlertDto: {
             note?: string;
+        };
+        CreateMaterialItemDto: {
+            /** Format: uuid */
+            materialTypeId: string;
+            title: string;
+            requirement?: Record<string, never> | null;
+            /** Format: date-time */
+            dueAt?: Record<string, never> | null;
+            /** Format: uuid */
+            ownerId?: Record<string, never> | null;
+        };
+        UploadMaterialVersionDto: {
+            fileName: string;
+            mimeType: string;
+            /** @description Base64编码文件内容，解码后最大50MB */
+            contentBase64: string;
+        };
+        ReviewMaterialDto: {
+            /** @enum {string} */
+            outcome: "APPROVED" | "PARTIALLY_MISSING" | "RESUBMISSION_REQUIRED" | "AWAITING_CONFIRMATION" | "NOT_APPLICABLE";
+            comment?: Record<string, never> | null;
+            version: number;
+        };
+        MarkMaterialMissingDto: {
+            missingReason: string;
+            /** Format: uuid */
+            ownerId: string;
+            /** Format: date-time */
+            expectedSubmitAt: string;
+            version: number;
+        };
+        MaterialFollowupDto: {
+            note: string;
+            /** @default false */
+            createTask: Record<string, never>;
+            /** Format: date-time */
+            dueAt?: string;
+        };
+        ArchiveMaterialDto: {
+            /** @enum {string} */
+            archiveStatus: "ARCHIVED" | "ARCHIVE_FAILED";
+            note: string;
+        };
+        StudentScoreInputDto: {
+            subjectName: string;
+            /** @enum {string} */
+            scoreType: "CURRENT" | "PREDICTED";
+            scoreValue: string;
+        };
+        StudentTargetInputDto: {
+            institutionName: string;
+            programName?: Record<string, never> | null;
+            /** @enum {string} */
+            targetLevel: "ASPIRATIONAL" | "MATCH" | "SAFE" | "OTHER";
+        };
+        UpdateStudentRecordDto: {
+            version: number;
+            englishName?: Record<string, never> | null;
+            school?: Record<string, never> | null;
+            grade?: Record<string, never> | null;
+            cohortYear?: Record<string, never> | null;
+            nextMilestone?: Record<string, never> | null;
+            scores?: components["schemas"]["StudentScoreInputDto"][];
+            targets?: components["schemas"]["StudentTargetInputDto"][];
+            reason: string;
+        };
+        UpdateStudentRiskDto: {
+            /** @enum {string} */
+            riskLevel: "NORMAL" | "ATTENTION" | "HIGH";
+            riskNote?: Record<string, never> | null;
+            version: number;
+        };
+        UpdateStudentServiceStatusDto: {
+            /** @enum {string} */
+            status: "ENABLED" | "PAUSED" | "TERMINATED";
+            /**
+             * @default KEEP
+             * @enum {string}
+             */
+            unfinishedTaskAction: "KEEP" | "CANCEL";
+            reason: string;
+            version: number;
+        };
+        CreateApplicationDto: {
+            /** Format: uuid */
+            studentId: string;
+            /** @enum {string} */
+            channel: "HK_DIRECT" | "JUPAS";
+            institutionName: string;
+            programName?: Record<string, never> | null;
+            preferenceNo?: Record<string, never> | null;
+            roundName?: Record<string, never> | null;
+            /** Format: date-time */
+            deadlineAt?: Record<string, never> | null;
+            /** Format: uuid */
+            ownerId?: Record<string, never> | null;
+            /** @default false */
+            confirmPastDeadline: Record<string, never>;
+        };
+        UpdateApplicationDto: {
+            version: number;
+            institutionName?: string;
+            programName?: Record<string, never> | null;
+            preferenceNo?: Record<string, never> | null;
+            roundName?: Record<string, never> | null;
+            /** Format: date-time */
+            deadlineAt?: Record<string, never> | null;
+            /** Format: uuid */
+            ownerId?: Record<string, never> | null;
+            reason: string;
+        };
+        ChangeApplicationStatusDto: {
+            /** @enum {string} */
+            status: "PLANNING" | "CONFIRMED" | "MATERIAL_PREPARATION" | "PENDING_SUBMISSION" | "SUBMITTED" | "WAITING_RESULT" | "SUPPLEMENT" | "INTERVIEW" | "OFFER" | "REJECTED" | "ENROLLED" | "WITHDRAWN";
+            version: number;
+            note: string;
+            /** Format: date-time */
+            submittedAt?: Record<string, never> | null;
+            applicationNo?: Record<string, never> | null;
+            result?: Record<string, never> | null;
+            offerCondition?: Record<string, never> | null;
+            /** Format: date-time */
+            confirmationDeadline?: Record<string, never> | null;
+            intakeDecision?: Record<string, never> | null;
+        };
+        CreateApplicationRequirementDto: {
+            /** @enum {string} */
+            requirementType: "SUPPLEMENT" | "INTERVIEW" | "OFFER_CONFIRMATION" | "ESSAY" | "OTHER";
+            description: string;
+            /** Format: date-time */
+            dueAt: string;
+            /** Format: uuid */
+            ownerId?: Record<string, never> | null;
+            /** @default true */
+            createTask: Record<string, never>;
+            /** @default true */
+            isBlocking: Record<string, never>;
+        };
+        CreateIssueDto: {
+            /** Format: uuid */
+            studentId: string;
+            /** Format: uuid */
+            linkedTaskId?: Record<string, never> | null;
+            category: string;
+            description: string;
+            context: string;
+            priority?: Record<string, never> | null;
+        };
+        IssueActionDto: {
+            note: string;
+            version: number;
+        };
+        RespondIssueDto: {
+            note: string;
+            version: number;
+            /** @default false */
+            requestMoreInformation: Record<string, never>;
+        };
+        ConvertIssueToTaskDto: {
+            note: string;
+            version: number;
+            /** Format: uuid */
+            ownerId: string;
+            /** Format: uuid */
+            stageInstanceId?: string;
+            /** Format: date-time */
+            dueAt: string;
+            /** @default false */
+            evidenceRequired: Record<string, never>;
+        };
+        PortalUploadMaterialDto: {
+            fileName: string;
+            mimeType: string;
+            contentBase64: string;
+        };
+        RespondConfirmationDto: {
+            /** @enum {string} */
+            status: "CONFIRMED" | "DECLINED";
+            note?: Record<string, never> | null;
         };
         ApiError: {
             code: string;
@@ -826,6 +1749,69 @@ export interface operations {
         };
     };
     AuthController_logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    NotificationsController_list: {
+        parameters: {
+            query?: {
+                page?: components["schemas"]["Object"];
+                pageSize?: components["schemas"]["Object"];
+                unreadOnly?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    NotificationsController_markRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notificationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    NotificationsController_markAllRead: {
         parameters: {
             query?: never;
             header?: never;
@@ -1170,9 +2156,18 @@ export interface operations {
                 page?: components["schemas"]["Object"];
                 pageSize?: components["schemas"]["Object"];
                 search?: string;
-                serviceStatus?: "NOT_ENABLED" | "ENABLED";
+                serviceStatus?: "NOT_ENABLED" | "ENABLED" | "PAUSED" | "TERMINATED";
                 defaultButlerId?: string;
                 plannerId?: string;
+                school?: string;
+                grade?: string;
+                cohortYear?: number;
+                riskLevel?: "NORMAL" | "ATTENTION" | "HIGH";
+                hasMissingMaterials?: boolean;
+                currentStageCode?: string;
+                hasCurrentBlockers?: boolean;
+                sortBy?: "stageProgress" | "currentBlockers" | "overdueTasks";
+                sortOrder?: "asc" | "desc";
             };
             header?: never;
             path?: never;
@@ -1250,6 +2245,73 @@ export interface operations {
         };
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    StudentsController_serviceProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    StudentsController_recalculateServiceProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    StudentsController_createManualTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateManualTaskDto"];
+            };
+        };
+        responses: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1350,6 +2412,83 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MyStudentsController_list: {
+        parameters: {
+            query?: {
+                page?: components["schemas"]["Object"];
+                pageSize?: components["schemas"]["Object"];
+                search?: string;
+                serviceStatus?: "NOT_ENABLED" | "ENABLED" | "PAUSED" | "TERMINATED";
+                defaultButlerId?: string;
+                plannerId?: string;
+                school?: string;
+                grade?: string;
+                cohortYear?: number;
+                riskLevel?: "NORMAL" | "ATTENTION" | "HIGH";
+                hasMissingMaterials?: boolean;
+                currentStageCode?: string;
+                hasCurrentBlockers?: boolean;
+                sortBy?: "stageProgress" | "currentBlockers" | "overdueTasks";
+                sortOrder?: "asc" | "desc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MyStudentsController_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MyStudentsController_serviceProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1501,12 +2640,84 @@ export interface operations {
             };
         };
     };
+    TasksController_markNotApplicable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkTaskNotApplicableDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    TasksController_addEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddTaskEvidenceDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    TasksController_downloadEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: string;
+                evidenceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
     MyTasksController_list: {
         parameters: {
             query?: {
                 page?: components["schemas"]["Object"];
                 pageSize?: components["schemas"]["Object"];
-                status?: "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELED";
+                status?: "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELED" | "NOT_APPLICABLE";
                 ownerId?: string;
                 studentId?: string;
                 stageCode?: string;
@@ -1537,7 +2748,7 @@ export interface operations {
             query?: {
                 page?: components["schemas"]["Object"];
                 pageSize?: components["schemas"]["Object"];
-                status?: "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELED";
+                status?: "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELED" | "NOT_APPLICABLE";
                 ownerId?: string;
                 studentId?: string;
                 stageCode?: string;
@@ -1568,7 +2779,7 @@ export interface operations {
             query?: {
                 page?: components["schemas"]["Object"];
                 pageSize?: components["schemas"]["Object"];
-                status?: "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELED";
+                status?: "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELED" | "NOT_APPLICABLE";
                 ownerId?: string;
                 studentId?: string;
                 stageCode?: string;
@@ -1669,6 +2880,31 @@ export interface operations {
             };
         };
     };
+    AdminTasksController_reopen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReopenTaskDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
     OverdueAlertsController_list: {
         parameters: {
             query?: {
@@ -1704,6 +2940,843 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["HandleOverdueAlertDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_types: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateMaterialItemDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UploadMaterialVersionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewMaterialDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_markMissing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkMaterialMissingDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_followup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaterialFollowupDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_archive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArchiveMaterialDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_download: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    StudentRecordsController_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    StudentRecordsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateStudentRecordDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    StudentRecordsController_updateRisk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateStudentRiskDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    StudentRecordsController_updateServiceStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateStudentServiceStatusDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    ApplicationsController_list: {
+        parameters: {
+            query?: {
+                page?: components["schemas"]["Object"];
+                pageSize?: components["schemas"]["Object"];
+                search?: string;
+                studentId?: string;
+                channel?: "HK_DIRECT" | "JUPAS";
+                status?: "PLANNING" | "CONFIRMED" | "MATERIAL_PREPARATION" | "PENDING_SUBMISSION" | "SUBMITTED" | "WAITING_RESULT" | "SUPPLEMENT" | "INTERVIEW" | "OFFER" | "REJECTED" | "ENROLLED" | "WITHDRAWN";
+                overdueOnly?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    ApplicationsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateApplicationDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    ApplicationsController_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                applicationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    ApplicationsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                applicationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateApplicationDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    ApplicationsController_changeStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                applicationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeApplicationStatusDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    ApplicationsController_createRequirement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                applicationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateApplicationRequirementDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    IssuesController_list: {
+        parameters: {
+            query?: {
+                page?: components["schemas"]["Object"];
+                pageSize?: components["schemas"]["Object"];
+                studentId?: string;
+                status?: "OPEN" | "NEEDS_INFO" | "RESPONDED" | "CONVERTED_TO_TASK" | "RESOLVED" | "CLOSED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    IssuesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateIssueDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    IssuesController_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issueId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    IssuesController_addInformation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issueId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueActionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    IssuesController_respond: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issueId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RespondIssueDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    IssuesController_convertToTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issueId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConvertIssueToTaskDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    IssuesController_resolve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issueId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueActionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    IssuesController_close: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issueId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueActionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    IssuesController_reopen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issueId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueActionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    PortalController_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    PortalController_materials: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    PortalController_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalUploadMaterialDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    PortalController_download: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    PortalController_progress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    PortalController_applications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    PortalController_confirmations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    PortalController_respondConfirmation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                confirmationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RespondConfirmationDto"];
             };
         };
         responses: {

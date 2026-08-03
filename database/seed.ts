@@ -8,7 +8,7 @@ loadEnvironment({
 });
 
 const ROLE_DEFINITIONS = [
-  ["ADMINISTRATOR", "管理员", "维护账号、角色、权限、审计和S1业务"],
+  ["ADMINISTRATOR", "管理员", "维护账号、角色、权限、审计和全部V1.0业务"],
   ["ERIC_MANAGER", "历史业务负责人", "仅为历史审计保留，不再用于新账号分配"],
   ["BUTLER", "管家", "负责学生日常服务协调"],
   ["PLANNER", "规划老师", "负责学情与升学规划"],
@@ -35,6 +35,16 @@ const PERMISSION_DEFINITIONS = [
   ["tasks.supervision.write", "改期、转派和取消任务"],
   ["overdue-alerts.read", "查看逾期提醒"],
   ["overdue-alerts.write", "处理逾期提醒"],
+  ["students.planning.write", "维护学生学情与升学目标"],
+  ["materials.read", "查看资料"],
+  ["materials.write", "维护资料"],
+  ["materials.review", "审核资料"],
+  ["applications.read", "查看申请"],
+  ["applications.write", "维护申请"],
+  ["issues.read", "查看问题反馈"],
+  ["issues.write", "提交与补充问题"],
+  ["issues.manage", "处理问题与专项任务"],
+  ["notifications.read", "查看站内通知"],
 ] as const;
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
@@ -52,13 +62,58 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "tasks.supervision.write",
     "overdue-alerts.read",
     "overdue-alerts.write",
+    "students.planning.write",
+    "materials.read",
+    "materials.write",
+    "materials.review",
+    "applications.read",
+    "applications.write",
+    "issues.read",
+    "issues.write",
+    "issues.manage",
+    "notifications.read",
   ],
   ERIC_MANAGER: [],
-  BUTLER: ["workspace.access", "students.own.read", "tasks.own.read", "tasks.own.write"],
-  PLANNER: ["workspace.access"],
-  SPECIALIST: ["workspace.access"],
-  STUDENT: ["portal.access"],
+  BUTLER: [
+    "workspace.access",
+    "students.own.read",
+    "tasks.own.read",
+    "tasks.own.write",
+    "materials.read",
+    "materials.write",
+    "materials.review",
+    "applications.read",
+    "applications.write",
+    "issues.read",
+    "issues.write",
+    "notifications.read",
+  ],
+  PLANNER: [
+    "workspace.access",
+    "students.own.read",
+    "students.planning.write",
+    "materials.read",
+    "applications.read",
+    "notifications.read",
+  ],
+  SPECIALIST: [
+    "workspace.access",
+    "tasks.own.read",
+    "tasks.own.write",
+    "issues.read",
+    "notifications.read",
+  ],
+  STUDENT: ["portal.access", "notifications.read"],
 };
+
+const MATERIAL_TYPES = [
+  ["IDENTITY", "身份证明", "香港身份证、护照或其他申请所需身份证明", true],
+  ["TRANSCRIPT", "在校成绩单", "最新正式成绩单及历史成绩记录", true],
+  ["PREDICTED_GRADES", "预测成绩", "学校或老师出具的预测成绩", true],
+  ["ACTIVITY_EVIDENCE", "活动与获奖证明", "活动、比赛、奖项及背景提升证明", false],
+  ["PERSONAL_STATEMENT", "个人陈述素材", "文书准备所需的经历、动机与素材", true],
+  ["RECOMMENDATION", "推荐信资料", "推荐人信息及推荐信相关材料", false],
+] as const;
 
 const SOP_BASELINE_STAGES = [
   ["PROFILE", "建档阶段"],
@@ -243,6 +298,24 @@ async function main(): Promise<void> {
         password: butlerPassword,
         roleCode: "BUTLER",
       },
+      {
+        username: process.env.SEED_PLANNER_USERNAME ?? "planner",
+        displayName: "测试规划老师",
+        password: process.env.SEED_PLANNER_PASSWORD ?? butlerPassword,
+        roleCode: "PLANNER",
+      },
+      {
+        username: process.env.SEED_SPECIALIST_USERNAME ?? "specialist",
+        displayName: "测试专项老师",
+        password: process.env.SEED_SPECIALIST_PASSWORD ?? butlerPassword,
+        roleCode: "SPECIALIST",
+      },
+      {
+        username: process.env.SEED_STUDENT_USERNAME ?? "student",
+        displayName: "门户演示学生",
+        password: process.env.SEED_STUDENT_PASSWORD ?? butlerPassword,
+        roleCode: "STUDENT",
+      },
     ];
 
     for (const account of accounts) {
@@ -272,8 +345,45 @@ async function main(): Promise<void> {
       });
     }
 
+    for (const [code, name, description, isCore] of MATERIAL_TYPES) {
+      await prisma.materialType.upsert({
+        where: { code },
+        update: { name, description, isCore, isActive: true },
+        create: { code, name, description, isCore, isActive: true },
+      });
+    }
+
     const administrator = await prisma.user.findUniqueOrThrow({
       where: { username: process.env.SEED_ADMIN_USERNAME ?? "admin" },
+    });
+    const butler = await prisma.user.findUniqueOrThrow({
+      where: { username: process.env.SEED_BUTLER_USERNAME ?? "butler" },
+    });
+    const planner = await prisma.user.findUniqueOrThrow({
+      where: { username: process.env.SEED_PLANNER_USERNAME ?? "planner" },
+    });
+    const portalUser = await prisma.user.findUniqueOrThrow({
+      where: { username: process.env.SEED_STUDENT_USERNAME ?? "student" },
+    });
+    await prisma.student.upsert({
+      where: { studentNo: "DSE-DEMO-000001" },
+      update: {
+        portalUserId: portalUser.id,
+        defaultButlerId: butler.id,
+        plannerId: planner.id,
+      },
+      create: {
+        studentNo: "DSE-DEMO-000001",
+        name: "门户演示学生",
+        englishName: "Demo Student",
+        school: "DSE示范中学",
+        grade: "中六",
+        cohortYear: new Date().getUTCFullYear(),
+        portalUserId: portalUser.id,
+        defaultButlerId: butler.id,
+        plannerId: planner.id,
+        createdById: administrator.id,
+      },
     });
     const existingBaseline = await prisma.sopVersion.findUnique({
       where: { versionNo: 1 },

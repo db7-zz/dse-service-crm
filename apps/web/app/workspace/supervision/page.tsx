@@ -28,6 +28,7 @@ const STATUS = {
   IN_PROGRESS: { label: "进行中", color: "blue" },
   COMPLETED: { label: "已完成", color: "green" },
   CANCELED: { label: "已取消", color: "default" },
+  NOT_APPLICABLE: { label: "不适用", color: "default" },
 } as const;
 
 const STAGES = [

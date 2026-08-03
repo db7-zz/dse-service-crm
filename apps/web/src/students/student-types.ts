@@ -10,17 +10,25 @@ export interface ResponsiblePersonOption extends StudentPerson {
 export interface ResponsiblePersonOptions {
   butlers: ResponsiblePersonOption[];
   planners: ResponsiblePersonOption[];
+  specialists?: ResponsiblePersonOption[];
 }
 
 export interface StudentRecord {
   id: string;
   studentNo: string;
   name: string;
+  englishName?: string | null;
+  school?: string | null;
+  grade?: string | null;
+  cohortYear?: number | null;
   phone?: string | null;
   email?: string | null;
   defaultButler: StudentPerson | null;
   planner?: StudentPerson | null;
-  serviceStatus: "NOT_ENABLED" | "ENABLED";
+  serviceStatus: "NOT_ENABLED" | "ENABLED" | "PAUSED" | "TERMINATED";
+  nextMilestone?: string | null;
+  riskLevel?: "NORMAL" | "ATTENTION" | "HIGH";
+  riskNote?: string | null;
   version: number;
   createdBy?: StudentPerson;
   createdAt: string;
@@ -77,6 +85,7 @@ export interface StudentDetail extends StudentRecord {
     inProgress: number;
     completed: number;
     canceled: number;
+    notApplicable?: number;
     overdue: number;
     unassigned: number;
     completionRate: number | null;
@@ -108,10 +117,10 @@ export interface StudentDetail extends StudentRecord {
       id: string;
       title: string;
       sequenceNo: number | null;
-      sourceType: "SOP" | "MANUAL";
+      sourceType: "SOP" | "MANUAL" | "MATERIAL" | "APPLICATION" | "ISSUE";
       isBlocking: boolean;
       isLegacy: boolean;
-      status: "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELED";
+      status: "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELED" | "NOT_APPLICABLE";
       owner: StudentPerson | null;
       currentDueAt: string;
       isOverdue: boolean;
