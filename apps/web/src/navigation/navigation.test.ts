@@ -19,7 +19,12 @@ describe("role navigation", () => {
   });
 
   it("uses the supervision route for an administrator with the S1 permission", () => {
-    const current = user([PermissionCode.WORKSPACE_ACCESS, PermissionCode.TASK_SUPERVISION_READ]);
+    const current = user([
+      PermissionCode.WORKSPACE_ACCESS,
+      PermissionCode.STUDENTS_READ,
+      PermissionCode.SYSTEM_USERS_READ,
+      PermissionCode.TASK_SUPERVISION_READ,
+    ]);
     expect(defaultRouteFor(current)).toBe("/workspace/supervision");
     expect(navigationFor(current).map((item) => item.label)).toContain("监督管理看板");
   });

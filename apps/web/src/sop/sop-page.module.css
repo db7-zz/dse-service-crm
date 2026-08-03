@@ -16,6 +16,20 @@
   box-shadow: 0 24px 80px rgb(49 54 76 / 9%);
 }
 
+.compactHero {
+  align-items: center;
+  padding: clamp(22px, 3vw, 34px);
+  border-radius: 28px;
+}
+
+.compactHero .title {
+  font-size: clamp(32px, 4vw, 44px);
+}
+
+.compactHero .lead {
+  max-width: 800px;
+}
+
 .eyebrow {
   color: #0071e3;
   font-size: 12px;

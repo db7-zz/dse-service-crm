@@ -57,6 +57,7 @@ describe("PermissionPage", () => {
     );
 
     expect(screen.queryByText("账号管理内容")).not.toBeInTheDocument();
-    expect(screen.getByText("你没有访问此页面的权限")).toBeInTheDocument();
+    expect(screen.getByText("当前角色没有访问此页面的权限")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "返回工作区" })).toHaveAttribute("href", "/workspace");
   });
 });

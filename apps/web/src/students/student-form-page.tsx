@@ -147,7 +147,7 @@ export function StudentFormPage({
             <Form<StudentFormValues>
               form={form}
               layout="vertical"
-              requiredMark="optional"
+              requiredMark={false}
               onFinish={async (values) => {
                 setSubmitting(true);
                 setConflict(false);
@@ -183,7 +183,7 @@ export function StudentFormPage({
                   <Input size="large" placeholder="例如：黄翰" autoComplete="name" />
                 </Form.Item>
                 <Form.Item
-                  label="联系电话"
+                  label="联系电话（可选）"
                   name="phone"
                   rules={[
                     {
@@ -195,7 +195,7 @@ export function StudentFormPage({
                   <Input size="large" placeholder="+852 6123 4567" autoComplete="tel" />
                 </Form.Item>
                 <Form.Item
-                  label="联系邮箱"
+                  label="联系邮箱（可选）"
                   name="email"
                   rules={[{ type: "email", message: "请输入有效的邮箱地址" }]}
                 >
@@ -203,7 +203,7 @@ export function StudentFormPage({
                 </Form.Item>
                 {mode === "create" ? (
                   <>
-                    <Form.Item label="默认管家" name="defaultButlerId">
+                    <Form.Item label="默认管家（可选）" name="defaultButlerId">
                       <Select
                         size="large"
                         allowClear
@@ -217,7 +217,7 @@ export function StudentFormPage({
                         notFoundContent="暂无可用管家"
                       />
                     </Form.Item>
-                    <Form.Item label="规划老师" name="plannerId">
+                    <Form.Item label="规划老师（可选）" name="plannerId">
                       <Select
                         size="large"
                         allowClear

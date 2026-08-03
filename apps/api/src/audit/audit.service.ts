@@ -19,6 +19,15 @@ export class AuditService {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.auditLog.findMany({
         where,
+        include: {
+          operator: {
+            select: {
+              id: true,
+              displayName: true,
+              username: true,
+            },
+          },
+        },
         orderBy: { createdAt: "desc" },
         skip: (input.page - 1) * input.pageSize,
         take: input.pageSize,

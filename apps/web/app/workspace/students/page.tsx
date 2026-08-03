@@ -99,12 +99,12 @@ export default function StudentsPage() {
   return (
     <PermissionPage permission={PermissionCode.STUDENTS_READ}>
       <main className={styles.page}>
-        <section className={styles.hero}>
+        <section className={styles.compactHero}>
           <div className={styles.heroContent}>
             <span className={styles.eyebrow}>Student operations</span>
-            <h1 className={styles.title}>每一位学生，都从一份清晰档案开始。</h1>
+            <h1 className={styles.compactTitle}>学生管理</h1>
             <p className={styles.lead}>
-              在一个视图里查看联系方式、默认管家、规划老师和服务状态。负责人可以先留空，待安排明确后再补充。
+              查看学生档案、负责人和服务状态；负责人允许在建档后继续补充。
             </p>
             <div className={styles.heroActions}>
               <Link href="/workspace/students/new">

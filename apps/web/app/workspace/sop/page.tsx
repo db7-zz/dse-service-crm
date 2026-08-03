@@ -108,7 +108,7 @@ export default function SopPage() {
   return (
     <PermissionPage permission={PermissionCode.SOP_READ}>
       <main className={styles.page}>
-        <section className={styles.hero}>
+        <section className={`${styles.hero} ${styles.compactHero}`}>
           <div>
             <span className={styles.eyebrow}>Service operating procedure</span>
             <h1 className={styles.title}>八阶段 SOP</h1>

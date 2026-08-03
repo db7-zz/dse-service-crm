@@ -60,7 +60,7 @@ function formatHongKongTime(value: string) {
 }
 
 export default function StudentDetailPage() {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const params = useParams<{ studentId: string }>();
   const studentId = params.studentId;
   const [student, setStudent] = useState<StudentDetail>();
@@ -80,6 +80,8 @@ export default function StudentDetailPage() {
     reason: string;
     taskIds: string[];
   }>();
+  const selectedBulkTaskIds = Form.useWatch("taskIds", bulkAssignForm) ?? [];
+  const selectedBulkButlerId = Form.useWatch("butlerId", bulkAssignForm);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -121,6 +123,7 @@ export default function StudentDetailPage() {
         .filter((task) => !task.owner && (task.status === "TODO" || task.status === "IN_PROGRESS"))
         .map((task) => ({ ...task, stageName: stage.name })),
     ) ?? [];
+  const selectedBulkButler = options.butlers.find((person) => person.id === selectedBulkButlerId);
 
   return (
     <PermissionPage permission={PermissionCode.STUDENTS_READ}>
@@ -178,7 +181,7 @@ export default function StudentDetailPage() {
                   disabled={student.serviceStatus === "ENABLED"}
                   loading={submitting}
                   onClick={() =>
-                    Modal.confirm({
+                    modal.confirm({
                       title: `为 ${student.name} 启用服务？`,
                       content:
                         "系统会使用当前已发布 SOP，一次生成八个阶段和全部任务。该操作不能重复执行。",
@@ -537,7 +540,7 @@ export default function StudentDetailPage() {
         <Modal
           open={bulkAssignOpen}
           title="批量分配未分配任务"
-          okText="确认分配"
+          okText={`确认分配 ${selectedBulkTaskIds.length} 项`}
           cancelText="取消"
           confirmLoading={submitting}
           forceRender
@@ -551,6 +554,17 @@ export default function StudentDetailPage() {
             showIcon
             title="批量操作采用全有或全无"
             description="如任一任务在提交前已被分配或版本改变，整批操作会被拒绝并列出冲突。"
+          />
+          <Alert
+            style={{ marginBottom: 18 }}
+            type={selectedBulkTaskIds.length > 0 && selectedBulkButler ? "success" : "warning"}
+            showIcon
+            title={
+              selectedBulkTaskIds.length > 0 && selectedBulkButler
+                ? `即将把 ${selectedBulkTaskIds.length} 项任务分配给 ${selectedBulkButler.displayName}`
+                : "请选择管家和至少一项任务"
+            }
+            description="提交前请核对任务数量、执行人和分配原因。"
           />
           <Form
             form={bulkAssignForm}

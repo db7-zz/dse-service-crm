@@ -92,10 +92,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
-  const selected =
-    navigation
-      .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
-      .sort((a, b) => b.href.length - a.href.length)[0]?.key ?? "workspace";
+  const selected = pathname.startsWith("/workspace/tasks/")
+    ? user.permissions.includes(PermissionCode.TASK_SUPERVISION_READ)
+      ? "supervision"
+      : user.permissions.includes(PermissionCode.TASKS_OWN_READ)
+        ? "my-tasks"
+        : "workspace"
+    : (navigation
+        .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+        .sort((a, b) => b.href.length - a.href.length)[0]?.key ?? "workspace");
   const siderCollapsed = mobile ? false : collapsed;
   const siderWidth = siderCollapsed ? 80 : 240;
   const workspaceName = user.roles.includes(RoleCode.ADMINISTRATOR) ? "管理员端" : "内部工作台";

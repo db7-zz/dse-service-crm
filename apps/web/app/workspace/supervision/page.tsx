@@ -30,6 +30,17 @@ const STATUS = {
   CANCELED: { label: "已取消", color: "default" },
 } as const;
 
+const STAGES = [
+  ["PROFILE", "建档阶段"],
+  ["ASSESSMENT", "学情评估阶段"],
+  ["PLANNING", "升学规划阶段"],
+  ["MATERIALS", "资料准备阶段"],
+  ["ESSAYS", "文书准备阶段"],
+  ["SUBMISSION", "申请递交阶段"],
+  ["RESULTS", "申请结果跟进阶段"],
+  ["ENROLLMENT", "入学确认阶段"],
+] as const;
+
 function hk(value: string) {
   return new Intl.DateTimeFormat("zh-HK", {
     timeZone: "Asia/Hong_Kong",
@@ -91,6 +102,17 @@ export default function SupervisionPage() {
         : filters.status === "IN_PROGRESS"
           ? "进行中"
           : undefined;
+  const activeFilterCount = [
+    filters.status,
+    filters.ownerId,
+    filters.studentId,
+    filters.stageCode,
+    filters.overdue,
+    filters.unassigned,
+    filters.openAlert,
+    filters.dueFrom,
+    filters.dueTo,
+  ].filter((value) => value !== undefined && value !== "").length;
 
   const applyMetric = (metric: "进行中" | "已逾期" | "未分配" | "待处理提醒") => {
     const clear = activeMetric === metric;
@@ -105,7 +127,7 @@ export default function SupervisionPage() {
   return (
     <PermissionPage permission={PermissionCode.TASK_SUPERVISION_READ}>
       <main className={styles.page}>
-        <section className={styles.hero}>
+        <section className={`${styles.hero} ${styles.compactHero}`}>
           <div>
             <span className={styles.eyebrow}>Task supervision</span>
             <h1 className={styles.title}>任务监督闭环</h1>
@@ -137,6 +159,20 @@ export default function SupervisionPage() {
         </div>
 
         <section className={styles.surface}>
+          <div className={styles.filterSummary}>
+            <div>
+              <strong>任务工作队列</strong>
+              <span className={styles.subtle}>
+                默认按截止时间从近到远排列，优先处理逾期、待提醒和未分配任务
+              </span>
+            </div>
+            <Button
+              disabled={activeFilterCount === 0}
+              onClick={() => setFilters({ page: 1, pageSize: filters.pageSize ?? 20 })}
+            >
+              清除筛选{activeFilterCount > 0 ? `（${activeFilterCount}）` : ""}
+            </Button>
+          </div>
           <div className={styles.filters}>
             <Select
               allowClear
@@ -165,16 +201,10 @@ export default function SupervisionPage() {
               placeholder="全部阶段"
               value={filters.stageCode}
               onChange={(stageCode) => patchFilters({ stageCode })}
-              options={[
-                "PROFILE",
-                "ASSESSMENT",
-                "PLANNING",
-                "MATERIALS",
-                "ESSAYS",
-                "SUBMISSION",
-                "RESULTS",
-                "ENROLLMENT",
-              ].map((value, index) => ({ value, label: `${index + 1}. ${value}` }))}
+              options={STAGES.map(([value, label], index) => ({
+                value,
+                label: `${index + 1}. ${label}`,
+              }))}
             />
             <Select
               allowClear
@@ -247,14 +277,11 @@ export default function SupervisionPage() {
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th>任务</th>
-                      <th>学生 / 阶段</th>
-                      <th>执行人</th>
-                      <th>状态</th>
-                      <th>截止 / 逾期</th>
-                      <th>最新延期</th>
+                      <th>任务 / 学生</th>
+                      <th>执行状态</th>
+                      <th>截止时间</th>
+                      <th>风险与跟进</th>
                       <th>最后更新</th>
-                      <th>提醒</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -265,19 +292,15 @@ export default function SupervisionPage() {
                             {task.title}
                           </Link>
                           <span className={styles.subtle}>
-                            {task.sopVersion.displayVersion} · 版本 {task.version}
+                            {task.student.name} · {task.stage.sequenceNo}. {task.stage.name} ·{" "}
+                            {task.sopVersion.displayVersion}
                           </span>
                         </td>
                         <td>
-                          {task.student.name}
-                          <span className={styles.subtle}>
-                            {task.stage.sequenceNo}. {task.stage.name}
-                          </span>
-                        </td>
-                        <td>{task.owner?.displayName ?? <Tag>未分配</Tag>}</td>
-                        <td>
+                          <div>{task.owner?.displayName ?? <Tag>未分配</Tag>}</div>
                           <Tag color={STATUS[task.status].color}>{STATUS[task.status].label}</Tag>
                           {task.isOverdue ? <Tag color="red">逾期</Tag> : null}
+                          <span className={styles.subtle}>进度 {task.progressPercent ?? 0}%</span>
                         </td>
                         <td className={task.isOverdue ? styles.overdue : ""}>
                           {hk(task.currentDueAt)}
@@ -288,28 +311,25 @@ export default function SupervisionPage() {
                           ) : null}
                         </td>
                         <td>
-                          {task.latestExtension ? (
-                            <>
-                              {task.latestExtension.reason}
-                              <span className={styles.subtle}>
-                                预计 {hk(task.latestExtension.expectedFinishAt)}
+                          <div className={styles.riskStack}>
+                            {task.activeAlert ? (
+                              <Tag color={task.activeAlert.status === "OPEN" ? "red" : "orange"}>
+                                第 {task.activeAlert.episode} 次提醒 ·{" "}
+                                {task.activeAlert.status === "OPEN" ? "待处理" : "已处理"}
+                              </Tag>
+                            ) : null}
+                            {task.latestExtension ? (
+                              <span>
+                                延期报备：{task.latestExtension.reason}
+                                <span className={styles.subtle}>
+                                  预计 {hk(task.latestExtension.expectedFinishAt)}
+                                </span>
                               </span>
-                            </>
-                          ) : (
-                            "—"
-                          )}
+                            ) : null}
+                            {!task.activeAlert && !task.latestExtension ? "—" : null}
+                          </div>
                         </td>
                         <td>{hk(task.updatedAt)}</td>
-                        <td>
-                          {task.activeAlert ? (
-                            <Tag color={task.activeAlert.status === "OPEN" ? "red" : "orange"}>
-                              第 {task.activeAlert.episode} 次 ·{" "}
-                              {task.activeAlert.status === "OPEN" ? "待处理" : "已处理"}
-                            </Tag>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
                       </tr>
                     ))}
                   </tbody>

@@ -58,6 +58,15 @@ const ACTION_TITLES: Record<Action, string> = {
   cancel: "取消任务",
 };
 
+const ROLE_LABELS: Record<string, string> = {
+  ADMINISTRATOR: "管理员",
+  BUTLER: "管家",
+  PLANNER: "规划老师",
+  SPECIALIST: "专项老师",
+  STUDENT: "学生",
+  SYSTEM: "系统",
+};
+
 function hk(value: string) {
   return new Intl.DateTimeFormat("zh-HK", {
     timeZone: "Asia/Hong_Kong",
@@ -66,9 +75,27 @@ function hk(value: string) {
   }).format(new Date(value));
 }
 
+function hongKongDateTimeInput(value: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Hong_Kong",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  })
+    .formatToParts(new Date(value))
+    .reduce<Record<string, string>>((result, part) => {
+      result[part.type] = part.value;
+      return result;
+    }, {});
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+}
+
 export default function TaskDetailPage() {
   const { user } = useAuth();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const params = useParams<{ taskId: string }>();
   const [task, setTask] = useState<TaskDetail>();
   const [butlers, setButlers] = useState<ResponsiblePersonOption[]>([]);
@@ -108,12 +135,17 @@ export default function TaskDetailPage() {
   }, [canRead, load]);
 
   if (!canRead) {
-    return <PermissionDenied />;
+    return (
+      <PermissionDenied
+        description="当前角色没有任务查看权限"
+        action={<Button href="/workspace">返回工作区</Button>}
+      />
+    );
   }
 
   const runStart = () => {
     if (!task) return;
-    Modal.confirm({
+    modal.confirm({
       title: "开始执行这项任务？",
       content: "任务状态将从“待开始”更新为“进行中”，并写入时间线。",
       okText: "开始任务",
@@ -193,6 +225,9 @@ export default function TaskDetailPage() {
 
   const openAction = (next: Action) => {
     form.resetFields();
+    if (next === "reschedule" && task) {
+      form.setFieldsValue({ dateTime: hongKongDateTimeInput(task.currentDueAt) });
+    }
     setAction(next);
   };
 
@@ -228,7 +263,7 @@ export default function TaskDetailPage() {
                 </span>
                 <h1 className={styles.title}>{task.title}</h1>
                 <p className={styles.lead}>
-                  {task.description || "暂无任务说明"} · {task.sopVersion.displayVersion}
+                  {task.description || "请按完成标准执行"} · {task.sopVersion.displayVersion}
                 </p>
               </div>
               <div>
@@ -327,8 +362,10 @@ export default function TaskDetailPage() {
                   <dd>{task.progressPercent ?? 0}%</dd>
                 </div>
                 <div>
-                  <dt>乐观锁版本</dt>
-                  <dd>{task.version}</dd>
+                  <dt>所属阶段</dt>
+                  <dd>
+                    {task.stage.sequenceNo}. {task.stage.name}
+                  </dd>
                 </div>
               </dl>
             </section>
@@ -370,7 +407,7 @@ export default function TaskDetailPage() {
                       <p className={styles.timelineMeta}>
                         {event.reason ? `${event.reason} · ` : ""}
                         {event.actor?.displayName ?? "系统"}
-                        {event.actorRole ? `（${event.actorRole}）` : ""}
+                        {event.actorRole ? `（${ROLE_LABELS[event.actorRole] ?? "服务人员"}）` : ""}
                       </p>
                     </div>
                     <time className={styles.timelineTime} dateTime={event.createdAt}>
@@ -397,6 +434,33 @@ export default function TaskDetailPage() {
         }}
         onOk={() => form.submit()}
       >
+        {task && action === "reschedule" ? (
+          <Alert
+            style={{ marginBottom: 16 }}
+            type="info"
+            showIcon
+            title={`当前截止：${hk(task.currentDueAt)}`}
+            description="提交后会保留原截止时间和改期原因；如任务已不再逾期，当前逾期提醒将自动解除。"
+          />
+        ) : null}
+        {task && action === "reassign" ? (
+          <Alert
+            style={{ marginBottom: 16 }}
+            type="info"
+            showIcon
+            title={`当前执行人：${task.owner?.displayName ?? "未分配"}`}
+            description="提交后，原管家将立即失去该任务的操作权限，新管家立即获得权限。"
+          />
+        ) : null}
+        {task && action === "cancel" ? (
+          <Alert
+            style={{ marginBottom: 16 }}
+            type="warning"
+            showIcon
+            title="取消后管家不能继续执行该任务"
+            description="任务及既有时间线会继续保留，以便后续追溯。"
+          />
+        ) : null}
         <Form form={form} layout="vertical" onFinish={(values) => void submitAction(values)}>
           {action === "progress" ? (
             <>

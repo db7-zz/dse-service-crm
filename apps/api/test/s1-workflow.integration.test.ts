@@ -3,6 +3,7 @@ import { Test } from "@nestjs/testing";
 import type { PrismaClient } from "@dse/database";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { assertSafeTestDatabaseUrl } from "./test-database.js";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const describeWithDatabase = testDatabaseUrl ? describe : describe.skip;
@@ -12,6 +13,7 @@ describeWithDatabase("S1 SOP, activation, task execution and supervision", () =>
   let prisma: PrismaClient;
 
   beforeAll(async () => {
+    assertSafeTestDatabaseUrl(testDatabaseUrl!);
     process.env.NODE_ENV = "test";
     process.env.DATABASE_URL = testDatabaseUrl!;
     const [{ AppModule }, { configureApplication }, { PRISMA }] = await Promise.all([

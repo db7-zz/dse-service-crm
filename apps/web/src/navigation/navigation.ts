@@ -66,14 +66,14 @@ export function defaultRouteFor(user: AuthenticatedUser): string {
   if (user.permissions.includes(PermissionCode.TASKS_OWN_READ)) {
     return "/workspace/my-tasks";
   }
+  if (user.permissions.includes(PermissionCode.TASK_SUPERVISION_READ)) {
+    return "/workspace/supervision";
+  }
   if (user.permissions.includes(PermissionCode.STUDENTS_READ)) {
     return "/workspace/students";
   }
   if (user.permissions.includes(PermissionCode.SYSTEM_USERS_READ)) {
     return "/workspace/system/users";
-  }
-  if (user.permissions.includes(PermissionCode.TASK_SUPERVISION_READ)) {
-    return "/workspace/supervision";
   }
   if (user.permissions.includes(PermissionCode.WORKSPACE_ACCESS)) {
     return "/workspace";

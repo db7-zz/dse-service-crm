@@ -158,6 +158,16 @@ export function ErrorState({
   );
 }
 
-export function PermissionDenied() {
-  return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="你没有访问此页面的权限" />;
+export function PermissionDenied({
+  description = "你没有访问此页面的权限",
+  action,
+}: {
+  description?: string;
+  action?: ReactNode;
+} = {}) {
+  return (
+    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={description}>
+      {action ? <div style={{ marginTop: 12 }}>{action}</div> : null}
+    </Empty>
+  );
 }

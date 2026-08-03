@@ -50,7 +50,7 @@ export default function MyTasksPage() {
   return (
     <PermissionPage permission={PermissionCode.TASKS_OWN_READ}>
       <main className={styles.page}>
-        <section className={styles.hero}>
+        <section className={`${styles.hero} ${styles.compactHero}`}>
           <div>
             <span className={styles.eyebrow}>My work queue</span>
             <h1 className={styles.title}>我的任务</h1>
