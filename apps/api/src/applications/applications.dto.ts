@@ -36,7 +36,7 @@ export class ListApplicationsQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  page = 1;
+  page: number = 1;
 
   @ApiPropertyOptional({ default: 20, maximum: 100 })
   @IsOptional()
@@ -44,7 +44,7 @@ export class ListApplicationsQueryDto {
   @IsInt()
   @Min(1)
   @Max(100)
-  pageSize = 20;
+  pageSize: number = 20;
 
   @ApiPropertyOptional({ maxLength: 200 })
   @IsOptional()
@@ -71,7 +71,7 @@ export class ListApplicationsQueryDto {
   @IsOptional()
   @Transform(({ value }) => (value === "true" ? true : value === "false" ? false : value))
   @IsBoolean()
-  overdueOnly = false;
+  overdueOnly: boolean = false;
 }
 
 export class CreateApplicationDto {

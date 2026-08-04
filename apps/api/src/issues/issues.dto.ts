@@ -20,7 +20,7 @@ export class ListIssuesQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  page = 1;
+  page: number = 1;
 
   @ApiPropertyOptional({ default: 20, maximum: 100 })
   @IsOptional()
@@ -28,7 +28,7 @@ export class ListIssuesQueryDto {
   @IsInt()
   @Min(1)
   @Max(100)
-  pageSize = 20;
+  pageSize: number = 20;
 
   @ApiPropertyOptional({ format: "uuid" })
   @IsOptional()
