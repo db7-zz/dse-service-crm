@@ -101,9 +101,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!user || process.env.NODE_ENV !== "development") return;
 
     const controller = new AbortController();
-    const queue = navigation.filter(
-      (item) => item.href !== pathname && !warmedRoutes.current.has(item.href),
-    );
+    const queue = navigation.filter((item) => !warmedRoutes.current.has(item.href));
 
     const warmRoutes = async () => {
       const worker = async () => {
@@ -125,7 +123,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         }
       };
 
-      await Promise.all([worker(), worker()]);
+      await Promise.all([worker(), worker(), worker(), worker()]);
     };
 
     const idleId = window.requestIdleCallback(() => void warmRoutes(), { timeout: 1_500 });
@@ -133,7 +131,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       window.cancelIdleCallback(idleId);
       controller.abort();
     };
-  }, [navigation, pathname, router, user]);
+  }, [navigation, router, user]);
 
   if (loading || !user) {
     return (
