@@ -60,8 +60,7 @@ pnpm check
 docker compose -f docker-compose.test.yml up -d
 $env:TEST_DATABASE_URL="postgresql://dse_crm_test:dse_crm_test_only@localhost:55432/dse_crm_test?schema=public"
 $env:DATABASE_URL=$env:TEST_DATABASE_URL
-$env:SEED_ADMIN_PASSWORD="replace-with-a-local-6-character-password"
-$env:SEED_BUTLER_PASSWORD="replace-with-a-local-6-character-password"
+$env:SEED_DEMO_PASSWORD="replace-with-a-local-6-character-password"
 pnpm db:migrate:deploy
 pnpm db:seed
 pnpm test

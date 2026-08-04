@@ -1,5 +1,6 @@
 import {
   PermissionCode,
+  RoleCode,
   type AuthenticatedUser,
   type PermissionCode as PermissionCodeType,
 } from "@dse/shared";
@@ -93,6 +94,12 @@ export function navigationFor(user: AuthenticatedUser): NavigationItem[] {
 export function defaultRouteFor(user: AuthenticatedUser): string {
   if (user.permissions.includes(PermissionCode.PORTAL_ACCESS)) {
     return "/portal";
+  }
+  if (
+    user.roles.includes(RoleCode.ADMINISTRATOR) &&
+    user.permissions.includes(PermissionCode.WORKSPACE_ACCESS)
+  ) {
+    return "/workspace";
   }
   if (user.permissions.includes(PermissionCode.TASKS_OWN_READ)) {
     return "/workspace/my-tasks";

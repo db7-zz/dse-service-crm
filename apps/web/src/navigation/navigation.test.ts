@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 import { PermissionCode, RoleCode, type AuthenticatedUser } from "@dse/shared";
 import { defaultRouteFor, navigationFor } from "./navigation";
 
-function user(permissions: AuthenticatedUser["permissions"]): AuthenticatedUser {
+function user(
+  permissions: AuthenticatedUser["permissions"],
+  roles: AuthenticatedUser["roles"] = [RoleCode.BUTLER],
+): AuthenticatedUser {
   return {
     id: "1",
     username: "test",
     displayName: "测试用户",
-    roles: [RoleCode.BUTLER],
+    roles,
     permissions,
   };
 }
@@ -18,24 +21,30 @@ describe("role navigation", () => {
     expect(items.map((item) => item.label)).toEqual(["工作区"]);
   });
 
-  it("uses the supervision route for an administrator with the S1 permission", () => {
-    const current = user([
-      PermissionCode.WORKSPACE_ACCESS,
-      PermissionCode.STUDENTS_READ,
-      PermissionCode.SYSTEM_USERS_READ,
-      PermissionCode.TASK_SUPERVISION_READ,
-    ]);
-    expect(defaultRouteFor(current)).toBe("/workspace/supervision");
+  it("uses the real workspace overview for an administrator", () => {
+    const current = user(
+      [
+        PermissionCode.WORKSPACE_ACCESS,
+        PermissionCode.STUDENTS_READ,
+        PermissionCode.SYSTEM_USERS_READ,
+        PermissionCode.TASK_SUPERVISION_READ,
+      ],
+      [RoleCode.ADMINISTRATOR],
+    );
+    expect(defaultRouteFor(current)).toBe("/workspace");
     expect(navigationFor(current).map((item) => item.label)).toContain("监督管理看板");
   });
 
-  it("routes an administrator with student access to student management first", () => {
-    const current = user([
-      PermissionCode.WORKSPACE_ACCESS,
-      PermissionCode.STUDENTS_READ,
-      PermissionCode.SYSTEM_USERS_READ,
-    ]);
-    expect(defaultRouteFor(current)).toBe("/workspace/students");
+  it("keeps the administrator workspace as the default without supervision access", () => {
+    const current = user(
+      [
+        PermissionCode.WORKSPACE_ACCESS,
+        PermissionCode.STUDENTS_READ,
+        PermissionCode.SYSTEM_USERS_READ,
+      ],
+      [RoleCode.ADMINISTRATOR],
+    );
+    expect(defaultRouteFor(current)).toBe("/workspace");
     expect(navigationFor(current).map((item) => item.label)).toContain("学生管理");
   });
 

@@ -1,3 +1,7 @@
+import { createHash } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { config as loadEnvironment } from "dotenv";
 import argon2 from "argon2";
 import { createPrismaClient } from "./src/index.js";
@@ -184,6 +188,82 @@ function required(name: string): string {
   return value;
 }
 
+const DEVELOPMENT_DATA_TABLES = [
+  "task_evidence",
+  "student_confirmations",
+  "notifications",
+  "issue_logs",
+  "issues",
+  "application_requirements",
+  "application_status_logs",
+  "applications",
+  "material_followups",
+  "material_versions",
+  "material_items",
+  "student_targets",
+  "student_scores",
+  "task_operation_receipts",
+  "task_timeline_events",
+  "overdue_alerts",
+  "task_reassignments",
+  "task_due_date_changes",
+  "task_extension_reports",
+  "task_progress_records",
+  "stage_transitions",
+  "service_progress_calculation_runs",
+  "task_instances",
+  "stage_instances",
+  "student_service_activations",
+  "sop_task_templates",
+  "sop_stage_templates",
+  "sop_versions",
+  "student_responsibility_changes",
+  "students",
+  "audit_logs",
+  "sessions",
+  "role_permissions",
+  "user_roles",
+  "users",
+  "permissions",
+  "roles",
+  "material_types",
+] as const;
+
+function assertSafeDevelopmentDatabaseUrl(databaseUrl: string): void {
+  const parsed = new URL(databaseUrl);
+  const databaseName = decodeURIComponent(parsed.pathname.replace(/^\//, "")).toLowerCase();
+  const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
+  if (!localHosts.has(parsed.hostname) || !/(?:^|[_-])dev(?:$|[_-])/.test(databaseName)) {
+    throw new Error(
+      `Development seed reset refused: expected a local database whose name contains dev; received ${parsed.hostname}/${databaseName || "unknown"}.`,
+    );
+  }
+}
+
+function shiftDays(base: Date, days: number): Date {
+  return new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+async function storeDemoPdf(storageKey: string, title: string) {
+  const apiRoot = fileURLToPath(new URL("../apps/api/", import.meta.url));
+  const storageRoot = path.resolve(apiRoot, process.env.FILE_STORAGE_ROOT ?? "./tmp/uploads");
+  const fullPath = path.resolve(storageRoot, storageKey.replaceAll("/", path.sep));
+  const storagePrefix = `${storageRoot}${path.sep}`;
+  if (!fullPath.startsWith(storagePrefix)) {
+    throw new Error("Demo file storage key resolved outside FILE_STORAGE_ROOT.");
+  }
+  const content = Buffer.from(
+    `%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R>>endobj\n4 0 obj<</Length 44>>stream\nBT /F1 12 Tf 72 720 Td (${title}) Tj ET\nendstream\nendobj\ntrailer<</Root 1 0 R>>\n%%EOF`,
+    "utf8",
+  );
+  await mkdir(path.dirname(fullPath), { recursive: true });
+  await writeFile(fullPath, content);
+  return {
+    fileSize: content.length,
+    fileHash: createHash("sha256").update(content).digest("hex"),
+  };
+}
+
 async function main(): Promise<void> {
   const environment = process.env.NODE_ENV ?? "development";
   if (environment === "staging" || environment === "production") {
@@ -191,28 +271,24 @@ async function main(): Promise<void> {
   }
 
   const databaseUrl = required("DATABASE_URL");
-  const adminPassword = required("SEED_ADMIN_PASSWORD");
-  const butlerPassword = required("SEED_BUTLER_PASSWORD");
-  if (adminPassword.length < 6 || butlerPassword.length < 6) {
-    throw new Error("Seed passwords must contain at least 6 characters.");
+  assertSafeDevelopmentDatabaseUrl(databaseUrl);
+  const demoPassword = process.env.SEED_DEMO_PASSWORD ?? required("SEED_ADMIN_PASSWORD");
+  if (demoPassword.length < 6) {
+    throw new Error("The demo account password must contain at least 6 characters.");
   }
 
   const prisma = createPrismaClient(databaseUrl);
   try {
+    await prisma.$executeRawUnsafe(
+      `TRUNCATE TABLE ${DEVELOPMENT_DATA_TABLES.map((table) => `"${table}"`).join(", ")} RESTART IDENTITY CASCADE`,
+    );
+
     for (const [code, name, description] of ROLE_DEFINITIONS) {
-      await prisma.role.upsert({
-        where: { code },
-        update: { name, description },
-        create: { code, name, description },
-      });
+      await prisma.role.create({ data: { code, name, description } });
     }
 
     for (const [code, name] of PERMISSION_DEFINITIONS) {
-      await prisma.permission.upsert({
-        where: { code },
-        update: { name },
-        create: { code, name },
-      });
+      await prisma.permission.create({ data: { code, name } });
     }
 
     for (const [roleCode, permissionCodes] of Object.entries(ROLE_PERMISSIONS)) {
@@ -220,7 +296,6 @@ async function main(): Promise<void> {
       const permissions = await prisma.permission.findMany({
         where: { code: { in: permissionCodes } },
       });
-      await prisma.rolePermission.deleteMany({ where: { roleId: role.id } });
       if (permissions.length > 0) {
         await prisma.rolePermission.createMany({
           data: permissions.map((permission) => ({
@@ -231,106 +306,29 @@ async function main(): Promise<void> {
       }
     }
 
-    const administratorRole = await prisma.role.findUniqueOrThrow({
-      where: { code: "ADMINISTRATOR" },
-    });
-    const legacyManagerRole = await prisma.role.findUniqueOrThrow({
-      where: { code: "ERIC_MANAGER" },
-    });
-    const activeLegacyRelations = await prisma.userRole.findMany({
-      where: { roleId: legacyManagerRole.id, expiredAt: null },
-    });
-    const migratedAt = new Date();
-    for (const relation of activeLegacyRelations) {
-      const existingAdministratorRelation = await prisma.userRole.findUnique({
-        where: {
-          userId_roleId: {
-            userId: relation.userId,
-            roleId: administratorRole.id,
-          },
-        },
-      });
-      const effectiveAt =
-        existingAdministratorRelation?.effectiveAt &&
-        existingAdministratorRelation.effectiveAt < relation.effectiveAt
-          ? existingAdministratorRelation.effectiveAt
-          : relation.effectiveAt;
-      await prisma.$transaction([
-        prisma.userRole.upsert({
-          where: {
-            userId_roleId: {
-              userId: relation.userId,
-              roleId: administratorRole.id,
-            },
-          },
-          update: {
-            effectiveAt,
-            expiredAt: null,
-          },
-          create: {
-            userId: relation.userId,
-            roleId: administratorRole.id,
-            effectiveAt,
-          },
-        }),
-        prisma.userRole.update({
-          where: {
-            userId_roleId: {
-              userId: relation.userId,
-              roleId: legacyManagerRole.id,
-            },
-          },
-          data: { expiredAt: migratedAt },
-        }),
-      ]);
-    }
-
     const accounts = [
       {
-        username: process.env.SEED_ADMIN_USERNAME ?? "admin",
-        displayName: "测试管理员",
-        password: adminPassword,
+        username: "admin",
+        displayName: "演示管理员",
         roleCode: "ADMINISTRATOR",
       },
       {
-        username: process.env.SEED_BUTLER_USERNAME ?? "butler",
-        displayName: "测试管家",
-        password: butlerPassword,
+        username: "butler",
+        displayName: "演示管家",
         roleCode: "BUTLER",
       },
       {
-        username: process.env.SEED_PLANNER_USERNAME ?? "planner",
-        displayName: "测试规划老师",
-        password: process.env.SEED_PLANNER_PASSWORD ?? butlerPassword,
-        roleCode: "PLANNER",
-      },
-      {
-        username: process.env.SEED_SPECIALIST_USERNAME ?? "specialist",
-        displayName: "测试专项老师",
-        password: process.env.SEED_SPECIALIST_PASSWORD ?? butlerPassword,
-        roleCode: "SPECIALIST",
-      },
-      {
-        username: process.env.SEED_STUDENT_USERNAME ?? "student",
-        displayName: "门户演示学生",
-        password: process.env.SEED_STUDENT_PASSWORD ?? butlerPassword,
+        username: "student",
+        displayName: "陈乐怡",
         roleCode: "STUDENT",
       },
-    ];
+    ] as const;
 
+    const passwordHash = await argon2.hash(demoPassword, { type: argon2.argon2id });
+    const users = new Map<string, Awaited<ReturnType<typeof prisma.user.create>>>();
     for (const account of accounts) {
-      const passwordHash = await argon2.hash(account.password, { type: argon2.argon2id });
-      const user = await prisma.user.upsert({
-        where: { username: account.username },
-        update: {
-          displayName: account.displayName,
-          passwordHash,
-          status: "ACTIVE",
-          failedLoginCount: 0,
-          failedLoginWindowStartedAt: null,
-          lockedUntil: null,
-        },
-        create: {
+      const user = await prisma.user.create({
+        data: {
           username: account.username,
           displayName: account.displayName,
           passwordHash,
@@ -338,116 +336,729 @@ async function main(): Promise<void> {
         },
       });
       const role = await prisma.role.findUniqueOrThrow({ where: { code: account.roleCode } });
-      await prisma.userRole.upsert({
-        where: { userId_roleId: { userId: user.id, roleId: role.id } },
-        update: { expiredAt: null },
-        create: { userId: user.id, roleId: role.id },
-      });
+      await prisma.userRole.create({ data: { userId: user.id, roleId: role.id } });
+      users.set(account.username, user);
     }
 
     for (const [code, name, description, isCore] of MATERIAL_TYPES) {
-      await prisma.materialType.upsert({
-        where: { code },
-        update: { name, description, isCore, isActive: true },
-        create: { code, name, description, isCore, isActive: true },
+      await prisma.materialType.create({
+        data: { code, name, description, isCore, isActive: true },
       });
     }
 
-    const administrator = await prisma.user.findUniqueOrThrow({
-      where: { username: process.env.SEED_ADMIN_USERNAME ?? "admin" },
-    });
-    const butler = await prisma.user.findUniqueOrThrow({
-      where: { username: process.env.SEED_BUTLER_USERNAME ?? "butler" },
-    });
-    const planner = await prisma.user.findUniqueOrThrow({
-      where: { username: process.env.SEED_PLANNER_USERNAME ?? "planner" },
-    });
-    const portalUser = await prisma.user.findUniqueOrThrow({
-      where: { username: process.env.SEED_STUDENT_USERNAME ?? "student" },
-    });
-    await prisma.student.upsert({
-      where: { studentNo: "DSE-DEMO-000001" },
-      update: {
-        portalUserId: portalUser.id,
-        defaultButlerId: butler.id,
-        plannerId: planner.id,
+    const administrator = users.get("admin")!;
+    const butler = users.get("butler")!;
+    const portalUser = users.get("student")!;
+    const now = new Date();
+    const enabledAt = shiftDays(now, -14);
+
+    const sop = await prisma.sopVersion.create({
+      data: {
+        versionNo: 1,
+        status: "PUBLISHED",
+        publishedAt: shiftDays(enabledAt, -1),
+        createdById: administrator.id,
+        stages: {
+          create: SOP_BASELINE_STAGES.map(([stageCode, name], index) => ({
+            stageCode,
+            name,
+            sequenceNo: index + 1,
+            description: `演示服务流程第 ${index + 1} 阶段`,
+            tasks: {
+              create: {
+                ...SOP_BASELINE_TASKS[stageCode],
+                sequenceNo: 1,
+                ownerRole: "BUTLER",
+                isBlocking: true,
+              },
+            },
+          })),
+        },
       },
-      create: {
-        studentNo: "DSE-DEMO-000001",
-        name: "门户演示学生",
-        englishName: "Demo Student",
-        school: "DSE示范中学",
+      include: {
+        stages: { include: { tasks: true }, orderBy: { sequenceNo: "asc" } },
+      },
+    });
+
+    const student = await prisma.student.create({
+      data: {
+        studentNo: "DSE-2026-0001",
+        name: "陈乐怡",
+        englishName: "Joyce Chan",
+        school: "港岛示范中学",
         grade: "中六",
-        cohortYear: new Date().getUTCFullYear(),
+        cohortYear: 2026,
+        phone: "90000001",
+        email: "student@example.test",
         portalUserId: portalUser.id,
         defaultButlerId: butler.id,
-        plannerId: planner.id,
+        serviceStatus: "ENABLED",
+        nextMilestone: "确认首轮选校与 JUPAS 课程排序，并补交预测成绩",
+        riskLevel: "ATTENTION",
+        riskNote: "首轮选校确认已延期，预测成绩仍待补交。",
+        version: 2,
         createdById: administrator.id,
       },
     });
-    const existingBaseline = await prisma.sopVersion.findUnique({
-      where: { versionNo: 1 },
-      include: { stages: { include: { tasks: true } } },
+
+    await prisma.studentResponsibilityChange.create({
+      data: {
+        studentId: student.id,
+        responsibilityType: "DEFAULT_BUTLER",
+        newUserId: butler.id,
+        reason: "管理员完成新生建档并分配默认管家",
+        operatorId: administrator.id,
+        createdAt: enabledAt,
+      },
     });
-    if (!existingBaseline) {
-      await prisma.sopVersion.create({
+
+    const activation = await prisma.studentServiceActivation.create({
+      data: {
+        studentId: student.id,
+        sopVersionId: sop.id,
+        enabledById: administrator.id,
+        enabledAt,
+      },
+    });
+
+    const stageInstances = new Map<string, { id: string }>();
+    for (const stage of sop.stages) {
+      const completed = stage.sequenceNo <= 2;
+      const current = stage.stageCode === "PLANNING";
+      const instance = await prisma.stageInstance.create({
         data: {
-          versionNo: 1,
-          status: "DRAFT",
-          createdById: administrator.id,
-          stages: {
-            create: SOP_BASELINE_STAGES.map(([stageCode, name], index) => ({
-              stageCode,
-              name,
-              sequenceNo: index + 1,
-              description: null,
-              tasks: {
-                create: {
-                  ...SOP_BASELINE_TASKS[stageCode],
-                  sequenceNo: 1,
-                  ownerRole: "BUTLER",
-                  isBlocking: true,
-                },
-              },
-            })),
-          },
+          studentId: student.id,
+          serviceActivationId: activation.id,
+          sopVersionId: sop.id,
+          stageTemplateId: stage.id,
+          stageCodeSnapshot: stage.stageCode,
+          nameSnapshot: stage.name,
+          sequenceNoSnapshot: stage.sequenceNo,
+          descriptionSnapshot: stage.description,
+          status: completed ? "COMPLETED" : current ? "IN_PROGRESS" : "NOT_STARTED",
+          startedAt: completed || current ? shiftDays(enabledAt, (stage.sequenceNo - 1) * 3) : null,
+          completedAt: completed ? shiftDays(enabledAt, stage.sequenceNo * 3 - 1) : null,
+          completionReason: completed ? "阶段标准任务已完成" : null,
+          version: completed ? 2 : current ? 1 : 0,
         },
       });
-    } else if (existingBaseline.status === "DRAFT") {
-      for (const [stageCode, name] of SOP_BASELINE_STAGES) {
-        const sequenceNo =
-          SOP_BASELINE_STAGES.findIndex(([candidate]) => candidate === stageCode) + 1;
-        const stage = await prisma.sopStageTemplate.upsert({
-          where: {
-            sopVersionId_stageCode: {
-              sopVersionId: existingBaseline.id,
-              stageCode,
-            },
+      stageInstances.set(stage.stageCode, instance);
+    }
+
+    const stageTasks = new Map<string, { id: string }>();
+    for (const stage of sop.stages) {
+      const template = stage.tasks[0]!;
+      const completed = stage.sequenceNo <= 2;
+      const current = stage.stageCode === "PLANNING";
+      const dueAt = completed
+        ? shiftDays(enabledAt, stage.sequenceNo * 3)
+        : shiftDays(now, stage.sequenceNo === 3 ? 2 : stage.sequenceNo * 4);
+      const task = await prisma.taskInstance.create({
+        data: {
+          studentId: student.id,
+          serviceActivationId: activation.id,
+          stageInstanceId: stageInstances.get(stage.stageCode)!.id,
+          taskTemplateId: template.id,
+          sopVersionId: sop.id,
+          sourceType: "SOP",
+          isBlockingSnapshot: true,
+          evidenceRequiredSnapshot: stage.stageCode === "PROFILE",
+          externalVisible: stage.sequenceNo >= 3 && stage.sequenceNo <= 4,
+          titleSnapshot: template.name,
+          descriptionSnapshot: template.description,
+          completionCriteriaSnapshot: template.completionCriteria,
+          completionWindowHoursSnapshot: template.completionWindowHours,
+          ownerId: butler.id,
+          status: completed ? "COMPLETED" : current ? "IN_PROGRESS" : "TODO",
+          progressPercent: completed ? 100 : current ? 60 : 0,
+          originalDueAt: dueAt,
+          currentDueAt: dueAt,
+          startedAt: completed || current ? shiftDays(dueAt, -2) : null,
+          completedAt: completed ? shiftDays(dueAt, -1) : null,
+          completionNote: completed ? "管家已完成并记录结果，学生可在门户查看阶段进度。" : null,
+        },
+      });
+      stageTasks.set(stage.stageCode, task);
+      await prisma.taskTimelineEvent.createMany({
+        data: [
+          {
+            taskId: task.id,
+            eventType: "CREATED",
+            actorId: administrator.id,
+            actorRole: "ADMINISTRATOR",
+            summary: "管理员启用服务，系统按 SOP 生成任务",
+            createdAt: enabledAt,
           },
-          update: {},
-          create: {
-            sopVersionId: existingBaseline.id,
-            stageCode,
-            name,
-            sequenceNo,
+          {
+            taskId: task.id,
+            eventType: "ASSIGNED",
+            actorId: administrator.id,
+            actorRole: "ADMINISTRATOR",
+            summary: "任务分配给学生默认管家",
+            afterData: { ownerId: butler.id },
+            createdAt: enabledAt,
+          },
+          ...(completed || current
+            ? [
+                {
+                  taskId: task.id,
+                  eventType: "STARTED" as const,
+                  actorId: butler.id,
+                  actorRole: "BUTLER",
+                  summary: "管家开始执行任务",
+                  createdAt: shiftDays(dueAt, -2),
+                },
+              ]
+            : []),
+          ...(completed
+            ? [
+                {
+                  taskId: task.id,
+                  eventType: "COMPLETED" as const,
+                  actorId: butler.id,
+                  actorRole: "BUTLER",
+                  summary: "管家完成任务并提交结果",
+                  createdAt: shiftDays(dueAt, -1),
+                },
+              ]
+            : []),
+        ],
+      });
+      if (completed || current) {
+        await prisma.taskProgressRecord.create({
+          data: {
+            taskId: task.id,
+            progressNote: completed
+              ? "已与学生核对信息并完成阶段交付。"
+              : "已完成方向访谈和首轮院校筛选，等待学生确认课程排序。",
+            progressPercent: completed ? 90 : 60,
+            createdById: butler.id,
+            createdAt: completed ? shiftDays(dueAt, -1) : shiftDays(now, -1),
           },
         });
-        const existingTaskCount = await prisma.sopTaskTemplate.count({
-          where: { stageTemplateId: stage.id },
-        });
-        if (existingTaskCount === 0) {
-          await prisma.sopTaskTemplate.create({
-            data: {
-              stageTemplateId: stage.id,
-              ...SOP_BASELINE_TASKS[stageCode],
-              sequenceNo: 1,
-              ownerRole: "BUTLER",
-              isBlocking: true,
-            },
-          });
-        }
       }
     }
+
+    const profileStage = stageInstances.get("PROFILE")!;
+    const assessmentStage = stageInstances.get("ASSESSMENT")!;
+    const planningStage = stageInstances.get("PLANNING")!;
+    await prisma.stageTransition.createMany({
+      data: [
+        {
+          stageInstanceId: profileStage.id,
+          fromStatus: null,
+          toStatus: "IN_PROGRESS",
+          triggerType: "SERVICE_ACTIVATION",
+          summary: "服务启用，进入建档阶段",
+          deduplicationKey: `${profileStage.id}:activation`,
+          createdAt: enabledAt,
+        },
+        {
+          stageInstanceId: profileStage.id,
+          fromStatus: "IN_PROGRESS",
+          toStatus: "COMPLETED",
+          triggerType: "TASK_COMPLETED",
+          triggerTaskId: stageTasks.get("PROFILE")!.id,
+          summary: "建档任务完成，建档阶段完成",
+          deduplicationKey: `${profileStage.id}:completed`,
+          createdAt: shiftDays(enabledAt, 2),
+        },
+        {
+          stageInstanceId: assessmentStage.id,
+          fromStatus: "NOT_STARTED",
+          toStatus: "IN_PROGRESS",
+          triggerType: "CONTINUOUS_ADVANCE",
+          summary: "进入学情评估阶段",
+          deduplicationKey: `${assessmentStage.id}:started`,
+          createdAt: shiftDays(enabledAt, 2),
+        },
+        {
+          stageInstanceId: assessmentStage.id,
+          fromStatus: "IN_PROGRESS",
+          toStatus: "COMPLETED",
+          triggerType: "TASK_COMPLETED",
+          triggerTaskId: stageTasks.get("ASSESSMENT")!.id,
+          summary: "学情评估任务完成，阶段完成",
+          deduplicationKey: `${assessmentStage.id}:completed`,
+          createdAt: shiftDays(enabledAt, 5),
+        },
+        {
+          stageInstanceId: planningStage.id,
+          fromStatus: "NOT_STARTED",
+          toStatus: "IN_PROGRESS",
+          triggerType: "CONTINUOUS_ADVANCE",
+          summary: "进入升学规划阶段",
+          deduplicationKey: `${planningStage.id}:started`,
+          createdAt: shiftDays(enabledAt, 5),
+        },
+      ],
+    });
+
+    await prisma.studentServiceActivation.update({
+      where: { id: activation.id },
+      data: {
+        currentStageInstanceId: planningStage.id,
+        completedStageCount: 2,
+        progressVersion: 3,
+        lastCalculatedAt: now,
+      },
+    });
+
+    const overdueTask = await prisma.taskInstance.create({
+      data: {
+        studentId: student.id,
+        serviceActivationId: activation.id,
+        stageInstanceId: planningStage.id,
+        sopVersionId: sop.id,
+        sourceType: "MANUAL",
+        isBlockingSnapshot: true,
+        externalVisible: true,
+        createdById: administrator.id,
+        titleSnapshot: "确认首轮选校与课程排序",
+        descriptionSnapshot: "管家整理首轮选校方案，学生在门户确认后进入下一步。",
+        completionCriteriaSnapshot: "学生完成首轮院校及课程排序确认",
+        ownerId: butler.id,
+        status: "IN_PROGRESS",
+        progressPercent: 40,
+        originalDueAt: shiftDays(now, -2),
+        currentDueAt: shiftDays(now, -1),
+        startedAt: shiftDays(now, -4),
+      },
+    });
+    await prisma.taskTimelineEvent.createMany({
+      data: [
+        {
+          taskId: overdueTask.id,
+          eventType: "CREATED",
+          actorId: administrator.id,
+          actorRole: "ADMINISTRATOR",
+          summary: "管理员创建学生确认任务",
+          createdAt: shiftDays(now, -5),
+        },
+        {
+          taskId: overdueTask.id,
+          eventType: "STARTED",
+          actorId: butler.id,
+          actorRole: "BUTLER",
+          summary: "管家开始整理选校与课程排序",
+          createdAt: shiftDays(now, -4),
+        },
+        {
+          taskId: overdueTask.id,
+          eventType: "EXTENSION_REPORTED",
+          actorId: butler.id,
+          actorRole: "BUTLER",
+          summary: "管家提交延期报备",
+          reason: "等待学生确认家庭预算和课程优先级",
+          createdAt: shiftDays(now, -1),
+        },
+        {
+          taskId: overdueTask.id,
+          eventType: "OVERDUE_ALERT_GENERATED",
+          summary: "系统生成逾期提醒并进入监督看板",
+          createdAt: shiftDays(now, -1),
+        },
+      ],
+    });
+    await prisma.taskProgressRecord.create({
+      data: {
+        taskId: overdueTask.id,
+        progressNote: "已向学生讲解首轮方案，等待确认预算与课程优先级。",
+        progressPercent: 40,
+        createdById: butler.id,
+        createdAt: shiftDays(now, -1),
+      },
+    });
+    await prisma.taskExtensionReport.create({
+      data: {
+        taskId: overdueTask.id,
+        extensionReason: "等待学生确认家庭预算和课程优先级",
+        expectedFinishAt: shiftDays(now, 2),
+        reportedById: butler.id,
+        reportedAt: shiftDays(now, -1),
+      },
+    });
+    await prisma.overdueAlert.create({
+      data: {
+        taskId: overdueTask.id,
+        overdueEpisodeNo: 1,
+        status: "OPEN",
+        firstOverdueAt: shiftDays(now, -1),
+        generatedAt: shiftDays(now, -1),
+      },
+    });
+
+    const materialStage = stageInstances.get("MATERIALS")!;
+    const materialScenarios = [
+      { code: "IDENTITY", status: "APPROVED" as const, dueDays: 3 },
+      { code: "TRANSCRIPT", status: "PENDING_REVIEW" as const, dueDays: 4 },
+      { code: "PREDICTED_GRADES", status: "PARTIALLY_MISSING" as const, dueDays: 7 },
+      { code: "PERSONAL_STATEMENT", status: "REQUIRED" as const, dueDays: 10 },
+    ];
+    const materialItems = new Map<string, { id: string; taskId: string }>();
+    for (const scenario of materialScenarios) {
+      const materialType = await prisma.materialType.findUniqueOrThrow({
+        where: { code: scenario.code },
+      });
+      const dueAt = shiftDays(now, scenario.dueDays);
+      const item = await prisma.materialItem.create({
+        data: {
+          studentId: student.id,
+          materialTypeId: materialType.id,
+          title: materialType.name,
+          requirement: materialType.description,
+          dueAt,
+          ownerId: butler.id,
+          status: scenario.status,
+          missingReason:
+            scenario.status === "PARTIALLY_MISSING" ? "学校尚未出具最终预测成绩证明" : null,
+          expectedSubmitAt: scenario.status === "PARTIALLY_MISSING" ? shiftDays(now, 6) : null,
+        },
+      });
+      const taskCompleted = scenario.status === "APPROVED";
+      const taskInProgress = scenario.status === "PENDING_REVIEW";
+      const task = await prisma.taskInstance.create({
+        data: {
+          studentId: student.id,
+          serviceActivationId: activation.id,
+          stageInstanceId: materialStage.id,
+          sopVersionId: sop.id,
+          sourceType: "MATERIAL",
+          sourceObjectId: item.id,
+          isBlockingSnapshot: true,
+          externalVisible: true,
+          titleSnapshot: `收集并审核：${materialType.name}`,
+          descriptionSnapshot: materialType.description,
+          completionCriteriaSnapshot: "资料已审核通过，或已记录缺失原因和补交时间",
+          ownerId: butler.id,
+          status: taskCompleted ? "COMPLETED" : taskInProgress ? "IN_PROGRESS" : "TODO",
+          progressPercent: taskCompleted ? 100 : taskInProgress ? 80 : 0,
+          originalDueAt: dueAt,
+          currentDueAt: dueAt,
+          startedAt: taskCompleted || taskInProgress ? shiftDays(now, -3) : null,
+          completedAt: taskCompleted ? shiftDays(now, -2) : null,
+          completionNote: taskCompleted ? "学生已上传，管家审核通过。" : null,
+        },
+      });
+      await prisma.taskTimelineEvent.create({
+        data: {
+          taskId: task.id,
+          eventType: taskCompleted ? "COMPLETED" : taskInProgress ? "PROGRESS_UPDATED" : "CREATED",
+          actorId: taskCompleted || taskInProgress ? butler.id : administrator.id,
+          actorRole: taskCompleted || taskInProgress ? "BUTLER" : "ADMINISTRATOR",
+          summary: taskCompleted
+            ? "管家审核资料并完成关联任务"
+            : taskInProgress
+              ? "学生已上传资料，等待管家审核"
+              : "启用服务时生成核心资料任务",
+        },
+      });
+      materialItems.set(scenario.code, { id: item.id, taskId: task.id });
+    }
+
+    for (const scenario of [
+      { code: "IDENTITY", title: "身份证明演示文件", reviewStatus: "APPROVED" as const },
+      { code: "TRANSCRIPT", title: "中六成绩单演示文件", reviewStatus: "PENDING" as const },
+    ]) {
+      const material = materialItems.get(scenario.code)!;
+      const storageKey = `materials/${student.id}/demo-${scenario.code.toLowerCase()}.pdf`;
+      const stored = await storeDemoPdf(storageKey, scenario.title);
+      const version = await prisma.materialVersion.create({
+        data: {
+          materialItemId: material.id,
+          versionNo: 1,
+          fileName: `${scenario.title}.pdf`,
+          mimeType: "application/pdf",
+          fileSize: stored.fileSize,
+          storageKey,
+          fileHash: stored.fileHash,
+          uploadedById: portalUser.id,
+          uploadedAt: shiftDays(now, -3),
+          reviewStatus: scenario.reviewStatus,
+          reviewedById: scenario.reviewStatus === "APPROVED" ? butler.id : null,
+          reviewedAt: scenario.reviewStatus === "APPROVED" ? shiftDays(now, -2) : null,
+          reviewComment: scenario.reviewStatus === "APPROVED" ? "文件清晰完整，已审核通过。" : null,
+        },
+      });
+      await prisma.materialItem.update({
+        where: { id: material.id },
+        data: { currentVersionId: version.id },
+      });
+    }
+
+    await prisma.materialFollowup.create({
+      data: {
+        materialItemId: materialItems.get("PREDICTED_GRADES")!.id,
+        taskId: materialItems.get("PREDICTED_GRADES")!.taskId,
+        followupNote: "管家已提醒学生向学校申请正式预测成绩，预计 6 天内补交。",
+        followedById: butler.id,
+        followedAt: shiftDays(now, -1),
+      },
+    });
+
+    const directApplication = await prisma.application.create({
+      data: {
+        studentId: student.id,
+        channel: "HK_DIRECT",
+        institutionName: "香港大学",
+        programName: "Bachelor of Arts",
+        roundName: "Early Round",
+        deadlineAt: shiftDays(now, 25),
+        status: "SUBMITTED",
+        submittedAt: shiftDays(now, -2),
+        applicationNo: "HKU-DEMO-2026-001",
+        ownerId: butler.id,
+      },
+    });
+    await prisma.applicationStatusLog.createMany({
+      data: [
+        {
+          applicationId: directApplication.id,
+          toStatus: "PLANNING",
+          note: "管理员建立香港大学申请记录",
+          operatorId: administrator.id,
+          changedAt: shiftDays(now, -8),
+        },
+        {
+          applicationId: directApplication.id,
+          fromStatus: "PLANNING",
+          toStatus: "CONFIRMED",
+          note: "管家与学生确认首轮申请方向",
+          operatorId: butler.id,
+          changedAt: shiftDays(now, -5),
+        },
+        {
+          applicationId: directApplication.id,
+          fromStatus: "CONFIRMED",
+          toStatus: "SUBMITTED",
+          note: "申请已递交并记录申请编号",
+          operatorId: butler.id,
+          changedAt: shiftDays(now, -2),
+        },
+      ],
+    });
+
+    const jupasApplication = await prisma.application.create({
+      data: {
+        studentId: student.id,
+        channel: "JUPAS",
+        institutionName: "JUPAS",
+        programName: "首轮课程排序",
+        preferenceNo: 1,
+        deadlineAt: shiftDays(now, 18),
+        status: "MATERIAL_PREPARATION",
+        ownerId: butler.id,
+      },
+    });
+    await prisma.applicationStatusLog.createMany({
+      data: [
+        {
+          applicationId: jupasApplication.id,
+          toStatus: "PLANNING",
+          note: "建立 JUPAS 申请记录",
+          operatorId: administrator.id,
+          changedAt: shiftDays(now, -7),
+        },
+        {
+          applicationId: jupasApplication.id,
+          fromStatus: "PLANNING",
+          toStatus: "MATERIAL_PREPARATION",
+          note: "管家整理课程排序并等待学生确认",
+          operatorId: butler.id,
+          changedAt: shiftDays(now, -3),
+        },
+      ],
+    });
+    await prisma.applicationRequirement.create({
+      data: {
+        applicationId: jupasApplication.id,
+        requirementType: "STUDENT_CONFIRMATION",
+        description: "学生确认首轮课程排序与优先级",
+        dueAt: shiftDays(now, 2),
+        linkedTaskId: overdueTask.id,
+        status: "OPEN",
+      },
+    });
+
+    await prisma.studentConfirmation.create({
+      data: {
+        studentId: student.id,
+        objectType: "application",
+        objectId: jupasApplication.id,
+        prompt: "请确认首轮选校方案和 JUPAS 课程排序是否符合你的意向。",
+        status: "PENDING",
+        dueAt: shiftDays(now, 2),
+      },
+    });
+
+    const issue = await prisma.issue.create({
+      data: {
+        studentId: student.id,
+        linkedTaskId: materialItems.get("TRANSCRIPT")!.taskId,
+        category: "资料审核",
+        description: "学生上传的成绩单缺少学校盖章页，请确认补交流程。",
+        context: "管家审核学生上传的中六成绩单时发现最后一页缺少学校盖章。",
+        priority: "中",
+        status: "RESPONDED",
+        submittedById: butler.id,
+        submittedAt: shiftDays(now, -2),
+        managerResponse: "先保留当前版本并通知学生补交盖章页，资料任务继续保持进行中。",
+        respondedAt: shiftDays(now, -1),
+      },
+    });
+    await prisma.issueLog.createMany({
+      data: [
+        {
+          issueId: issue.id,
+          action: "CREATED",
+          note: "管家提交资料审核问题",
+          operatorId: butler.id,
+          createdAt: shiftDays(now, -2),
+        },
+        {
+          issueId: issue.id,
+          action: "RESPONDED",
+          note: "管理员给出补交处理方案",
+          operatorId: administrator.id,
+          createdAt: shiftDays(now, -1),
+        },
+      ],
+    });
+
+    const profileEvidenceKey = `task-evidence/${stageTasks.get("PROFILE")!.id}/demo-profile-check.pdf`;
+    const profileEvidence = await storeDemoPdf(profileEvidenceKey, "学生建档核对记录");
+    await prisma.taskEvidence.create({
+      data: {
+        taskId: stageTasks.get("PROFILE")!.id,
+        fileName: "学生建档核对记录.pdf",
+        mimeType: "application/pdf",
+        fileSize: profileEvidence.fileSize,
+        storageKey: profileEvidenceKey,
+        fileHash: profileEvidence.fileHash,
+        uploadedById: butler.id,
+        createdAt: shiftDays(enabledAt, 1),
+      },
+    });
+
+    await prisma.notification.createMany({
+      data: [
+        {
+          recipientId: administrator.id,
+          eventType: "TASK_EXTENSION_REPORTED",
+          title: "管家提交延期报备",
+          content: "陈乐怡 · 确认首轮选校与课程排序",
+          objectType: "task",
+          objectId: overdueTask.id,
+          actionUrl: `/workspace/tasks/${overdueTask.id}`,
+          eventKey: "demo:admin:extension",
+          createdAt: shiftDays(now, -1),
+        },
+        {
+          recipientId: administrator.id,
+          eventType: "ISSUE_SUBMITTED",
+          title: "管家提交资料审核问题",
+          content: "陈乐怡的成绩单缺少学校盖章页",
+          objectType: "issue",
+          objectId: issue.id,
+          actionUrl: "/workspace/issues",
+          eventKey: "demo:admin:issue",
+          createdAt: shiftDays(now, -2),
+        },
+        {
+          recipientId: butler.id,
+          eventType: "MATERIAL_UPLOADED",
+          title: "学生上传了新资料",
+          content: "陈乐怡已上传中六成绩单，等待审核。",
+          objectType: "material",
+          objectId: materialItems.get("TRANSCRIPT")!.id,
+          actionUrl: "/workspace/materials",
+          eventKey: "demo:butler:material",
+          createdAt: shiftDays(now, -3),
+        },
+        {
+          recipientId: butler.id,
+          eventType: "TASK_ASSIGNED",
+          title: "收到学生服务任务",
+          content: "陈乐怡 · 确认首轮选校与课程排序",
+          objectType: "task",
+          objectId: overdueTask.id,
+          actionUrl: `/workspace/tasks/${overdueTask.id}`,
+          eventKey: "demo:butler:task",
+          createdAt: shiftDays(now, -5),
+        },
+        {
+          recipientId: portalUser.id,
+          eventType: "STAGE_CHANGED",
+          title: "服务进入升学规划阶段",
+          content: "学情评估已完成，接下来请确认首轮选校与课程排序。",
+          objectType: "student",
+          objectId: student.id,
+          actionUrl: "/portal/progress",
+          eventKey: "demo:student:stage",
+          createdAt: shiftDays(now, -8),
+        },
+        {
+          recipientId: portalUser.id,
+          eventType: "APPLICATION_STATUS_CHANGED",
+          title: "香港大学申请已递交",
+          content: "申请编号 HKU-DEMO-2026-001，可在申请进度中查看。",
+          objectType: "application",
+          objectId: directApplication.id,
+          actionUrl: "/portal/applications",
+          eventKey: "demo:student:application",
+          createdAt: shiftDays(now, -2),
+        },
+      ],
+    });
+
+    await prisma.auditLog.createMany({
+      data: [
+        {
+          operatorId: administrator.id,
+          operatorRole: "ADMINISTRATOR",
+          objectType: "sop_version",
+          objectId: sop.id,
+          action: "SOP_PUBLISHED",
+          afterData: { versionNo: 1, status: "PUBLISHED" },
+          reason: "发布演示基础 SOP",
+          requestId: "demo-seed-sop",
+          createdAt: shiftDays(enabledAt, -1),
+        },
+        {
+          operatorId: administrator.id,
+          operatorRole: "ADMINISTRATOR",
+          objectType: "student",
+          objectId: student.id,
+          action: "STUDENT_CREATED",
+          afterData: { studentNo: student.studentNo, defaultButlerId: butler.id },
+          reason: "建立演示学生并分配管家",
+          requestId: "demo-seed-student",
+          createdAt: enabledAt,
+        },
+        {
+          operatorId: administrator.id,
+          operatorRole: "ADMINISTRATOR",
+          objectType: "student_service",
+          objectId: activation.id,
+          action: "SERVICE_ACTIVATED",
+          afterData: { sopVersionNo: 1, taskCount: 13 },
+          reason: "启用学生服务并套用八阶段 SOP",
+          requestId: "demo-seed-activation",
+          createdAt: enabledAt,
+        },
+        {
+          operatorId: butler.id,
+          operatorRole: "BUTLER",
+          objectType: "task",
+          objectId: overdueTask.id,
+          action: "TASK_EXTENSION_REPORTED",
+          afterData: { expectedFinishAt: shiftDays(now, 2).toISOString() },
+          reason: "等待学生确认家庭预算和课程优先级",
+          requestId: "demo-seed-extension",
+          createdAt: shiftDays(now, -1),
+        },
+      ],
+    });
   } finally {
     await prisma.$disconnect();
   }
