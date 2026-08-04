@@ -1,8 +1,20 @@
-import { Injectable, type ArgumentMetadata, type PipeTransform } from "@nestjs/common";
+import { Injectable, ValidationPipe, type ArgumentMetadata } from "@nestjs/common";
 
 @Injectable()
-export class QueryPrimitivePipe implements PipeTransform<unknown, unknown> {
-  public transform(value: unknown, metadata: ArgumentMetadata): unknown {
+export class QueryPrimitivePipe extends ValidationPipe {
+  public constructor() {
+    super({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    });
+  }
+
+  public override transform(value: unknown, metadata: ArgumentMetadata) {
+    return super.transform(this.normalizeQuery(value, metadata), metadata);
+  }
+
+  private normalizeQuery(value: unknown, metadata: ArgumentMetadata): unknown {
     if (
       metadata.type !== "query" ||
       !metadata.metatype ||

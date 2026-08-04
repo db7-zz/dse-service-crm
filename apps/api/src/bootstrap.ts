@@ -1,5 +1,4 @@
 import type { INestApplication } from "@nestjs/common";
-import { ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { DocumentBuilder, type OpenAPIObject, SwaggerModule } from "@nestjs/swagger";
 import cookieParser from "cookie-parser";
@@ -30,14 +29,7 @@ export function configureApplication(app: INestApplication): void {
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   });
-  app.useGlobalPipes(
-    new QueryPrimitivePipe(),
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
+  app.useGlobalPipes(new QueryPrimitivePipe());
   app.setGlobalPrefix("api/v1");
   app.enableShutdownHooks();
 }
