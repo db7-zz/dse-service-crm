@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -61,6 +61,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const warmedRoutes = useRef(new Set<string>());
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 720px)");
@@ -95,6 +96,45 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [pathname, user]);
 
   const navigation = useMemo(() => (user ? navigationFor(user) : []), [user]);
+
+  useEffect(() => {
+    if (!user || process.env.NODE_ENV !== "development") return;
+
+    const controller = new AbortController();
+    const queue = navigation.filter(
+      (item) => item.href !== pathname && !warmedRoutes.current.has(item.href),
+    );
+
+    const warmRoutes = async () => {
+      const worker = async () => {
+        while (queue.length > 0) {
+          const item = queue.shift();
+          if (!item) return;
+          try {
+            const response = await fetch(item.href, {
+              credentials: "same-origin",
+              signal: controller.signal,
+            });
+            if (response.ok) {
+              warmedRoutes.current.add(item.href);
+              router.prefetch(item.href);
+            }
+          } catch (exception) {
+            if (exception instanceof DOMException && exception.name === "AbortError") return;
+          }
+        }
+      };
+
+      await Promise.all([worker(), worker()]);
+    };
+
+    const idleId = window.requestIdleCallback(() => void warmRoutes(), { timeout: 1_500 });
+    return () => {
+      window.cancelIdleCallback(idleId);
+      controller.abort();
+    };
+  }, [navigation, pathname, router, user]);
+
   if (loading || !user) {
     return (
       <div style={{ maxWidth: 720, margin: "15vh auto", padding: 24 }}>

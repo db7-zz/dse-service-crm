@@ -4,6 +4,7 @@ import { ConfigService } from "@nestjs/config";
 import { DocumentBuilder, type OpenAPIObject, SwaggerModule } from "@nestjs/swagger";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+import { QueryPrimitivePipe } from "./common/query-primitive.pipe.js";
 import type { Environment } from "./config/environment.js";
 
 export function configureApplication(app: INestApplication): void {
@@ -30,6 +31,7 @@ export function configureApplication(app: INestApplication): void {
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   });
   app.useGlobalPipes(
+    new QueryPrimitivePipe(),
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
