@@ -54,8 +54,8 @@ export function SearchInput(props: InputProps) {
   );
 }
 
-export const FormField = Form.Item;
-export const AppDatePicker = DatePicker;
+export const FormField: typeof Form.Item = Form.Item;
+export const AppDatePicker: typeof DatePicker = DatePicker;
 
 export function PersonSelect(props: SelectProps) {
   return (
