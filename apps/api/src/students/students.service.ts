@@ -12,6 +12,7 @@ import type { RequestContext } from "../common/request-context.js";
 import { PRISMA } from "../database/database.module.js";
 import type {
   AssignResponsiblePersonDto,
+  ConfirmStudentProfileDto,
   CreateStudentDto,
   ListStudentsQueryDto,
   UpdateStudentDto,
@@ -20,6 +21,15 @@ import type {
 const STUDENT_INCLUDE = {
   defaultButler: { select: { id: true, displayName: true } },
   planner: { select: { id: true, displayName: true } },
+  portalUser: {
+    select: {
+      id: true,
+      username: true,
+      status: true,
+      mustChangePassword: true,
+      temporaryPasswordExpiresAt: true,
+    },
+  },
   createdBy: { select: { id: true, displayName: true } },
 } as const;
 
@@ -111,6 +121,24 @@ const STUDENT_DETAIL_INCLUDE = {
 type StudentWithPeople = Prisma.StudentGetPayload<{ include: typeof STUDENT_INCLUDE }>;
 type StudentWithProgress = Prisma.StudentGetPayload<{ include: typeof STUDENT_LIST_INCLUDE }>;
 type StudentWithHistory = Prisma.StudentGetPayload<{ include: typeof STUDENT_DETAIL_INCLUDE }>;
+
+interface SubmittedProfileData {
+  studentName: string;
+  cohortYear: number;
+  grade: string;
+  school: string;
+  studentPhone: string;
+  studentWechat: string;
+  parentName: string;
+  parentRelationship: string;
+  parentPhone: string;
+  parentWechat: string;
+  identityCategory: string;
+  examCandidateType: string;
+  dseSubjects: string[];
+  scoreSummary: string;
+  targetDirection: string;
+}
 
 @Injectable()
 export class StudentsService {
@@ -407,6 +435,42 @@ export class StudentsService {
     }
   }
 
+  public async createMine(body: CreateStudentDto, request: RequestContext) {
+    const actor = request.authenticatedUser as AuthenticatedUser;
+    if (!actor.roles.includes(RoleCode.BUTLER)) {
+      throw new ApiException(
+        HttpStatus.FORBIDDEN,
+        ErrorCode.FORBIDDEN,
+        "只有管家可以新建本人负责的学生",
+      );
+    }
+    return this.create(
+      {
+        name: body.name,
+        phone: body.phone,
+        email: body.email,
+        defaultButlerId: actor.id,
+        plannerId: null,
+      },
+      request,
+    );
+  }
+
+  public async checkNameDuplicates(nameInput: string) {
+    const name = nameInput.trim();
+    if (!name) {
+      throw new ApiException(
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.VALIDATION_ERROR,
+        "学生姓名不能为空",
+      );
+    }
+    const count = await this.prisma.student.count({
+      where: { name: { equals: name, mode: "insensitive" } },
+    });
+    return { name, hasDuplicates: count > 0, count };
+  }
+
   public async detail(studentId: string) {
     return this.serializeStudentDetail(await this.loadDetail(studentId));
   }
@@ -431,7 +495,9 @@ export class StudentsService {
         nextMilestone: student.nextMilestone,
         defaultButler: student.defaultButler,
         planner: student.planner,
+        account: student.account,
         serviceStatus: student.serviceStatus,
+        profileStatus: student.profileStatus,
         version: student.version,
         progress: student.progress,
         createdAt: student.createdAt,
@@ -465,7 +531,20 @@ export class StudentsService {
       nextMilestone: detail.nextMilestone,
       defaultButler: detail.defaultButler,
       planner: detail.planner,
+      account: detail.account,
       serviceStatus: detail.serviceStatus,
+      profileStatus: detail.profileStatus,
+      phone: detail.phone,
+      studentWechat: detail.studentWechat,
+      parentName: detail.parentName,
+      parentRelationship: detail.parentRelationship,
+      parentPhone: detail.parentPhone,
+      parentWechat: detail.parentWechat,
+      identityCategory: detail.identityCategory,
+      examCandidateType: detail.examCandidateType,
+      dseSubjects: detail.dseSubjects,
+      scoreSummary: detail.scoreSummary,
+      targetDirection: detail.targetDirection,
       version: detail.version,
       createdAt: detail.createdAt,
       updatedAt: detail.updatedAt,
@@ -495,6 +574,144 @@ export class StudentsService {
       ? this.redactTaskDetailsForPlanner(serialized)
       : this.redactTaskDetailsForButler(serialized, student, actor.id);
     return this.progressResponse(detail);
+  }
+
+  public async profileSubmissionMine(studentId: string, request: RequestContext) {
+    const actor = request.authenticatedUser as AuthenticatedUser;
+    const student = await this.prisma.student.findFirst({
+      where: { id: studentId, defaultButlerId: actor.id },
+      include: { profileSubmission: true },
+    });
+    if (!student) {
+      throw new ApiException(
+        HttpStatus.FORBIDDEN,
+        ErrorCode.FORBIDDEN,
+        "只有该学生的管家可以确认档案",
+      );
+    }
+    return {
+      profileStatus: student.profileStatus,
+      official: {
+        studentName: student.name,
+        cohortYear: student.cohortYear,
+        grade: student.grade,
+        school: student.school,
+        studentPhone: student.phone,
+        studentWechat: student.studentWechat,
+        parentName: student.parentName,
+        parentRelationship: student.parentRelationship,
+        parentPhone: student.parentPhone,
+        parentWechat: student.parentWechat,
+        identityCategory: student.identityCategory,
+        examCandidateType: student.examCandidateType,
+        dseSubjects: student.dseSubjects,
+        scoreSummary: student.scoreSummary,
+        targetDirection: student.targetDirection,
+      },
+      submission: student.profileSubmission
+        ? {
+            id: student.profileSubmission.id,
+            data: student.profileSubmission.data,
+            version: student.profileSubmission.version,
+            submittedAt: student.profileSubmission.submittedAt.toISOString(),
+            confirmedAt: student.profileSubmission.confirmedAt?.toISOString() ?? null,
+          }
+        : null,
+    };
+  }
+
+  public async confirmProfileSubmissionMine(
+    studentId: string,
+    body: ConfirmStudentProfileDto,
+    request: RequestContext,
+  ) {
+    const actor = request.authenticatedUser as AuthenticatedUser;
+    return this.prisma.$transaction(async (transaction) => {
+      const student = await transaction.student.findFirst({
+        where: { id: studentId, defaultButlerId: actor.id },
+        include: { profileSubmission: true },
+      });
+      if (!student) {
+        throw new ApiException(
+          HttpStatus.FORBIDDEN,
+          ErrorCode.FORBIDDEN,
+          "只有该学生的管家可以确认档案",
+        );
+      }
+      const submission = student.profileSubmission;
+      if (!submission) {
+        throw new ApiException(HttpStatus.CONFLICT, ErrorCode.CONFLICT, "学生尚未提交基本信息表");
+      }
+      if (submission.version !== body.version) {
+        throw new ApiException(
+          HttpStatus.CONFLICT,
+          ErrorCode.CONFLICT,
+          "学生刚刚更新了信息，请刷新后再确认",
+        );
+      }
+      const data = submission.data as unknown as SubmittedProfileData;
+      const confirmedAt = new Date();
+      const updated = await transaction.student.update({
+        where: { id: student.id },
+        data: {
+          name: data.studentName,
+          cohortYear: data.cohortYear,
+          grade: data.grade,
+          school: data.school,
+          phone: data.studentPhone,
+          studentWechat: data.studentWechat,
+          parentName: data.parentName,
+          parentRelationship: data.parentRelationship,
+          parentPhone: data.parentPhone,
+          parentWechat: data.parentWechat,
+          identityCategory: data.identityCategory,
+          examCandidateType: data.examCandidateType,
+          dseSubjects: data.dseSubjects,
+          scoreSummary: data.scoreSummary,
+          targetDirection: data.targetDirection,
+          profileStatus: "CONFIRMED",
+          profileConfirmedAt: confirmedAt,
+          version: { increment: 1 },
+        },
+      });
+      await transaction.studentProfileSubmission.update({
+        where: { id: submission.id },
+        data: { confirmedAt, confirmedById: actor.id },
+      });
+      const basicInformation = await transaction.materialItem.findFirst({
+        where: { studentId, materialType: { code: "BASIC_INFORMATION" } },
+        select: { id: true },
+      });
+      if (basicInformation) {
+        await transaction.materialItem.update({
+          where: { id: basicInformation.id },
+          data: { status: "APPROVED", missingReason: null, version: { increment: 1 } },
+        });
+        const materialTask = await transaction.taskInstance.findFirst({
+          where: {
+            studentId,
+            sourceType: "MATERIAL",
+            sourceObjectId: basicInformation.id,
+            status: { in: ["TODO", "IN_PROGRESS"] },
+          },
+        });
+        if (materialTask) {
+          await transaction.taskInstance.update({
+            where: { id: materialTask.id },
+            data: { status: "COMPLETED", completedAt: confirmedAt, version: { increment: 1 } },
+          });
+        }
+      }
+      await transaction.auditLog.create({
+        data: this.auditData(request, {
+          action: "STUDENT_PROFILE_CONFIRMED",
+          objectId: student.id,
+          beforeData: { profileStatus: student.profileStatus },
+          afterData: { profileStatus: "CONFIRMED", submissionVersion: submission.version },
+        }),
+      });
+      return { studentId, profileStatus: updated.profileStatus, version: updated.version };
+    });
   }
 
   public async update(studentId: string, body: UpdateStudentDto, request: RequestContext) {
@@ -587,6 +804,9 @@ export class StudentsService {
           where: { id: studentId, version: body.version },
           data: {
             [field]: body.userId,
+            ...(responsibilityType === "PLANNER" && body.userId
+              ? { profileStatus: "PLANNER_ASSIGNED" as const }
+              : {}),
             version: { increment: 1 },
           },
         });
@@ -654,6 +874,20 @@ export class StudentsService {
               objectType: "student",
               objectId: studentId,
               actionUrl: `/workspace/students/${studentId}`,
+            },
+          });
+        }
+        if (responsibilityType === "PLANNER" && body.userId) {
+          await transaction.notification.create({
+            data: {
+              recipientId: body.userId,
+              eventType: "PLANNER_ASSIGNED",
+              title: "收到新的规划学生",
+              content: `${existing.name} 已分配给你，学生档案可开始规划评估。`,
+              objectType: "student",
+              objectId: studentId,
+              actionUrl: `/workspace/students/${studentId}`,
+              eventKey: `planner-assigned:${studentId}:${body.userId}`,
             },
           });
         }
@@ -740,6 +974,17 @@ export class StudentsService {
       school: student.school,
       grade: student.grade,
       cohortYear: student.cohortYear,
+      studentWechat: student.studentWechat,
+      parentName: student.parentName,
+      parentRelationship: student.parentRelationship,
+      parentPhone: student.parentPhone,
+      parentWechat: student.parentWechat,
+      identityCategory: student.identityCategory,
+      examCandidateType: student.examCandidateType,
+      dseSubjects: student.dseSubjects,
+      scoreSummary: student.scoreSummary,
+      targetDirection: student.targetDirection,
+      profileStatus: student.profileStatus,
       phone: student.phone,
       email: student.email,
       nextMilestone: student.nextMilestone,
@@ -747,6 +992,16 @@ export class StudentsService {
       riskNote: student.riskNote,
       defaultButler: student.defaultButler,
       planner: student.planner,
+      account: student.portalUser
+        ? {
+            id: student.portalUser.id,
+            username: student.portalUser.username,
+            status: student.portalUser.status,
+            mustChangePassword: student.portalUser.mustChangePassword,
+            temporaryPasswordExpiresAt:
+              student.portalUser.temporaryPasswordExpiresAt?.toISOString() ?? null,
+          }
+        : null,
       serviceStatus: student.serviceStatus,
       version: student.version,
       createdBy: student.createdBy,

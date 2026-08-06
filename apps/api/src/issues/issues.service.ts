@@ -19,6 +19,7 @@ const ISSUE_INCLUDE = {
     select: { id: true, studentNo: true, name: true, defaultButlerId: true, plannerId: true },
   },
   submittedBy: { select: { id: true, displayName: true } },
+  owner: { select: { id: true, displayName: true } },
   linkedTask: { select: { id: true, titleSnapshot: true, status: true } },
   convertedTask: {
     select: { id: true, titleSnapshot: true, status: true, ownerId: true, currentDueAt: true },
@@ -85,6 +86,43 @@ export class IssuesService {
           );
         }
       }
+      const managers = await transaction.user.findMany({
+        where: {
+          status: "ACTIVE",
+          roles: { some: { expiredAt: null, role: { code: RoleCode.ADMINISTRATOR } } },
+        },
+        select: { id: true },
+        orderBy: { createdAt: "asc" },
+      });
+      const ownerId = body.ownerId ?? managers[0]?.id;
+      if (!ownerId) {
+        throw new ApiException(
+          HttpStatus.CONFLICT,
+          ErrorCode.RESPONSIBLE_PERSON_INVALID,
+          "当前没有可负责处理问题的管理员账号",
+        );
+      }
+      const owner = await transaction.user.findFirst({
+        where: { id: ownerId, status: "ACTIVE" },
+        select: { id: true },
+      });
+      if (!owner) {
+        throw new ApiException(
+          HttpStatus.BAD_REQUEST,
+          ErrorCode.RESPONSIBLE_PERSON_INVALID,
+          "问题负责人必须是启用状态的账号",
+        );
+      }
+      const dueAt = body.dueAt
+        ? new Date(body.dueAt)
+        : this.defaultIssueDueAt(body.priority, new Date());
+      if (dueAt.getTime() <= Date.now()) {
+        throw new ApiException(
+          HttpStatus.BAD_REQUEST,
+          ErrorCode.VALIDATION_ERROR,
+          "问题处理截止时间必须晚于当前时间",
+        );
+      }
       const issue = await transaction.issue.create({
         data: {
           studentId: body.studentId,
@@ -93,19 +131,14 @@ export class IssuesService {
           description: body.description.trim(),
           context: body.context.trim(),
           priority: this.optionalText(body.priority),
+          ownerId,
+          dueAt,
           submittedById: actor.id,
           logs: {
             create: { action: "CREATED", note: body.description.trim(), operatorId: actor.id },
           },
         },
         include: ISSUE_INCLUDE,
-      });
-      const managers = await transaction.user.findMany({
-        where: {
-          status: "ACTIVE",
-          roles: { some: { expiredAt: null, role: { code: RoleCode.ADMINISTRATOR } } },
-        },
-        select: { id: true },
       });
       for (const manager of managers) {
         await this.notifications.createInTransaction(transaction, {
@@ -124,6 +157,8 @@ export class IssuesService {
           studentId: body.studentId,
           category: body.category.trim(),
           linkedTaskId: body.linkedTaskId ?? null,
+          ownerId,
+          dueAt: dueAt.toISOString(),
         }),
       });
       return this.serialize(issue);
@@ -177,6 +212,8 @@ export class IssuesService {
           status,
           managerResponse: body.note.trim(),
           respondedAt: new Date(),
+          ownerId: body.requestMoreInformation ? issue.submittedById : null,
+          dueAt: body.requestMoreInformation ? new Date(Date.now() + 48 * 60 * 60 * 1000) : null,
           version: { increment: 1 },
         },
       });
@@ -450,6 +487,11 @@ export class IssuesService {
       description: issue.description,
       context: issue.context,
       priority: issue.priority,
+      owner: issue.owner,
+      dueAt: issue.dueAt?.toISOString() ?? null,
+      isOverdue:
+        Boolean(issue.dueAt && issue.dueAt.getTime() < Date.now()) &&
+        !["RESOLVED", "CLOSED"].includes(issue.status),
       status: issue.status,
       submittedBy: issue.submittedBy,
       submittedAt: issue.submittedAt.toISOString(),
@@ -486,6 +528,12 @@ export class IssuesService {
   private optionalText(value: string | null | undefined) {
     const trimmed = value?.trim();
     return trimmed ? trimmed : null;
+  }
+
+  private defaultIssueDueAt(priority: string | null | undefined, now: Date) {
+    const normalized = priority?.trim().toUpperCase();
+    const hours = normalized === "URGENT" ? 24 : normalized === "HIGH" ? 48 : 72;
+    return new Date(now.getTime() + hours * 60 * 60 * 1000);
   }
 
   private audit(

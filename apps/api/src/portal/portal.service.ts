@@ -6,7 +6,11 @@ import { ApiException } from "../common/api-exception.js";
 import type { RequestContext } from "../common/request-context.js";
 import { PRISMA } from "../database/database.module.js";
 import { MaterialsService } from "../materials/materials.service.js";
-import type { PortalUploadMaterialDto, RespondConfirmationDto } from "./portal.dto.js";
+import type {
+  PortalUploadMaterialDto,
+  RespondConfirmationDto,
+  SubmitPortalProfileDto,
+} from "./portal.dto.js";
 
 @Injectable()
 export class PortalService {
@@ -111,6 +115,120 @@ export class PortalService {
     };
   }
 
+  public async profile(request: RequestContext) {
+    const student = await this.access.portalStudent(request);
+    const record = await this.prisma.student.findUniqueOrThrow({
+      where: { id: student.id },
+      include: { profileSubmission: true },
+    });
+    return {
+      profileStatus: record.profileStatus,
+      official: {
+        studentName: record.name,
+        cohortYear: record.cohortYear,
+        grade: record.grade,
+        school: record.school,
+        studentPhone: record.phone,
+        studentWechat: record.studentWechat,
+        parentName: record.parentName,
+        parentRelationship: record.parentRelationship,
+        parentPhone: record.parentPhone,
+        parentWechat: record.parentWechat,
+        identityCategory: record.identityCategory,
+        examCandidateType: record.examCandidateType,
+        dseSubjects: record.dseSubjects,
+        scoreSummary: record.scoreSummary,
+        targetDirection: record.targetDirection,
+      },
+      submission: record.profileSubmission
+        ? {
+            data: record.profileSubmission.data,
+            version: record.profileSubmission.version,
+            submittedAt: record.profileSubmission.submittedAt.toISOString(),
+            confirmedAt: record.profileSubmission.confirmedAt?.toISOString() ?? null,
+          }
+        : null,
+    };
+  }
+
+  public async submitProfile(body: SubmitPortalProfileDto, request: RequestContext) {
+    const student = await this.access.portalStudent(request);
+    const actor = request.authenticatedUser as AuthenticatedUser;
+    const submittedAt = new Date();
+    const data = {
+      studentName: body.studentName.trim(),
+      cohortYear: body.cohortYear,
+      grade: body.grade.trim(),
+      school: body.school.trim(),
+      studentPhone: body.studentPhone.trim(),
+      studentWechat: body.studentWechat.trim(),
+      parentName: body.parentName.trim(),
+      parentRelationship: body.parentRelationship.trim(),
+      parentPhone: body.parentPhone.trim(),
+      parentWechat: body.parentWechat.trim(),
+      identityCategory: body.identityCategory.trim(),
+      examCandidateType: body.examCandidateType.trim(),
+      dseSubjects: body.dseSubjects.map((subject) => subject.trim()).filter(Boolean),
+      scoreSummary: body.scoreSummary.trim(),
+      targetDirection: body.targetDirection.trim(),
+    };
+    const result = await this.prisma.$transaction(async (transaction) => {
+      const submission = await transaction.studentProfileSubmission.upsert({
+        where: { studentId: student.id },
+        update: {
+          data,
+          submittedAt,
+          confirmedAt: null,
+          confirmedById: null,
+          version: { increment: 1 },
+        },
+        create: { studentId: student.id, data, submittedAt },
+      });
+      const updated = await transaction.student.update({
+        where: { id: student.id },
+        data: { profileStatus: "PENDING_REVIEW", version: { increment: 1 } },
+        select: { defaultButlerId: true },
+      });
+      await transaction.materialItem.updateMany({
+        where: { studentId: student.id, materialType: { code: "BASIC_INFORMATION" } },
+        data: { status: "PENDING_REVIEW", version: { increment: 1 } },
+      });
+      if (updated.defaultButlerId) {
+        await transaction.notification.create({
+          data: {
+            recipientId: updated.defaultButlerId,
+            eventType: "PROFILE_SUBMITTED",
+            title: "学生基本信息待确认",
+            content: `${student.name} 已提交基本信息表，请核对差异并确认建档。`,
+            objectType: "student_profile_submission",
+            objectId: submission.id,
+            actionUrl: `/workspace/students/${student.id}`,
+            eventKey: `profile-submitted:${submission.id}:v${submission.version}`,
+          },
+        });
+      }
+      await transaction.auditLog.create({
+        data: {
+          operatorId: actor.id,
+          operatorRole: actor.roles[0] ?? null,
+          objectType: "student_profile_submission",
+          objectId: submission.id,
+          action: "STUDENT_PROFILE_SUBMITTED",
+          afterData: { studentId: student.id, version: submission.version },
+          requestId: request.requestId,
+          ipAddress: request.ip,
+          deviceInfo: request.header("User-Agent"),
+        },
+      });
+      return submission;
+    });
+    return {
+      profileStatus: "PENDING_REVIEW" as const,
+      version: result.version,
+      submittedAt: result.submittedAt.toISOString(),
+    };
+  }
+
   public async materialList(request: RequestContext) {
     const student = await this.access.portalStudent(request);
     const items = await this.prisma.materialItem.findMany({
@@ -120,7 +238,10 @@ export class PortalService {
         currentVersion: true,
         versions: { orderBy: { versionNo: "desc" } },
       },
-      orderBy: [{ materialType: { isCore: "desc" } }, { dueAt: "asc" }],
+      orderBy: [
+        { materialType: { collectionPhase: "asc" } },
+        { materialType: { sequenceNo: "asc" } },
+      ],
     });
     return {
       items: items.map((item) => ({
@@ -130,6 +251,9 @@ export class PortalService {
           code: item.materialType.code,
           name: item.materialType.name,
           isCore: item.materialType.isCore,
+          inputMode: item.materialType.inputMode,
+          collectionPhase: item.materialType.collectionPhase,
+          sequenceNo: item.materialType.sequenceNo,
         },
         requirement: item.requirement,
         dueAt: item.dueAt?.toISOString() ?? null,

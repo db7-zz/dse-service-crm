@@ -66,13 +66,19 @@ describeWithDatabase("S2 student service progress", () => {
     );
     const people = await admin.agent.get("/api/v1/students/responsible-person-options").expect(200);
     const butlerId = people.body.data.butlers[0]?.id as string | undefined;
+    const plannerId = people.body.data.planners[0]?.id as string | undefined;
     expect(butlerId).toBeDefined();
-    if (!butlerId) throw new Error("S2 test requires a seeded butler");
+    expect(plannerId).toBeDefined();
+    if (!butlerId || !plannerId) throw new Error("S2 test requires a seeded butler and planner");
 
     const studentResult = await admin.agent
       .post("/api/v1/students")
       .set("X-CSRF-Token", admin.csrfToken)
-      .send({ name: `S2进度联调-${Date.now()}`, defaultButlerId: butlerId })
+      .send({
+        name: `S2进度联调-${Date.now()}`,
+        defaultButlerId: butlerId,
+        plannerId,
+      })
       .expect(201);
     const student = studentResult.body.data as { id: string; version: number };
     const activation = await admin.agent

@@ -23,6 +23,14 @@ import { RequiresPermission } from "../auth/requires-permission.decorator.js";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestContext } from "../common/request-context.js";
 import {
+  ButlerSupervisionWeekQueryDto,
+  RejectStudentBlockerDto,
+  ReportStudentBlockerDto,
+  ReviewWeeklyReviewDto,
+  SubmitWeeklyReviewDto,
+} from "./butler-supervision.dto.js";
+import { ButlerSupervisionService } from "./butler-supervision.service.js";
+import {
   AddTaskProgressDto,
   AddTaskEvidenceDto,
   CancelTaskDto,
@@ -44,7 +52,11 @@ import { TasksService } from "./tasks.service.js";
 @Controller("tasks")
 @UseGuards(SessionAuthGuard, PermissionGuard)
 export class TasksController {
-  public constructor(@Inject(TasksService) private readonly tasksService: TasksService) {}
+  public constructor(
+    @Inject(TasksService) private readonly tasksService: TasksService,
+    @Inject(ButlerSupervisionService)
+    private readonly butlerSupervision: ButlerSupervisionService,
+  ) {}
 
   @Get(":taskId")
   public detail(
@@ -96,6 +108,17 @@ export class TasksController {
     @Req() request: RequestContext,
   ) {
     return this.tasksService.reportExtension(taskId, body, idempotencyKey, request);
+  }
+
+  @Post(":taskId/student-blockers")
+  @RequiresPermission(PermissionCode.TASKS_OWN_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public reportStudentBlocker(
+    @Param("taskId", new ParseUUIDPipe({ version: "4" })) taskId: string,
+    @Body() body: ReportStudentBlockerDto,
+    @Req() request: RequestContext,
+  ) {
+    return this.butlerSupervision.reportStudentBlocker(taskId, body, request);
   }
 
   @Post(":taskId/complete")
@@ -156,12 +179,72 @@ export class TasksController {
 @Controller("my/tasks")
 @UseGuards(SessionAuthGuard, PermissionGuard)
 export class MyTasksController {
-  public constructor(@Inject(TasksService) private readonly tasksService: TasksService) {}
+  public constructor(
+    @Inject(TasksService) private readonly tasksService: TasksService,
+    @Inject(ButlerSupervisionService)
+    private readonly butlerSupervision: ButlerSupervisionService,
+  ) {}
 
   @Get()
   @RequiresPermission(PermissionCode.TASKS_OWN_READ)
   public list(@Query() query: ListTasksQueryDto, @Req() request: RequestContext) {
     return this.tasksService.listMine(query, request);
+  }
+
+  @Get("weekly-reviews")
+  @RequiresPermission(PermissionCode.TASKS_OWN_READ)
+  public weeklyReviews(@Req() request: RequestContext) {
+    return this.butlerSupervision.listMine(request);
+  }
+
+  @Post("weekly-reviews/:reviewId/submit")
+  @RequiresPermission(PermissionCode.TASKS_OWN_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public submitWeeklyReview(
+    @Param("reviewId", new ParseUUIDPipe({ version: "4" })) reviewId: string,
+    @Body() body: SubmitWeeklyReviewDto,
+    @Req() request: RequestContext,
+  ) {
+    return this.butlerSupervision.submitReview(reviewId, body, request);
+  }
+}
+
+@ApiTags("butler-supervision")
+@ApiCookieAuth()
+@Controller("admin/butler-supervision")
+@UseGuards(SessionAuthGuard, PermissionGuard)
+export class ButlerSupervisionController {
+  public constructor(
+    @Inject(ButlerSupervisionService)
+    private readonly butlerSupervision: ButlerSupervisionService,
+  ) {}
+
+  @Get()
+  @RequiresPermission(PermissionCode.TASK_SUPERVISION_READ)
+  public dashboard(@Query() query: ButlerSupervisionWeekQueryDto) {
+    return this.butlerSupervision.dashboard(query);
+  }
+
+  @Post("student-blockers/:blockerId/reject")
+  @RequiresPermission(PermissionCode.TASK_SUPERVISION_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public rejectBlocker(
+    @Param("blockerId", new ParseUUIDPipe({ version: "4" })) blockerId: string,
+    @Body() body: RejectStudentBlockerDto,
+    @Req() request: RequestContext,
+  ) {
+    return this.butlerSupervision.rejectStudentBlocker(blockerId, body, request);
+  }
+
+  @Post("weekly-reviews/:reviewId/review")
+  @RequiresPermission(PermissionCode.TASK_SUPERVISION_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public reviewWeekly(
+    @Param("reviewId", new ParseUUIDPipe({ version: "4" })) reviewId: string,
+    @Body() body: ReviewWeeklyReviewDto,
+    @Req() request: RequestContext,
+  ) {
+    return this.butlerSupervision.reviewWeekly(reviewId, body, request);
   }
 }
 
@@ -176,6 +259,18 @@ export class TaskSupervisionController {
   @RequiresPermission(PermissionCode.TASK_SUPERVISION_READ)
   public summary(@Query() query: ListTasksQueryDto) {
     return this.tasksService.supervisionSummary(query);
+  }
+
+  @Get("butlers")
+  @RequiresPermission(PermissionCode.TASK_SUPERVISION_READ)
+  public butlers() {
+    return this.tasksService.butlerDashboard();
+  }
+
+  @Get("focus")
+  @RequiresPermission(PermissionCode.TASK_SUPERVISION_READ)
+  public focus(@Query() query: ListTasksQueryDto) {
+    return this.tasksService.supervisionFocus(query);
   }
 
   @Get("tasks")

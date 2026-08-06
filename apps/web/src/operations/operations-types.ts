@@ -81,6 +81,9 @@ export interface IssueView {
   description: string;
   context: string;
   priority: string | null;
+  owner: PersonRef | null;
+  dueAt: string | null;
+  isOverdue: boolean;
   status: string;
   submittedBy: PersonRef;
   submittedAt: string;

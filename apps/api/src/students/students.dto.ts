@@ -155,6 +155,14 @@ export class CreateStudentDto {
   plannerId?: string | null;
 }
 
+export class CheckStudentNameQueryDto {
+  @ApiProperty({ example: "黄翰", maxLength: 100 })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  name!: string;
+}
+
 export class UpdateStudentDto {
   @ApiPropertyOptional({ maxLength: 100 })
   @IsOptional()
@@ -210,6 +218,13 @@ export class AssignResponsiblePersonDto {
 
 export class ActivateStudentServiceDto {
   @ApiProperty({ minimum: 1, description: "学生资料乐观锁版本号" })
+  @IsInt()
+  @Min(1)
+  version!: number;
+}
+
+export class ConfirmStudentProfileDto {
+  @ApiProperty({ minimum: 1, description: "学生提交版本" })
   @IsInt()
   @Min(1)
   version!: number;

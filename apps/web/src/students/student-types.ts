@@ -21,10 +21,28 @@ export interface StudentRecord {
   school?: string | null;
   grade?: string | null;
   cohortYear?: number | null;
+  studentWechat?: string | null;
+  parentName?: string | null;
+  parentRelationship?: string | null;
+  parentPhone?: string | null;
+  parentWechat?: string | null;
+  identityCategory?: string | null;
+  examCandidateType?: string | null;
+  dseSubjects?: string[];
+  scoreSummary?: string | null;
+  targetDirection?: string | null;
+  profileStatus?: "INFORMATION_PENDING" | "PENDING_REVIEW" | "CONFIRMED" | "PLANNER_ASSIGNED";
   phone?: string | null;
   email?: string | null;
   defaultButler: StudentPerson | null;
   planner?: StudentPerson | null;
+  account?: null | {
+    id: string;
+    username: string;
+    status: "ACTIVE" | "DISABLED" | "LOCKED";
+    mustChangePassword: boolean;
+    temporaryPasswordExpiresAt: string | null;
+  };
   serviceStatus: "NOT_ENABLED" | "ENABLED" | "PAUSED" | "TERMINATED";
   nextMilestone?: string | null;
   riskLevel?: "NORMAL" | "ATTENTION" | "HIGH";

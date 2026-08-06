@@ -43,7 +43,14 @@ export interface PortalSummary {
 export interface PortalMaterial {
   id: string;
   title: string;
-  materialType: { code: string; name: string; isCore: boolean };
+  materialType: {
+    code: string;
+    name: string;
+    isCore: boolean;
+    inputMode: "FILE" | "FORM" | "SECURE_REFERENCE";
+    collectionPhase: "CURRENT" | "LATER";
+    sequenceNo: number;
+  };
   requirement: string | null;
   dueAt: string | null;
   status: string;
@@ -74,6 +81,44 @@ export function getPortalSummary() {
 
 export function getPortalMaterials() {
   return apiClient.request<{ items: PortalMaterial[] }>("/portal/me/materials");
+}
+
+export interface PortalProfileData {
+  studentName: string;
+  cohortYear: number;
+  grade: string;
+  school: string;
+  studentPhone: string;
+  studentWechat: string;
+  parentName: string;
+  parentRelationship: string;
+  parentPhone: string;
+  parentWechat: string;
+  identityCategory: string;
+  examCandidateType: string;
+  dseSubjects: string[];
+  scoreSummary: string;
+  targetDirection: string;
+}
+
+export function getPortalProfile() {
+  return apiClient.request<{
+    profileStatus: "INFORMATION_PENDING" | "PENDING_REVIEW" | "CONFIRMED" | "PLANNER_ASSIGNED";
+    official: Partial<PortalProfileData>;
+    submission: null | {
+      data: PortalProfileData;
+      version: number;
+      submittedAt: string;
+      confirmedAt: string | null;
+    };
+  }>("/portal/me/profile");
+}
+
+export function submitPortalProfile(values: PortalProfileData) {
+  return apiClient.request<{ profileStatus: string; version: number; submittedAt: string }>(
+    "/portal/me/profile",
+    { method: "POST", body: JSON.stringify(values) },
+  );
 }
 
 export function uploadPortalMaterial(materialId: string, file: File) {

@@ -20,7 +20,11 @@ import { PermissionGuard } from "../auth/permission.guard.js";
 import { RequiresPermission } from "../auth/requires-permission.decorator.js";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestContext } from "../common/request-context.js";
-import { PortalUploadMaterialDto, RespondConfirmationDto } from "./portal.dto.js";
+import {
+  PortalUploadMaterialDto,
+  RespondConfirmationDto,
+  SubmitPortalProfileDto,
+} from "./portal.dto.js";
 import { PortalService } from "./portal.service.js";
 
 @ApiTags("student-portal")
@@ -34,6 +38,17 @@ export class PortalController {
   @Get("summary")
   public summary(@Req() request: RequestContext) {
     return this.portal.summary(request);
+  }
+
+  @Get("profile")
+  public profile(@Req() request: RequestContext) {
+    return this.portal.profile(request);
+  }
+
+  @Post("profile")
+  @UseGuards(OriginGuard, CsrfGuard)
+  public submitProfile(@Body() body: SubmitPortalProfileDto, @Req() request: RequestContext) {
+    return this.portal.submitProfile(body, request);
   }
 
   @Get("materials")

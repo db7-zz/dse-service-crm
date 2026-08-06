@@ -11,12 +11,10 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+let permissions = ["students.read", "students.write"];
+
 vi.mock("../auth/auth-context", () => ({
-  useAuth: () => ({
-    user: {
-      permissions: ["students.read"],
-    },
-  }),
+  useAuth: () => ({ user: { permissions } }),
 }));
 
 vi.mock("./student-api", () => ({
@@ -31,6 +29,7 @@ describe("student list states", () => {
   beforeEach(() => {
     listStudentsMock.mockReset();
     optionsMock.mockReset();
+    permissions = ["students.read", "students.write"];
     optionsMock.mockResolvedValue({ butlers: [], planners: [] });
   });
 
@@ -45,7 +44,25 @@ describe("student list states", () => {
     render(<StudentsPage />);
 
     expect(await screen.findByText("暂无学生")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "新建第一位学生" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "新建学生" })).toBeEnabled();
+    expect(
+      screen
+        .getAllByRole("link", { name: /新建学生/ })
+        .some((link) => link.getAttribute("href") === "/workspace/students/new"),
+    ).toBe(true);
+  });
+
+  it("lets a butler create a student from the same management page", async () => {
+    permissions = ["students.own.read", "students.own.write"];
+    listStudentsMock.mockResolvedValue({ items: [], page: 1, pageSize: 20, total: 0 });
+
+    render(<StudentsPage />);
+
+    expect(await screen.findByRole("button", { name: "新建学生" })).toBeEnabled();
+    expect(screen.getByRole("link", { name: "新建学生" })).toHaveAttribute(
+      "href",
+      "/workspace/students/new",
+    );
   });
 
   it("shows a retry action when loading fails", async () => {

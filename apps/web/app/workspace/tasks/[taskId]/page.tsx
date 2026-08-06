@@ -13,19 +13,7 @@ import {
   SwapOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
-import {
-  Alert,
-  App,
-  Button,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Select,
-  Skeleton,
-  Tag,
-  Upload,
-} from "antd";
+import { Alert, App, Button, Form, Input, Modal, Select, Skeleton, Tag, Upload } from "antd";
 import { PermissionCode } from "@dse/shared";
 import { PermissionDenied } from "@dse/ui";
 import { useAuth } from "../../../../src/auth/auth-context";
@@ -40,7 +28,7 @@ import {
   markTaskNotApplicable,
   reassignTask,
   reopenTask,
-  reportTaskExtension,
+  reportStudentBlocker,
   rescheduleTask,
   startTask,
   updateTaskProgress,
@@ -48,14 +36,14 @@ import {
 import type { TaskDetail } from "../../../../src/tasks/task-types";
 import styles from "../../../../src/tasks/task-page.module.css";
 
-type Action = "progress" | "extension" | "complete" | "reschedule" | "reassign" | "cancel";
+type Action = "progress" | "blocker" | "complete" | "reschedule" | "reassign" | "cancel";
 
 interface ActionValues {
   note?: string;
   reason?: string;
-  percent?: number;
   dateTime?: string;
   ownerId?: string;
+  category?: string;
 }
 
 const STATUS = {
@@ -68,7 +56,7 @@ const STATUS = {
 
 const ACTION_TITLES: Record<Action, string> = {
   progress: "更新任务进展",
-  extension: "提交延期报备",
+  blocker: "上报学生阻塞",
   complete: "完成任务",
   reschedule: "调整截止时间",
   reassign: "转派任务",
@@ -137,7 +125,7 @@ export default function TaskDetailPage() {
           : ""
       }`
     : canSupervise
-      ? "/workspace/supervision"
+      ? "/workspace/butlers"
       : "/workspace/my-tasks";
 
   const load = useCallback(async () => {
@@ -204,15 +192,16 @@ export default function TaskDetailPage() {
           taskId: task.id,
           version: task.version,
           progressNote: values.note!,
-          progressPercent: values.percent,
         });
-      } else if (action === "extension") {
-        updated = await reportTaskExtension({
+      } else if (action === "blocker") {
+        await reportStudentBlocker({
           taskId: task.id,
           version: task.version,
-          reason: values.reason!,
-          expectedFinishAt: new Date(values.dateTime!).toISOString(),
+          category: values.category!,
+          description: values.reason!,
+          expectedRecoveryAt: new Date(values.dateTime!).toISOString(),
         });
+        updated = await getTask(task.id);
       } else if (action === "complete") {
         updated = await completeTask({
           taskId: task.id,
@@ -276,7 +265,7 @@ export default function TaskDetailPage() {
         {requestedReturnTo?.startsWith("/workspace/students/")
           ? "学生服务进度"
           : canSupervise
-            ? "监督看板"
+            ? "管家监督"
             : "我的任务"}
       </Link>
 
@@ -328,9 +317,6 @@ export default function TaskDetailPage() {
                   <Button icon={<EditOutlined />} onClick={() => openAction("progress")}>
                     更新进展
                   </Button>
-                  <Button icon={<ClockCircleOutlined />} onClick={() => openAction("extension")}>
-                    延期报备
-                  </Button>
                   <Button
                     type="primary"
                     icon={<CheckOutlined />}
@@ -339,6 +325,13 @@ export default function TaskDetailPage() {
                     完成任务
                   </Button>
                 </>
+              ) : null}
+              {canExecute &&
+              (task.status === "TODO" || task.status === "IN_PROGRESS") &&
+              task.owner?.id === user?.id ? (
+                <Button icon={<ClockCircleOutlined />} onClick={() => openAction("blocker")}>
+                  上报学生阻塞
+                </Button>
               ) : null}
               {canExecute &&
               (task.status === "TODO" || task.status === "IN_PROGRESS") &&
@@ -443,6 +436,20 @@ export default function TaskDetailPage() {
             </div>
           </section>
 
+          {task.studentBlockers.find((item) => item.status === "ACTIVE") ? (
+            <Alert
+              type="warning"
+              showIcon
+              title="当前处于学生阻塞跟进中"
+              description={(() => {
+                const blocker = task.studentBlockers.find((item) => item.status === "ACTIVE")!;
+                return `${blocker.description} · 预计恢复 ${hk(blocker.expectedRecoveryAt)} · ${
+                  blocker.reportedInTime ? "截止前已上报" : "逾期补充说明，不撤销既有异常"
+                }`;
+              })()}
+            />
+          ) : null}
+
           <div className={styles.detailGrid}>
             <section className={styles.detailCard}>
               <h2 className={styles.cardTitle}>任务信息</h2>
@@ -466,8 +473,8 @@ export default function TaskDetailPage() {
                   <dd>{hk(task.originalDueAt)}</dd>
                 </div>
                 <div>
-                  <dt>进度</dt>
-                  <dd>{task.progressPercent ?? 0}%</dd>
+                  <dt>最近更新</dt>
+                  <dd>{hk(task.updatedAt)}</dd>
                 </div>
                 <div>
                   <dt>所属阶段</dt>
@@ -558,6 +565,7 @@ export default function TaskDetailPage() {
       )}
 
       <Modal
+        forceRender
         open={Boolean(action)}
         title={action ? ACTION_TITLES[action] : ""}
         okText="确认提交"
@@ -599,18 +607,14 @@ export default function TaskDetailPage() {
         ) : null}
         <Form form={form} layout="vertical" onFinish={(values) => void submitAction(values)}>
           {action === "progress" ? (
-            <>
-              <Form.Item
-                name="note"
-                label="进展说明"
-                rules={[{ required: true, whitespace: true, message: "请填写进展说明" }]}
-              >
-                <Input.TextArea rows={4} maxLength={2000} showCount />
-              </Form.Item>
-              <Form.Item name="percent" label="完成百分比（可选）">
-                <InputNumber min={0} max={99} precision={0} aria-label="完成百分比" />
-              </Form.Item>
-            </>
+            <Form.Item
+              name="note"
+              label="进展说明"
+              extra="请记录已经完成的动作、当前阻塞和下一步；任务是否完成以完成标准为准。"
+              rules={[{ required: true, whitespace: true, message: "请填写进展说明" }]}
+            >
+              <Input.TextArea rows={4} maxLength={2000} showCount />
+            </Form.Item>
           ) : null}
           {action === "complete" ? (
             <Form.Item
@@ -621,10 +625,36 @@ export default function TaskDetailPage() {
               <Input.TextArea rows={4} maxLength={2000} showCount />
             </Form.Item>
           ) : null}
-          {action === "extension" || action === "reschedule" ? (
+          {action === "blocker" ? (
+            <Alert
+              style={{ marginBottom: 16 }}
+              type="info"
+              showIcon
+              title="上报不会修改任务截止时间"
+              description="在截止前上报的学生或外部阻塞会暂时免责；预计恢复时间用于提醒跟进，到期未更新会形成“学生阻塞未跟进”异常。"
+            />
+          ) : null}
+          {action === "blocker" ? (
+            <Form.Item
+              name="category"
+              label="阻塞类别"
+              rules={[{ required: true, message: "请选择阻塞类别" }]}
+            >
+              <Select
+                options={[
+                  { value: "STUDENT_COOPERATION", label: "学生配合" },
+                  { value: "FAMILY", label: "家庭安排" },
+                  { value: "SCHOOL", label: "学校材料" },
+                  { value: "EXTERNAL_DOCUMENT", label: "外部文件或机构" },
+                  { value: "OTHER", label: "其他" },
+                ]}
+              />
+            </Form.Item>
+          ) : null}
+          {action === "blocker" || action === "reschedule" ? (
             <Form.Item
               name="dateTime"
-              label={action === "extension" ? "预计完成时间" : "新截止时间"}
+              label={action === "blocker" ? "预计恢复时间" : "新截止时间"}
               rules={[{ required: true, message: "请选择时间" }]}
             >
               <Input type="datetime-local" />
@@ -645,16 +675,22 @@ export default function TaskDetailPage() {
               />
             </Form.Item>
           ) : null}
-          {action === "extension" ||
+          {action === "blocker" ||
           action === "reschedule" ||
           action === "reassign" ||
           action === "cancel" ? (
             <Form.Item
               name="reason"
-              label="原因"
-              rules={[{ required: true, whitespace: true, message: "请填写原因" }]}
+              label={action === "blocker" ? "阻塞说明" : "原因"}
+              rules={[
+                {
+                  required: true,
+                  whitespace: true,
+                  message: action === "blocker" ? "请填写阻塞说明" : "请填写原因",
+                },
+              ]}
             >
-              <Input.TextArea rows={4} maxLength={500} showCount />
+              <Input.TextArea rows={4} maxLength={action === "blocker" ? 1000 : 500} showCount />
             </Form.Item>
           ) : null}
         </Form>

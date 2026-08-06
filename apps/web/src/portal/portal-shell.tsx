@@ -11,6 +11,7 @@ import styles from "./portal-shell.module.css";
 
 const NAV = [
   ["/portal", "首页"],
+  ["/portal/profile", "基本信息"],
   ["/portal/materials", "我的资料"],
   ["/portal/progress", "服务进度"],
   ["/portal/applications", "申请动态"],

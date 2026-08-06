@@ -12,6 +12,7 @@ function user(
     displayName: "测试用户",
     roles,
     permissions,
+    mustChangePassword: false,
   };
 }
 
@@ -32,7 +33,10 @@ describe("role navigation", () => {
       [RoleCode.ADMINISTRATOR],
     );
     expect(defaultRouteFor(current)).toBe("/workspace");
-    expect(navigationFor(current).map((item) => item.label)).toContain("监督管理看板");
+    expect(navigationFor(current).map((item) => item.label)).toContain("管家监督");
+    expect(
+      navigationFor(current).filter((item) => item.href === "/workspace/butlers"),
+    ).toHaveLength(1);
   });
 
   it("keeps the administrator workspace as the default without supervision access", () => {
@@ -62,7 +66,7 @@ describe("role navigation", () => {
 
   it("does not expose S1 supervision through the legacy permission", () => {
     const current = user([PermissionCode.WORKSPACE_ACCESS, PermissionCode.SUPERVISION_ACCESS]);
-    expect(navigationFor(current).map((item) => item.label)).not.toContain("监督管理看板");
+    expect(navigationFor(current).map((item) => item.label)).not.toContain("管家监督");
   });
 
   it("does not route a portal-only student into the internal workspace", () => {

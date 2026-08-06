@@ -38,6 +38,8 @@ import {
   getStudent,
   getStudentServiceProgress,
   recalculateServiceProgress,
+  repairStudentAccount,
+  resetMyStudentAccount,
 } from "../../../../src/students/student-api";
 import type {
   ResponsiblePersonOptions,
@@ -314,14 +316,46 @@ export default function StudentDetailPage() {
                       modal.confirm({
                         title: `为 ${student.name} 启用服务？`,
                         content:
-                          "系统会使用当前已发布 SOP，一次生成八个阶段和全部任务。该操作不能重复执行。",
+                          "这是管理员应急入口。新学生应从“学生管理”创建并直接开通；系统只要求已分配管家，不要求先分配规划老师。",
                         okText: "确认启用",
                         cancelText: "取消",
                         onOk: async () => {
                           setSubmitting(true);
                           try {
-                            await activateStudentService(student.id, student.version);
-                            await message.success("服务已启用，阶段和任务已生成");
+                            const result = await activateStudentService(
+                              student.id,
+                              student.version,
+                            );
+                            modal.success({
+                              title: "账号与服务已同时启用",
+                              content: (
+                                <div>
+                                  <p>
+                                    登录账号：<strong>{result.account.username}</strong>
+                                  </p>
+                                  <p>
+                                    一次性临时密码：
+                                    <strong>{result.account.temporaryPassword}</strong>
+                                  </p>
+                                  <Button
+                                    onClick={async () => {
+                                      await navigator.clipboard.writeText(
+                                        `账号：${result.account.username}\n临时密码：${result.account.temporaryPassword}`,
+                                      );
+                                      await message.success("登录凭证已复制");
+                                    }}
+                                  >
+                                    复制登录凭证
+                                  </Button>
+                                  <Alert
+                                    type="warning"
+                                    showIcon
+                                    title="临时密码只显示这一次，学生首次登录后必须修改"
+                                    style={{ marginTop: 12 }}
+                                  />
+                                </div>
+                              ),
+                            });
                             await load();
                           } catch (exception) {
                             await message.error(
@@ -336,6 +370,70 @@ export default function StudentDetailPage() {
                   >
                     {student.serviceStatus === "NOT_ENABLED" ? "启用服务" : "服务已经初始化"}
                   </Button>
+                  {student.serviceStatus === "ENABLED" && !student.account ? (
+                    <Button
+                      className={styles.secondaryButton}
+                      icon={<UserSwitchOutlined />}
+                      loading={submitting}
+                      onClick={() =>
+                        modal.confirm({
+                          title: `为 ${student.name} 补建并关联账号？`,
+                          content:
+                            "仅修复历史数据：若同学号的学生账号已存在，将校验角色后重置一次性密码并完成关联。",
+                          okText: "确认补建",
+                          cancelText: "取消",
+                          onOk: async () => {
+                            setSubmitting(true);
+                            try {
+                              const result = await repairStudentAccount(
+                                student.id,
+                                student.version,
+                              );
+                              modal.success({
+                                title: "学生账号已补建并关联",
+                                content: (
+                                  <div>
+                                    <p>
+                                      登录账号：<strong>{result.account.username}</strong>
+                                    </p>
+                                    <p>
+                                      一次性临时密码：
+                                      <strong>{result.account.temporaryPassword}</strong>
+                                    </p>
+                                    <Button
+                                      onClick={async () => {
+                                        await navigator.clipboard.writeText(
+                                          `账号：${result.account.username}\n临时密码：${result.account.temporaryPassword}`,
+                                        );
+                                        await message.success("登录凭证已复制");
+                                      }}
+                                    >
+                                      复制登录凭证
+                                    </Button>
+                                    <Alert
+                                      type="warning"
+                                      showIcon
+                                      title="临时密码只显示这一次，学生首次登录后必须修改"
+                                      style={{ marginTop: 12 }}
+                                    />
+                                  </div>
+                                ),
+                              });
+                              await load();
+                            } catch (exception) {
+                              await message.error(
+                                exception instanceof Error ? exception.message : "账号补建失败",
+                              );
+                            } finally {
+                              setSubmitting(false);
+                            }
+                          },
+                        })
+                      }
+                    >
+                      补建并关联账号
+                    </Button>
+                  ) : null}
                   <Button
                     className={styles.secondaryButton}
                     icon={<UserSwitchOutlined />}
@@ -375,6 +473,57 @@ export default function StudentDetailPage() {
                 </div>
               ) : (
                 <div className={styles.detailActions}>
+                  {user?.permissions.includes(PermissionCode.STUDENTS_OWN_WRITE) ? (
+                    <>
+                      <Link href={`/workspace/students/${student.id}/profile-review`}>
+                        <Button type="primary">
+                          {student.profileStatus === "PENDING_REVIEW"
+                            ? "核对学生提交资料"
+                            : "查看建档资料"}
+                        </Button>
+                      </Link>
+                      {student.account ? (
+                        <Button
+                          onClick={() =>
+                            modal.confirm({
+                              title: `重置并解锁 ${student.name} 的账号？`,
+                              content:
+                                "旧会话会退出，系统生成新的临时密码。请把新凭证发送到服务群。",
+                              okText: "确认重置",
+                              onOk: async () => {
+                                const result = await resetMyStudentAccount(student.id);
+                                modal.success({
+                                  title: "账号已重置并解锁",
+                                  content: (
+                                    <div>
+                                      <p>
+                                        账号：<strong>{result.account.username}</strong>
+                                      </p>
+                                      <p>
+                                        临时密码：
+                                        <strong>{result.account.temporaryPassword}</strong>
+                                      </p>
+                                      <Button
+                                        onClick={() =>
+                                          navigator.clipboard.writeText(
+                                            `账号：${result.account.username}\n临时密码：${result.account.temporaryPassword}`,
+                                          )
+                                        }
+                                      >
+                                        复制凭证
+                                      </Button>
+                                    </div>
+                                  ),
+                                });
+                              },
+                            })
+                          }
+                        >
+                          重置/解锁学生账号
+                        </Button>
+                      ) : null}
+                    </>
+                  ) : null}
                   <Link href={`/workspace/students/${student.id}/record`}>
                     <Button className={styles.secondaryButton}>完整档案</Button>
                   </Link>

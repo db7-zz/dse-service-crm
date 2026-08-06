@@ -15,6 +15,7 @@ const administrator: AuthenticatedUser = {
   displayName: "管理员",
   roles: [RoleCode.ADMINISTRATOR],
   permissions: [PermissionCode.SYSTEM_USERS_READ],
+  mustChangePassword: false,
 };
 
 function authValue(user: AuthenticatedUser | null): ReturnType<typeof useAuth> {

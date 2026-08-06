@@ -36,7 +36,10 @@ export class UsersService {
     search?: string;
     status?: "ACTIVE" | "DISABLED" | "LOCKED";
   }) {
-    const where = {
+    const where: Prisma.UserWhereInput = {
+      roles: {
+        none: { expiredAt: null, role: { code: RoleCode.STUDENT } },
+      },
       ...(input.status ? { status: input.status } : {}),
       ...(input.search
         ? {
@@ -65,7 +68,81 @@ export class UsersService {
     };
   }
 
+  public async listStudentAccounts(input: { page: number; pageSize: number; search?: string }) {
+    const page = Math.max(1, input.page);
+    const pageSize = Math.min(100, Math.max(1, input.pageSize));
+    const search = input.search?.trim();
+    const where: Prisma.StudentWhereInput = search
+      ? {
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { studentNo: { contains: search, mode: "insensitive" } },
+            { portalUser: { username: { contains: search, mode: "insensitive" } } },
+          ],
+        }
+      : {};
+    const [students, total] = await this.prisma.$transaction([
+      this.prisma.student.findMany({
+        where,
+        include: {
+          portalUser: {
+            select: {
+              id: true,
+              username: true,
+              status: true,
+              mustChangePassword: true,
+              lastLoginAt: true,
+            },
+          },
+          defaultButler: { select: { id: true, displayName: true } },
+          handoff: { select: { status: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.student.count({ where }),
+    ]);
+    return {
+      items: students.map((student) => ({
+        id: student.id,
+        studentNo: student.studentNo,
+        name: student.name,
+        serviceStatus: student.serviceStatus,
+        profileStatus: student.profileStatus,
+        defaultButler: student.defaultButler,
+        account: student.portalUser
+          ? {
+              id: student.portalUser.id,
+              username: student.portalUser.username,
+              status: student.portalUser.status,
+              mustChangePassword: student.portalUser.mustChangePassword,
+              lastLoginAt: student.portalUser.lastLoginAt?.toISOString() ?? null,
+            }
+          : null,
+        accountState: student.portalUser
+          ? student.portalUser.status
+          : student.handoff?.status === "PENDING_ACCEPTANCE"
+            ? "PENDING_BUTLER_ACCEPTANCE"
+            : student.serviceStatus === "NOT_ENABLED"
+              ? "PENDING_ACTIVATION"
+              : "ACTIVATION_FAILED",
+        createdAt: student.createdAt.toISOString(),
+      })),
+      page,
+      pageSize,
+      total,
+    };
+  }
+
   public async create(body: CreateUserDto, request: RequestContext) {
+    if (body.roleCodes.includes(RoleCode.STUDENT)) {
+      throw new ApiException(
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.VALIDATION_ERROR,
+        "学生账号必须通过新生建档流程创建",
+      );
+    }
     const username = body.username.trim().toLowerCase();
     const existing = await this.prisma.user.findUnique({ where: { username } });
     if (existing) {
@@ -136,6 +213,13 @@ export class UsersService {
   }
 
   public async setRoles(id: string, body: SetUserRolesDto, request: RequestContext) {
+    if (body.roleCodes.includes(RoleCode.STUDENT)) {
+      throw new ApiException(
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.VALIDATION_ERROR,
+        "学生角色只能由新生建档流程分配",
+      );
+    }
     const existing = await this.findUser(id);
     const previousRoles = existing.roles.map(({ role }) => role.code);
     if (

@@ -79,6 +79,12 @@ export class ListTasksQueryDto {
   @IsBoolean()
   openAlert?: boolean;
 
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === "true")
+  @IsBoolean()
+  attentionOnly?: boolean;
+
   @ApiPropertyOptional({ format: "date-time" })
   @IsOptional()
   @IsDateString()
@@ -103,13 +109,6 @@ export class AddTaskProgressDto extends TaskVersionDto {
   @MinLength(1)
   @MaxLength(2000)
   progressNote!: string;
-
-  @ApiPropertyOptional({ minimum: 0, maximum: 99 })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Max(99)
-  progressPercent?: number;
 }
 
 export class ReportTaskExtensionDto extends TaskVersionDto {

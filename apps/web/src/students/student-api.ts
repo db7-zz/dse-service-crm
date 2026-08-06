@@ -104,8 +104,8 @@ export function recalculateServiceProgress(studentId: string) {
   });
 }
 
-export function createStudent(values: StudentFormValues) {
-  return apiClient.request<StudentRecord>("/students", {
+export function createStudent(values: StudentFormValues, mine = false) {
+  return apiClient.request<StudentRecord>(mine ? "/my/students" : "/students", {
     method: "POST",
     body: JSON.stringify({
       name: values.name.trim(),
@@ -115,6 +115,13 @@ export function createStudent(values: StudentFormValues) {
       plannerId: values.plannerId ?? null,
     }),
   });
+}
+
+export function checkStudentNameDuplicates(name: string, mine = false) {
+  const query = new URLSearchParams({ name: name.trim() });
+  return apiClient.request<{ name: string; hasDuplicates: boolean; count: number }>(
+    `${mine ? "/my/students" : "/students"}/name-duplicates?${query.toString()}`,
+  );
 }
 
 export function updateStudent(
@@ -151,11 +158,59 @@ export function assignResponsiblePerson(input: {
   });
 }
 
-export function activateStudentService(studentId: string, version: number) {
-  return apiClient.request(`/students/${studentId}/service-activation`, {
+export function activateStudentService(studentId: string, version: number, mine = false) {
+  return apiClient.request<{
+    studentId: string;
+    serviceStatus: "ENABLED";
+    version: number;
+    account: { username: string; temporaryPassword: string; expiresAt: string };
+  }>(`${mine ? "/my/students" : "/students"}/${studentId}/service-activation`, {
     method: "POST",
     body: JSON.stringify({ version }),
   });
+}
+
+export function repairStudentAccount(studentId: string, version: number) {
+  return apiClient.request<{
+    studentId: string;
+    version: number;
+    account: { username: string; temporaryPassword: string; expiresAt: string };
+  }>(`/students/${studentId}/account-repair`, {
+    method: "POST",
+    body: JSON.stringify({ version }),
+  });
+}
+
+export interface StudentProfileSubmissionView {
+  profileStatus: "INFORMATION_PENDING" | "PENDING_REVIEW" | "CONFIRMED" | "PLANNER_ASSIGNED";
+  official: Record<string, string | number | string[] | null>;
+  submission: null | {
+    id: string;
+    data: Record<string, string | number | string[]>;
+    version: number;
+    submittedAt: string;
+    confirmedAt: string | null;
+  };
+}
+
+export function getStudentProfileSubmission(studentId: string) {
+  return apiClient.request<StudentProfileSubmissionView>(
+    `/my/students/${studentId}/profile-submission`,
+  );
+}
+
+export function confirmStudentProfileSubmission(studentId: string, version: number) {
+  return apiClient.request(`/my/students/${studentId}/profile-submission/confirm`, {
+    method: "POST",
+    body: JSON.stringify({ version }),
+  });
+}
+
+export function resetMyStudentAccount(studentId: string) {
+  return apiClient.request<{
+    studentId: string;
+    account: { username: string; temporaryPassword: string; expiresAt: string };
+  }>(`/my/students/${studentId}/account-reset`, { method: "POST" });
 }
 
 export function bulkAssignStudentTasks(input: {

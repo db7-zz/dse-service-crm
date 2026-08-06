@@ -30,6 +30,9 @@ const PERMISSION_DEFINITIONS = [
   ["students.read", "查看学生最小档案"],
   ["students.own.read", "查看本人负责学生的服务进度"],
   ["students.write", "维护学生最小档案与负责人"],
+  ["students.own.write", "管家接手、开通并确认本人学生档案"],
+  ["student-handoffs.read", "查看签约学生交接"],
+  ["student-handoffs.write", "创建签约学生交接"],
   ["sop.read", "查看SOP版本"],
   ["sop.write", "维护和发布SOP版本"],
   ["service.activation.write", "启用学生服务并套用SOP"],
@@ -59,6 +62,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "system.audit.read",
     "students.read",
     "students.write",
+    "student-handoffs.read",
+    "student-handoffs.write",
     "sop.read",
     "sop.write",
     "service.activation.write",
@@ -81,6 +86,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   BUTLER: [
     "workspace.access",
     "students.own.read",
+    "students.own.write",
+    "student-handoffs.read",
     "tasks.own.read",
     "tasks.own.write",
     "materials.read",
@@ -111,12 +118,84 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
 };
 
 const MATERIAL_TYPES = [
-  ["IDENTITY", "身份证明", "香港身份证、护照或其他申请所需身份证明", true],
-  ["TRANSCRIPT", "在校成绩单", "最新正式成绩单及历史成绩记录", true],
-  ["PREDICTED_GRADES", "预测成绩", "学校或老师出具的预测成绩", true],
-  ["ACTIVITY_EVIDENCE", "活动与获奖证明", "活动、比赛、奖项及背景提升证明", false],
-  ["PERSONAL_STATEMENT", "个人陈述素材", "文书准备所需的经历、动机与素材", true],
-  ["RECOMMENDATION", "推荐信资料", "推荐人信息及推荐信相关材料", false],
+  [
+    "BASIC_INFORMATION",
+    "基本信息表",
+    "由学生或家长在线填写，管家确认后写入正式档案",
+    true,
+    "FORM",
+    "CURRENT",
+    1,
+  ],
+  ["SELF_RECOMMENDATION", "自荐信素材", "学生填写的自荐信及文书素材", true, "FILE", "CURRENT", 2],
+  [
+    "TRANSCRIPT",
+    "高中三年成绩单",
+    "成绩单需包含年级排名；当前阶段可暂缓",
+    true,
+    "FILE",
+    "LATER",
+    3,
+  ],
+  ["ENROLLMENT_PROOF", "在读证明", "由学校开具；当前阶段可暂缓", true, "FILE", "LATER", 4],
+  ["RECOMMENDATION", "推荐信素材", "学生填写或上传推荐信相关素材", false, "FILE", "CURRENT", 5],
+  [
+    "IDENTITY",
+    "身份证明",
+    "按实际情况上传身份证、护照或港澳通行证彩色正反面扫描件",
+    true,
+    "FILE",
+    "CURRENT",
+    6,
+  ],
+  ["PROFILE_PHOTO", "近照免冠照电子版", "1张白底或蓝底免冠证件照", true, "FILE", "CURRENT", 7],
+  [
+    "ACTIVITY_EVIDENCE",
+    "社会实践及获奖证明",
+    "高中阶段活动、比赛、奖项证明及活动照片",
+    false,
+    "FILE",
+    "CURRENT",
+    8,
+  ],
+  ["PREDICTED_GRADES", "预估及正式成绩单", "由学校开具；当前阶段可暂缓", true, "FILE", "LATER", 9],
+  [
+    "EXAM_CHECKLIST",
+    "CHECKLIST及准考证",
+    "收到后再上传；当前阶段可暂缓",
+    false,
+    "FILE",
+    "LATER",
+    10,
+  ],
+  ["RESUME", "简历（如有）", "如已有简历可上传，没有可标记不适用", false, "FILE", "CURRENT", 11],
+  [
+    "HKEAA_ACCOUNT",
+    "考评局系统账号（如有）",
+    "敏感凭证不作为普通文件或备注保存，请通过安全渠道提供",
+    false,
+    "SECURE_REFERENCE",
+    "LATER",
+    12,
+  ],
+  [
+    "JUPAS_ACCOUNT",
+    "JUPAS系统账号（如有）",
+    "敏感凭证不作为普通文件或备注保存，请通过安全渠道提供",
+    false,
+    "SECURE_REFERENCE",
+    "LATER",
+    13,
+  ],
+  [
+    "LANGUAGE_SCORE",
+    "雅思或托福成绩（如有）",
+    "如有雅思或托福成绩请上传，没有可标记不适用",
+    false,
+    "FILE",
+    "CURRENT",
+    14,
+  ],
 ] as const;
 
 const SOP_BASELINE_STAGES = [
@@ -189,6 +268,8 @@ function required(name: string): string {
 }
 
 const DEVELOPMENT_DATA_TABLES = [
+  "rectification_items",
+  "rectification_records",
   "task_evidence",
   "student_confirmations",
   "notifications",
@@ -214,6 +295,8 @@ const DEVELOPMENT_DATA_TABLES = [
   "task_instances",
   "stage_instances",
   "student_service_activations",
+  "student_profile_submissions",
+  "signed_student_handoffs",
   "sop_task_templates",
   "sop_stage_templates",
   "sop_versions",
@@ -318,6 +401,11 @@ async function main(): Promise<void> {
         roleCode: "BUTLER",
       },
       {
+        username: "planner",
+        displayName: "演示规划老师",
+        roleCode: "PLANNER",
+      },
+      {
         username: "student",
         displayName: "陈乐怡",
         roleCode: "STUDENT",
@@ -340,14 +428,32 @@ async function main(): Promise<void> {
       users.set(account.username, user);
     }
 
-    for (const [code, name, description, isCore] of MATERIAL_TYPES) {
+    for (const [
+      code,
+      name,
+      description,
+      isCore,
+      inputMode,
+      collectionPhase,
+      sequenceNo,
+    ] of MATERIAL_TYPES) {
       await prisma.materialType.create({
-        data: { code, name, description, isCore, isActive: true },
+        data: {
+          code,
+          name,
+          description,
+          isCore,
+          isActive: true,
+          inputMode,
+          collectionPhase,
+          sequenceNo,
+        },
       });
     }
 
     const administrator = users.get("admin")!;
     const butler = users.get("butler")!;
+    const planner = users.get("planner")!;
     const portalUser = users.get("student")!;
     const now = new Date();
     const enabledAt = shiftDays(now, -14);
@@ -392,6 +498,7 @@ async function main(): Promise<void> {
         email: "student@example.test",
         portalUserId: portalUser.id,
         defaultButlerId: butler.id,
+        plannerId: planner.id,
         serviceStatus: "ENABLED",
         nextMilestone: "确认首轮选校与 JUPAS 课程排序，并补交预测成绩",
         riskLevel: "ATTENTION",
@@ -407,6 +514,17 @@ async function main(): Promise<void> {
         responsibilityType: "DEFAULT_BUTLER",
         newUserId: butler.id,
         reason: "管理员完成新生建档并分配默认管家",
+        operatorId: administrator.id,
+        createdAt: enabledAt,
+      },
+    });
+
+    await prisma.studentResponsibilityChange.create({
+      data: {
+        studentId: student.id,
+        responsibilityType: "PLANNER",
+        newUserId: planner.id,
+        reason: "管理员完成新生建档并分配规划老师",
         operatorId: administrator.id,
         createdAt: enabledAt,
       },

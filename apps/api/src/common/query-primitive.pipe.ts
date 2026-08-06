@@ -1,5 +1,17 @@
 import { Injectable, ValidationPipe, type ArgumentMetadata } from "@nestjs/common";
 
+const NUMBER_QUERY_KEYS = new Set(["page", "pageSize", "cohortYear"]);
+const BOOLEAN_QUERY_KEYS = new Set([
+  "attentionOnly",
+  "hasCurrentBlockers",
+  "hasMissingMaterials",
+  "openAlert",
+  "overdue",
+  "overdueOnly",
+  "unassigned",
+  "unreadOnly",
+]);
+
 @Injectable()
 export class QueryPrimitivePipe extends ValidationPipe {
   public constructor() {
@@ -36,11 +48,14 @@ export class QueryPrimitivePipe extends ValidationPipe {
         key,
       );
 
-      if (expectedType === Number && typeof rawValue === "string") {
+      if ((expectedType === Number || NUMBER_QUERY_KEYS.has(key)) && typeof rawValue === "string") {
         normalized[key] = Number(rawValue);
-      } else if (expectedType === Boolean && rawValue === "true") {
+      } else if ((expectedType === Boolean || BOOLEAN_QUERY_KEYS.has(key)) && rawValue === "true") {
         normalized[key] = true;
-      } else if (expectedType === Boolean && rawValue === "false") {
+      } else if (
+        (expectedType === Boolean || BOOLEAN_QUERY_KEYS.has(key)) &&
+        rawValue === "false"
+      ) {
         normalized[key] = false;
       }
     }

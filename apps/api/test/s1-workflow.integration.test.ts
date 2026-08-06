@@ -87,34 +87,6 @@ describeWithDatabase("S1 SOP, activation, task execution and supervision", () =>
     ).reduce((total, stage) => total + stage.tasks.length, 0);
     expect(publishedTaskCount).toBeGreaterThan(0);
 
-    const created = await admin.agent
-      .post("/api/v1/students")
-      .set("X-CSRF-Token", admin.csrfToken)
-      .send({ name: `S1纵向联调-${Date.now()}` })
-      .expect(201);
-    const student = created.body.data as { id: string; version: number };
-    const activation = await admin.agent
-      .post(`/api/v1/students/${student.id}/service-activation`)
-      .set("X-CSRF-Token", admin.csrfToken)
-      .send({ version: student.version })
-      .expect(201);
-    expect(activation.body.data).toMatchObject({
-      serviceStatus: "ENABLED",
-      stageCount: 8,
-      taskCount: publishedTaskCount,
-      assignedTaskCount: 0,
-      unassignedTaskCount: publishedTaskCount,
-    });
-
-    const detail = await admin.agent.get(`/api/v1/students/${student.id}`).expect(200);
-    expect(detail.body.data.stages).toHaveLength(8);
-    expect(detail.body.data.taskSummary).toMatchObject({
-      total: publishedTaskCount,
-      unassigned: publishedTaskCount,
-    });
-    const tasks = detail.body.data.stages.flatMap(
-      (stage: { tasks: Array<{ id: string; version: number }> }) => stage.tasks,
-    ) as Array<{ id: string; version: number }>;
     const people = await admin.agent.get("/api/v1/students/responsible-person-options").expect(200);
     const seededButler = await prisma.user.findUnique({
       where: { username: process.env.SEED_BUTLER_USERNAME ?? "butler" },
@@ -123,11 +95,58 @@ describeWithDatabase("S1 SOP, activation, task execution and supervision", () =>
     const butler = people.body.data.butlers.find(
       (candidate: { id: string }) => candidate.id === seededButler?.id,
     ) as { id: string } | undefined;
+    const planner = people.body.data.planners[0] as { id: string } | undefined;
     expect(butler).toBeDefined();
-    if (!butler) {
-      throw new Error("Seeded Butler is missing from responsible person options");
+    expect(planner).toBeDefined();
+    if (!butler || !planner) {
+      throw new Error("Seeded Butler or planner is missing from responsible person options");
     }
 
+    const created = await admin.agent
+      .post("/api/v1/students")
+      .set("X-CSRF-Token", admin.csrfToken)
+      .send({
+        name: `S1纵向联调-${Date.now()}`,
+        defaultButlerId: butler.id,
+        plannerId: planner.id,
+      })
+      .expect(201);
+    const student = created.body.data as { id: string; version: number };
+    const activation = await admin.agent
+      .post(`/api/v1/students/${student.id}/service-activation`)
+      .set("X-CSRF-Token", admin.csrfToken)
+      .send({ version: student.version })
+      .expect(201);
+    const activationTaskCount = activation.body.data.taskCount as number;
+    expect(activationTaskCount).toBeGreaterThan(publishedTaskCount);
+    expect(activation.body.data).toMatchObject({
+      serviceStatus: "ENABLED",
+      stageCount: 8,
+      taskCount: activationTaskCount,
+      assignedTaskCount: activationTaskCount,
+      unassignedTaskCount: 0,
+    });
+
+    const activatedTasks = await prisma.taskInstance.findMany({
+      where: { studentId: student.id },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+      take: 2,
+    });
+    await prisma.taskInstance.updateMany({
+      where: { id: { in: activatedTasks.map((task) => task.id) } },
+      data: { ownerId: null },
+    });
+
+    const detail = await admin.agent.get(`/api/v1/students/${student.id}`).expect(200);
+    expect(detail.body.data.stages).toHaveLength(8);
+    expect(detail.body.data.taskSummary).toMatchObject({
+      total: activationTaskCount,
+      unassigned: 2,
+    });
+    const tasks = detail.body.data.stages.flatMap(
+      (stage: { tasks: Array<{ id: string; version: number }> }) => stage.tasks,
+    ) as Array<{ id: string; version: number }>;
     const bulkKey = `bulk-assign-${Date.now()}`;
     const bulkBody = {
       butlerId: butler.id,
@@ -209,7 +228,6 @@ describeWithDatabase("S1 SOP, activation, task execution and supervision", () =>
       .send({
         version: started.body.data.version,
         progressNote: "完成首轮资料核对",
-        progressPercent: 60,
       })
       .expect(201);
     const completed = await butlerSession.agent
@@ -235,6 +253,33 @@ describeWithDatabase("S1 SOP, activation, task execution and supervision", () =>
       .get("/api/v1/admin/task-supervision/tasks")
       .query({ studentId: student.id })
       .expect(200);
+    const butlerDashboard = await admin.agent
+      .get("/api/v1/admin/task-supervision/butlers")
+      .expect(200);
+    const butlerDashboardItem = butlerDashboard.body.data.items.find(
+      (item: { id: string }) => item.id === butler.id,
+    ) as { activeTaskCount: number; overdue: number; attentionCount: number } | undefined;
+    expect(butlerDashboardItem).toBeDefined();
+    expect(butlerDashboardItem?.activeTaskCount).toBeGreaterThan(0);
+    expect(butlerDashboardItem?.overdue).toBeGreaterThan(0);
+    expect(butlerDashboard.body.data.attentionItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ taskId: supervisedTaskId, reason: "OVERDUE" }),
+      ]),
+    );
+    const supervisionFocus = await admin.agent
+      .get("/api/v1/admin/task-supervision/focus")
+      .query({ studentId: student.id })
+      .expect(200);
+    expect(supervisionFocus.body.data.items).toHaveLength(1);
+    expect(supervisionFocus.body.data.items[0].tasks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: supervisedTaskId,
+          attentionReasons: expect.arrayContaining(["OVERDUE", "OPEN_ALERT"]),
+        }),
+      ]),
+    );
     const alerts = await admin.agent
       .get("/api/v1/admin/overdue-alerts")
       .query({ status: "OPEN" })

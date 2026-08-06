@@ -1,0 +1,378 @@
+.page {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.hero,
+.panel,
+.metric,
+.butlerRow {
+  border: 1px solid rgb(15 23 42 / 8%);
+  background: rgb(255 255 255 / 88%);
+  box-shadow: 0 18px 48px rgb(15 23 42 / 7%);
+}
+
+.hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 34px 36px;
+  overflow: hidden;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 88% 12%, rgb(37 99 235 / 18%), transparent 34%),
+    linear-gradient(135deg, #fff 0%, #f5f8ff 68%, #eef4ff 100%);
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #1769e0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(34px, 5vw, 56px);
+  font-weight: 850;
+  letter-spacing: -0.055em;
+  line-height: 1;
+}
+
+.lead {
+  max-width: 690px;
+  margin: 14px 0 0;
+  color: #64748b;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.weekControl {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.metric {
+  min-width: 0;
+  padding: 20px 22px;
+  border-radius: 20px;
+}
+
+.metric strong {
+  display: block;
+  color: #0f172a;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.metric span {
+  display: block;
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.visualGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+  gap: 16px;
+  min-width: 0;
+}
+
+.panel {
+  min-width: 0;
+  padding: 24px;
+  border-radius: 24px;
+}
+
+.panelHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.panelHead h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.panelHead span {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.trend {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(32px, 1fr));
+  align-items: end;
+  min-height: 206px;
+  gap: 8px;
+}
+
+.trendButton {
+  display: grid;
+  grid-template-rows: 150px auto;
+  gap: 8px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.trendTrack {
+  display: flex;
+  align-items: flex-end;
+  height: 150px;
+  padding: 0 4px;
+  border-bottom: 1px solid #dbe4f0;
+}
+
+.trendBar {
+  position: relative;
+  width: 100%;
+  min-height: 4px;
+  border-radius: 8px 8px 2px 2px;
+  background: linear-gradient(180deg, #1967e8, #74a7ff);
+  transition:
+    transform 160ms ease,
+    filter 160ms ease;
+}
+
+.trendButton:hover .trendBar,
+.trendButtonActive .trendBar {
+  filter: saturate(1.2);
+  transform: translateY(-3px);
+}
+
+.trendValue {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 700;
+  transform: translateX(-50%);
+}
+
+.trendLabel {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rankList,
+.butlerList,
+.anomalyList {
+  display: grid;
+  gap: 10px;
+}
+
+.rankButton {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 0;
+  border: 0;
+  background: transparent;
+  color: #334155;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rankTrack {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #edf2f8;
+}
+
+.rankFill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #1e6dea, #80b0ff);
+}
+
+.rankCount {
+  color: #0f172a;
+  font-weight: 800;
+  text-align: right;
+}
+
+.butlerRow {
+  display: grid;
+  grid-template-columns:
+    minmax(170px, 1.1fr) repeat(3, minmax(86px, 0.45fr)) minmax(190px, 1fr)
+    auto;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 18px 20px;
+  border-radius: 18px;
+  color: #334155;
+  text-align: left;
+  cursor: pointer;
+}
+
+.butlerRow:hover {
+  border-color: rgb(37 99 235 / 28%);
+  transform: translateY(-1px);
+}
+
+.butlerName strong,
+.fact strong {
+  display: block;
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.butlerName span,
+.fact span {
+  display: block;
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.fact strong {
+  font-size: 20px;
+}
+
+.studentNames {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowAction {
+  padding: 7px 13px;
+  border: 1px solid #d8e0ea;
+  border-radius: 9px;
+  background: #fff;
+  color: #334155;
+  font-size: 13px;
+  text-align: center;
+}
+
+.rowAction[data-active="true"] {
+  border-color: #1769e0;
+  background: #1769e0;
+  color: #fff;
+}
+
+.drawerSummary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.drawerSummary div {
+  padding: 12px;
+  border-radius: 12px;
+  background: #f6f8fb;
+  text-align: center;
+}
+
+.drawerSummary strong,
+.drawerSummary span {
+  display: block;
+}
+
+.drawerSummary strong {
+  color: #0f172a;
+  font-size: 22px;
+}
+
+.drawerSummary span {
+  margin-top: 3px;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.anomalyCard {
+  padding: 16px;
+  border: 1px solid #e5eaf1;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.anomalyTitle {
+  margin: 8px 0 4px;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.anomalyMeta,
+.anomalyText {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+@media (max-width: 1100px) {
+  .visualGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .butlerRow {
+    grid-template-columns: minmax(150px, 1fr) repeat(3, 70px) auto;
+  }
+
+  .studentNames {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .hero {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 26px 22px;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .trend {
+    gap: 4px;
+    overflow-x: auto;
+  }
+
+  .trendButton {
+    min-width: 36px;
+  }
+
+  .butlerRow {
+    grid-template-columns: 1fr repeat(3, 58px);
+  }
+
+  .butlerRow > :last-child {
+    display: none;
+  }
+}

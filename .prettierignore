@@ -5,6 +5,7 @@ coverage
 playwright-report
 test-results
 docs/api/openapi.json
+docs/releases/S2/INCREMENT_PRD_S2.local-original.md
 packages/api-client/src/generated
 pnpm-lock.yaml
 

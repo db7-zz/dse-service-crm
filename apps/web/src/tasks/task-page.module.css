@@ -186,6 +186,91 @@
   margin-top: 18px;
 }
 
+.focusList {
+  display: grid;
+  gap: 12px;
+}
+
+.studentFocus {
+  overflow: hidden;
+  background: rgb(250 251 253 / 86%);
+  border: 1px solid rgb(29 29 31 / 8%);
+  border-radius: 18px;
+}
+
+.studentFocus[open] {
+  background: #fff;
+  border-color: rgb(0 113 227 / 18%);
+  box-shadow: 0 12px 32px rgb(55 67 90 / 7%);
+}
+
+.studentFocusSummary {
+  display: grid;
+  grid-template-columns:
+    minmax(150px, 1.1fr) minmax(220px, 1.5fr) minmax(120px, 0.8fr)
+    minmax(170px, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: 18px 20px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.studentFocusSummary::-webkit-details-marker {
+  display: none;
+}
+
+.studentFocusSummary:hover {
+  background: rgb(0 113 227 / 3%);
+}
+
+.studentName {
+  font-size: 16px;
+}
+
+.focusSignals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.focusSignals :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+
+.focusLabel {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.expandHint {
+  color: var(--blue);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.focusTasks {
+  display: grid;
+  border-top: 1px solid rgb(29 29 31 / 8%);
+}
+
+.focusTask {
+  display: grid;
+  grid-template-columns:
+    minmax(220px, 1.6fr) minmax(190px, 1.2fr) minmax(170px, 1fr)
+    minmax(160px, 0.9fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: 18px 20px;
+}
+
+.focusTask:not(:last-child) {
+  border-bottom: 1px solid rgb(29 29 31 / 8%);
+}
+
 .back {
   display: inline-flex;
   gap: 8px;
@@ -327,6 +412,15 @@
   .detailCard {
     grid-column: 1 / -1;
   }
+
+  .studentFocusSummary,
+  .focusTask {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .expandHint {
+    justify-self: start;
+  }
 }
 
 @media (width <= 620px) {
@@ -342,5 +436,10 @@
 
   .timelineTime {
     grid-column: 2;
+  }
+
+  .studentFocusSummary,
+  .focusTask {
+    grid-template-columns: 1fr;
   }
 }

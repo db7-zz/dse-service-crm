@@ -1,6 +1,12 @@
 import { Inject, Injectable, HttpStatus } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { ErrorCode, type AuthenticatedUser, type PermissionCode, type RoleCode } from "@dse/shared";
+import {
+  ErrorCode,
+  RoleCode,
+  type AuthenticatedUser,
+  type PermissionCode,
+  type RoleCode as RoleCodeType,
+} from "@dse/shared";
 import type { Prisma, PrismaClient } from "@dse/database";
 import type { Environment } from "../config/environment.js";
 import { PRISMA } from "../database/database.module.js";
@@ -59,6 +65,9 @@ export class AuthService {
       where: { username },
       include: USER_RELATIONS,
     });
+    const isStudentAccount = Boolean(
+      user?.roles.some(({ role }) => role.code === RoleCode.STUDENT),
+    );
 
     if (!user) {
       await hashPassword(password);
@@ -91,7 +100,7 @@ export class AuthService {
       );
     }
 
-    if (user.lockedUntil && user.lockedUntil > now) {
+    if (!isStudentAccount && user.lockedUntil && user.lockedUntil > now) {
       await this.writeAudit({
         action: "LOGIN_FAILED",
         objectType: "user",
@@ -122,6 +131,20 @@ export class AuthService {
 
     const passwordValid = await verifyPassword(user.passwordHash, password);
     if (!passwordValid) {
+      if (isStudentAccount) {
+        await this.writeAudit({
+          action: "LOGIN_FAILED",
+          objectType: "user",
+          objectId: user.id,
+          afterData: { reason: "invalid_credentials" },
+          request,
+        });
+        throw new ApiException(
+          HttpStatus.UNAUTHORIZED,
+          ErrorCode.AUTH_INVALID_CREDENTIALS,
+          "账号或密码错误",
+        );
+      }
       const failure = calculateLoginFailure(
         now,
         user.failedLoginCount,
@@ -159,6 +182,25 @@ export class AuthService {
         HttpStatus.UNAUTHORIZED,
         ErrorCode.AUTH_INVALID_CREDENTIALS,
         "账号或密码错误",
+      );
+    }
+
+    if (
+      user.mustChangePassword &&
+      user.temporaryPasswordExpiresAt &&
+      user.temporaryPasswordExpiresAt <= now
+    ) {
+      await this.writeAudit({
+        action: "LOGIN_FAILED",
+        objectType: "user",
+        objectId: user.id,
+        afterData: { reason: "temporary_password_expired" },
+        request,
+      });
+      throw new ApiException(
+        HttpStatus.FORBIDDEN,
+        ErrorCode.AUTH_TEMPORARY_PASSWORD_EXPIRED,
+        "临时密码已过期，请联系管理员处理",
       );
     }
 
@@ -306,6 +348,65 @@ export class AuthService {
     return { loggedOut: true };
   }
 
+  public async changePassword(
+    currentPassword: string,
+    newPassword: string,
+    request: RequestContext,
+  ) {
+    const actor = request.authenticatedUser as AuthenticatedUser;
+    if (currentPassword === newPassword) {
+      throw new ApiException(
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.VALIDATION_ERROR,
+        "新密码不能与当前密码相同",
+      );
+    }
+    const user = await this.prisma.user.findUnique({ where: { id: actor.id } });
+    if (!user || !(await verifyPassword(user.passwordHash, currentPassword))) {
+      throw new ApiException(
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.AUTH_INVALID_CREDENTIALS,
+        "当前密码不正确",
+      );
+    }
+    const passwordHash = await hashPassword(newPassword);
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: actor.id },
+        data: {
+          passwordHash,
+          mustChangePassword: false,
+          temporaryPasswordExpiresAt: null,
+          failedLoginCount: 0,
+          failedLoginWindowStartedAt: null,
+          lockedUntil: null,
+        },
+      }),
+      this.prisma.session.updateMany({
+        where: {
+          userId: actor.id,
+          id: { not: request.authenticatedSession!.id },
+          revokedAt: null,
+        },
+        data: { revokedAt: new Date() },
+      }),
+      this.prisma.auditLog.create({
+        data: {
+          operatorId: actor.id,
+          operatorRole: actor.roles[0] ?? null,
+          action: "PASSWORD_CHANGED",
+          objectType: "user",
+          objectId: actor.id,
+          requestId: request.requestId,
+          ipAddress: request.ip,
+          deviceInfo: request.header("User-Agent"),
+        },
+      }),
+    ]);
+    actor.mustChangePassword = false;
+    return { changed: true as const };
+  }
+
   public async rotateCsrf(request: RequestContext): Promise<string> {
     const token = generateOpaqueToken();
     await this.prisma.session.update({
@@ -320,6 +421,7 @@ export class AuthService {
     id: string;
     username: string;
     displayName: string;
+    mustChangePassword: boolean;
     roles: Array<{
       role: {
         code: string;
@@ -327,7 +429,7 @@ export class AuthService {
       };
     }>;
   }): AuthenticatedUser {
-    const roles = user.roles.map(({ role }) => role.code as RoleCode);
+    const roles = user.roles.map(({ role }) => role.code as RoleCodeType);
     const permissions = [
       ...new Set(
         user.roles.flatMap(({ role }) =>
@@ -341,6 +443,7 @@ export class AuthService {
       displayName: user.displayName,
       roles,
       permissions,
+      mustChangePassword: user.mustChangePassword,
     };
   }
 

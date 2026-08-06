@@ -21,6 +21,30 @@ enum StudentServiceStatus {
   TERMINATED
 }
 
+enum StudentHandoffStatus {
+  PENDING_ACCEPTANCE
+  ACCEPTED
+  CANCELED
+}
+
+enum StudentProfileStatus {
+  INFORMATION_PENDING
+  PENDING_REVIEW
+  CONFIRMED
+  PLANNER_ASSIGNED
+}
+
+enum MaterialInputMode {
+  FILE
+  FORM
+  SECURE_REFERENCE
+}
+
+enum MaterialCollectionPhase {
+  CURRENT
+  LATER
+}
+
 enum StudentRiskLevel {
   NORMAL
   ATTENTION
@@ -153,6 +177,14 @@ enum NotificationEventType {
   ISSUE_SUBMITTED
   SPECIALIST_TASK_ASSIGNED
   STUDENT_RESPONSIBILITY_CHANGED
+  HANDOFF_ASSIGNED
+  HANDOFF_ACCEPTED
+  PROFILE_SUBMITTED
+  PLANNER_ASSIGNMENT_REQUESTED
+  PLANNER_ASSIGNED
+  BUTLER_ANOMALY_DAILY
+  BUTLER_WEEKLY_REVIEW_FROZEN
+  BUTLER_WEEKLY_REVIEW_SUBMITTED
 }
 
 enum ConfirmationStatus {
@@ -194,6 +226,40 @@ enum OverdueAlertStatus {
   RESOLVED
 }
 
+enum RectificationStatus {
+  PENDING_RECTIFICATION
+  PENDING_REVIEW
+  CLOSED
+}
+
+enum StudentBlockerStatus {
+  ACTIVE
+  SUPERSEDED
+  RESOLVED
+  REJECTED
+}
+
+enum ButlerAnomalyType {
+  TASK_OVERDUE_UNREPORTED
+  STUDENT_BLOCKER_FOLLOWUP_MISSED
+  STUDENT_BLOCKER_REJECTED
+  WEEKLY_RESPONSE_OVERDUE
+}
+
+enum ButlerAnomalyStatus {
+  OPEN
+  RECTIFIED
+  APPEAL_ACCEPTED
+  APPEAL_REJECTED
+}
+
+enum ButlerWeeklyReviewStatus {
+  LIVE
+  PENDING_RESPONSE
+  PENDING_REVIEW
+  CLOSED
+}
+
 enum TaskTimelineEventType {
   CREATED
   ASSIGNED
@@ -210,58 +276,78 @@ enum TaskTimelineEventType {
   OVERDUE_ALERT_GENERATED
   OVERDUE_ALERT_HANDLED
   OVERDUE_ALERT_RESOLVED
+  STUDENT_BLOCKER_REPORTED
+  STUDENT_BLOCKER_UPDATED
+  STUDENT_BLOCKER_REJECTED
+  STUDENT_BLOCKER_RESOLVED
 }
 
 model User {
-  id                         String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  username                   String                          @unique @db.VarChar(64)
-  displayName                String                          @map("display_name") @db.VarChar(100)
-  passwordHash               String                          @map("password_hash") @db.VarChar(255)
-  status                     UserStatus                      @default(ACTIVE)
-  failedLoginCount           Int                             @default(0) @map("failed_login_count")
-  failedLoginWindowStartedAt DateTime?                       @map("failed_login_window_started_at")
-  lockedUntil                DateTime?                       @map("locked_until")
-  lastLoginAt                DateTime?                       @map("last_login_at")
-  createdAt                  DateTime                        @default(now()) @map("created_at")
-  updatedAt                  DateTime                        @updatedAt @map("updated_at")
-  roles                      UserRole[]
-  sessions                   Session[]
-  auditLogs                  AuditLog[]                      @relation("AuditOperator")
-  studentsCreated            Student[]                       @relation("StudentCreator")
-  studentsAsDefaultButler    Student[]                       @relation("StudentDefaultButler")
-  studentsAsPlanner          Student[]                       @relation("StudentPlanner")
-  responsibilityChangesMade  StudentResponsibilityChange[]   @relation("ResponsibilityChangeOperator")
-  responsibilityChangesFrom  StudentResponsibilityChange[]   @relation("ResponsibilityChangePreviousUser")
-  responsibilityChangesTo    StudentResponsibilityChange[]   @relation("ResponsibilityChangeNewUser")
-  sopVersionsCreated         SopVersion[]                    @relation("SopVersionCreator")
-  serviceActivationsEnabled  StudentServiceActivation[]      @relation("ServiceActivationOperator")
-  tasksOwned                 TaskInstance[]                  @relation("TaskOwner")
-  taskProgressCreated        TaskProgressRecord[]            @relation("TaskProgressOperator")
-  taskExtensionsReported     TaskExtensionReport[]           @relation("TaskExtensionReporter")
-  taskDueDatesChanged        TaskDueDateChange[]             @relation("TaskDueDateOperator")
-  taskReassignmentsOperated  TaskReassignment[]              @relation("TaskReassignmentOperator")
-  taskReassignmentsFrom      TaskReassignment[]              @relation("TaskReassignmentPreviousOwner")
-  taskReassignmentsTo        TaskReassignment[]              @relation("TaskReassignmentNewOwner")
-  tasksCanceled              TaskInstance[]                  @relation("TaskCancellationOperator")
-  overdueAlertsHandled       OverdueAlert[]                  @relation("OverdueAlertHandler")
-  taskTimelineEvents         TaskTimelineEvent[]             @relation("TaskTimelineActor")
-  taskOperationReceipts      TaskOperationReceipt[]          @relation("TaskOperationActor")
-  manualTasksCreated         TaskInstance[]                  @relation("TaskCreator")
-  progressCalculationRuns    ServiceProgressCalculationRun[] @relation("ProgressCalculationInitiator")
-  portalStudent              Student?                        @relation("StudentPortalUser")
-  studentScoresUpdated       StudentScore[]                  @relation("StudentScoreUpdater")
-  studentTargetsUpdated      StudentTarget[]                 @relation("StudentTargetUpdater")
-  materialItemsOwned         MaterialItem[]                  @relation("MaterialOwner")
-  materialVersionsUploaded   MaterialVersion[]               @relation("MaterialVersionUploader")
-  materialVersionsReviewed   MaterialVersion[]               @relation("MaterialVersionReviewer")
-  materialFollowupsCreated   MaterialFollowup[]              @relation("MaterialFollowupOperator")
-  applicationsOwned          Application[]                   @relation("ApplicationOwner")
-  applicationStatusChanges   ApplicationStatusLog[]          @relation("ApplicationStatusOperator")
-  issuesSubmitted            Issue[]                         @relation("IssueSubmitter")
-  issueLogsCreated           IssueLog[]                      @relation("IssueLogOperator")
-  notifications              Notification[]                  @relation("NotificationRecipient")
-  confirmationsResponded     StudentConfirmation[]           @relation("ConfirmationResponder")
-  taskEvidenceUploaded       TaskEvidence[]                  @relation("TaskEvidenceUploader")
+  id                          String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username                    String                          @unique @db.VarChar(64)
+  displayName                 String                          @map("display_name") @db.VarChar(100)
+  passwordHash                String                          @map("password_hash") @db.VarChar(255)
+  mustChangePassword          Boolean                         @default(false) @map("must_change_password")
+  temporaryPasswordExpiresAt  DateTime?                       @map("temporary_password_expires_at")
+  status                      UserStatus                      @default(ACTIVE)
+  failedLoginCount            Int                             @default(0) @map("failed_login_count")
+  failedLoginWindowStartedAt  DateTime?                       @map("failed_login_window_started_at")
+  lockedUntil                 DateTime?                       @map("locked_until")
+  lastLoginAt                 DateTime?                       @map("last_login_at")
+  createdAt                   DateTime                        @default(now()) @map("created_at")
+  updatedAt                   DateTime                        @updatedAt @map("updated_at")
+  roles                       UserRole[]
+  sessions                    Session[]
+  auditLogs                   AuditLog[]                      @relation("AuditOperator")
+  studentsCreated             Student[]                       @relation("StudentCreator")
+  studentsAsDefaultButler     Student[]                       @relation("StudentDefaultButler")
+  studentsAsPlanner           Student[]                       @relation("StudentPlanner")
+  responsibilityChangesMade   StudentResponsibilityChange[]   @relation("ResponsibilityChangeOperator")
+  responsibilityChangesFrom   StudentResponsibilityChange[]   @relation("ResponsibilityChangePreviousUser")
+  responsibilityChangesTo     StudentResponsibilityChange[]   @relation("ResponsibilityChangeNewUser")
+  sopVersionsCreated          SopVersion[]                    @relation("SopVersionCreator")
+  serviceActivationsEnabled   StudentServiceActivation[]      @relation("ServiceActivationOperator")
+  tasksOwned                  TaskInstance[]                  @relation("TaskOwner")
+  taskProgressCreated         TaskProgressRecord[]            @relation("TaskProgressOperator")
+  taskExtensionsReported      TaskExtensionReport[]           @relation("TaskExtensionReporter")
+  taskDueDatesChanged         TaskDueDateChange[]             @relation("TaskDueDateOperator")
+  taskReassignmentsOperated   TaskReassignment[]              @relation("TaskReassignmentOperator")
+  taskReassignmentsFrom       TaskReassignment[]              @relation("TaskReassignmentPreviousOwner")
+  taskReassignmentsTo         TaskReassignment[]              @relation("TaskReassignmentNewOwner")
+  tasksCanceled               TaskInstance[]                  @relation("TaskCancellationOperator")
+  overdueAlertsHandled        OverdueAlert[]                  @relation("OverdueAlertHandler")
+  taskTimelineEvents          TaskTimelineEvent[]             @relation("TaskTimelineActor")
+  taskOperationReceipts       TaskOperationReceipt[]          @relation("TaskOperationActor")
+  manualTasksCreated          TaskInstance[]                  @relation("TaskCreator")
+  progressCalculationRuns     ServiceProgressCalculationRun[] @relation("ProgressCalculationInitiator")
+  portalStudent               Student?                        @relation("StudentPortalUser")
+  studentScoresUpdated        StudentScore[]                  @relation("StudentScoreUpdater")
+  studentTargetsUpdated       StudentTarget[]                 @relation("StudentTargetUpdater")
+  materialItemsOwned          MaterialItem[]                  @relation("MaterialOwner")
+  materialVersionsUploaded    MaterialVersion[]               @relation("MaterialVersionUploader")
+  materialVersionsReviewed    MaterialVersion[]               @relation("MaterialVersionReviewer")
+  materialFollowupsCreated    MaterialFollowup[]              @relation("MaterialFollowupOperator")
+  applicationsOwned           Application[]                   @relation("ApplicationOwner")
+  applicationStatusChanges    ApplicationStatusLog[]          @relation("ApplicationStatusOperator")
+  issuesSubmitted             Issue[]                         @relation("IssueSubmitter")
+  issueLogsCreated            IssueLog[]                      @relation("IssueLogOperator")
+  notifications               Notification[]                  @relation("NotificationRecipient")
+  confirmationsResponded      StudentConfirmation[]           @relation("ConfirmationResponder")
+  taskEvidenceUploaded        TaskEvidence[]                  @relation("TaskEvidenceUploader")
+  issuesAssigned              Issue[]                         @relation("IssueOwner")
+  rectificationsAssigned      RectificationRecord[]           @relation("RectificationButler")
+  rectificationsCreated       RectificationRecord[]           @relation("RectificationCreator")
+  rectificationsReviewed      RectificationRecord[]           @relation("RectificationReviewer")
+  studentBlockersReported     TaskStudentBlocker[]            @relation("StudentBlockerReporter")
+  studentBlockersReviewed     TaskStudentBlocker[]            @relation("StudentBlockerReviewer")
+  butlerAnomalies             ButlerAnomaly[]                 @relation("ButlerAnomalyButler")
+  butlerAnomaliesResolved     ButlerAnomaly[]                 @relation("ButlerAnomalyResolver")
+  weeklyReviewsAssigned       ButlerWeeklyReview[]            @relation("ButlerWeeklyReviewButler")
+  weeklyReviewsReviewed       ButlerWeeklyReview[]            @relation("ButlerWeeklyReviewReviewer")
+  handoffsCreated             SignedStudentHandoff[]          @relation("StudentHandoffCreator")
+  handoffsAssigned            SignedStudentHandoff[]          @relation("StudentHandoffButler")
+  handoffsAccepted            SignedStudentHandoff[]          @relation("StudentHandoffAcceptor")
+  profileSubmissionsConfirmed StudentProfileSubmission[]      @relation("StudentProfileConfirmer")
 
   @@map("users")
 }
@@ -364,6 +450,18 @@ model Student {
   school                String?                       @db.VarChar(150)
   grade                 String?                       @db.VarChar(32)
   cohortYear            Int?                          @map("cohort_year")
+  studentWechat         String?                       @map("student_wechat") @db.VarChar(100)
+  parentName            String?                       @map("parent_name") @db.VarChar(100)
+  parentRelationship    String?                       @map("parent_relationship") @db.VarChar(50)
+  parentPhone           String?                       @map("parent_phone") @db.VarChar(32)
+  parentWechat          String?                       @map("parent_wechat") @db.VarChar(100)
+  identityCategory      String?                       @map("identity_category") @db.VarChar(100)
+  examCandidateType     String?                       @map("exam_candidate_type") @db.VarChar(100)
+  dseSubjects           String[]                      @default([]) @map("dse_subjects")
+  scoreSummary          String?                       @map("score_summary") @db.VarChar(1000)
+  targetDirection       String?                       @map("target_direction") @db.VarChar(1000)
+  profileStatus         StudentProfileStatus          @default(INFORMATION_PENDING) @map("profile_status")
+  profileConfirmedAt    DateTime?                     @map("profile_confirmed_at")
   nextMilestone         String?                       @map("next_milestone") @db.VarChar(500)
   riskLevel             StudentRiskLevel              @default(NORMAL) @map("risk_level")
   riskNote              String?                       @map("risk_note") @db.VarChar(1000)
@@ -389,6 +487,8 @@ model Student {
   applications          Application[]
   issues                Issue[]
   confirmations         StudentConfirmation[]
+  handoff               SignedStudentHandoff?
+  profileSubmission     StudentProfileSubmission?
 
   @@index([name])
   @@index([serviceStatus, createdAt])
@@ -397,6 +497,55 @@ model Student {
   @@index([school, grade, cohortYear])
   @@index([riskLevel, updatedAt])
   @@map("students")
+}
+
+model SignedStudentHandoff {
+  id                   String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentName          String               @map("student_name") @db.VarChar(100)
+  studentPhone         String?              @map("student_phone") @db.VarChar(32)
+  studentWechat        String?              @map("student_wechat") @db.VarChar(100)
+  parentName           String               @map("parent_name") @db.VarChar(100)
+  parentRelationship   String?              @map("parent_relationship") @db.VarChar(50)
+  parentPhone          String               @map("parent_phone") @db.VarChar(32)
+  parentWechat         String?              @map("parent_wechat") @db.VarChar(100)
+  school               String?              @db.VarChar(150)
+  grade                String?              @db.VarChar(32)
+  cohortYear           Int?                 @map("cohort_year")
+  assignedButlerId     String               @map("assigned_butler_id") @db.Uuid
+  wechatGroupCreatedAt DateTime             @map("wechat_group_created_at")
+  status               StudentHandoffStatus @default(PENDING_ACCEPTANCE)
+  studentId            String?              @unique @map("student_id") @db.Uuid
+  acceptedById         String?              @map("accepted_by_id") @db.Uuid
+  acceptedAt           DateTime?            @map("accepted_at")
+  version              Int                  @default(1)
+  createdById          String               @map("created_by_id") @db.Uuid
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+  assignedButler       User                 @relation("StudentHandoffButler", fields: [assignedButlerId], references: [id], onDelete: Restrict)
+  acceptedBy           User?                @relation("StudentHandoffAcceptor", fields: [acceptedById], references: [id], onDelete: SetNull)
+  createdBy            User                 @relation("StudentHandoffCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  student              Student?             @relation(fields: [studentId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([assignedButlerId, status, createdAt])
+  @@map("signed_student_handoffs")
+}
+
+model StudentProfileSubmission {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId     String    @unique @map("student_id") @db.Uuid
+  data          Json
+  version       Int       @default(1)
+  submittedAt   DateTime  @map("submitted_at")
+  confirmedAt   DateTime? @map("confirmed_at")
+  confirmedById String?   @map("confirmed_by_id") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  student       Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  confirmedBy   User?     @relation("StudentProfileConfirmer", fields: [confirmedById], references: [id], onDelete: SetNull)
+
+  @@index([submittedAt])
+  @@map("student_profile_submissions")
 }
 
 model StudentResponsibilityChange {
@@ -579,6 +728,9 @@ model TaskInstance {
   issuesLinked                  Issue[]                  @relation("IssueLinkedTask")
   issuesConvertedFrom           Issue[]                  @relation("IssueConvertedTask")
   evidence                      TaskEvidence[]
+  rectificationItems            RectificationItem[]
+  studentBlockers               TaskStudentBlocker[]
+  butlerAnomalies               ButlerAnomaly[]
 
   @@unique([serviceActivationId, taskTemplateId])
   @@index([ownerId, status, currentDueAt])
@@ -661,6 +813,32 @@ model TaskExtensionReport {
 
   @@index([taskId, reportedAt])
   @@map("task_extension_reports")
+}
+
+model TaskStudentBlocker {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  taskId             String               @map("task_id") @db.Uuid
+  reportedById       String               @map("reported_by") @db.Uuid
+  category           String               @db.VarChar(64)
+  description        String               @db.VarChar(1000)
+  expectedRecoveryAt DateTime             @map("expected_recovery_at")
+  reportedAt         DateTime             @default(now()) @map("reported_at")
+  reportedInTime     Boolean              @map("reported_in_time")
+  status             StudentBlockerStatus @default(ACTIVE)
+  reviewedById       String?              @map("reviewed_by") @db.Uuid
+  reviewedAt         DateTime?            @map("reviewed_at")
+  reviewNote         String?              @map("review_note") @db.VarChar(1000)
+  resolvedAt         DateTime?            @map("resolved_at")
+  createdAt          DateTime             @default(now()) @map("created_at")
+  updatedAt          DateTime             @updatedAt @map("updated_at")
+  task               TaskInstance         @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  reportedBy         User                 @relation("StudentBlockerReporter", fields: [reportedById], references: [id], onDelete: Restrict)
+  reviewedBy         User?                @relation("StudentBlockerReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  anomalies          ButlerAnomaly[]
+
+  @@index([taskId, status, expectedRecoveryAt])
+  @@index([reportedById, status])
+  @@map("task_student_blockers")
 }
 
 model TaskDueDateChange {
@@ -784,15 +962,18 @@ model StudentTarget {
 }
 
 model MaterialType {
-  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code        String         @unique @db.VarChar(64)
-  name        String         @db.VarChar(100)
-  description String?        @db.VarChar(500)
-  isCore      Boolean        @default(true) @map("is_core")
-  isActive    Boolean        @default(true) @map("is_active")
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
-  items       MaterialItem[]
+  id              String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code            String                  @unique @db.VarChar(64)
+  name            String                  @db.VarChar(100)
+  description     String?                 @db.VarChar(500)
+  isCore          Boolean                 @default(true) @map("is_core")
+  isActive        Boolean                 @default(true) @map("is_active")
+  inputMode       MaterialInputMode       @default(FILE) @map("input_mode")
+  collectionPhase MaterialCollectionPhase @default(CURRENT) @map("collection_phase")
+  sequenceNo      Int                     @default(0) @map("sequence_no")
+  createdAt       DateTime                @default(now()) @map("created_at")
+  updatedAt       DateTime                @updatedAt @map("updated_at")
+  items           MaterialItem[]
 
   @@index([isActive, name])
   @@map("material_types")
@@ -939,31 +1120,152 @@ model ApplicationRequirement {
 }
 
 model Issue {
-  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  studentId       String        @map("student_id") @db.Uuid
-  linkedTaskId    String?       @map("linked_task_id") @db.Uuid
-  convertedTaskId String?       @map("converted_task_id") @db.Uuid
-  category        String        @db.VarChar(64)
-  description     String        @db.VarChar(2000)
-  context         String        @db.VarChar(4000)
-  priority        String?       @db.VarChar(32)
-  status          IssueStatus   @default(OPEN)
-  submittedById   String        @map("submitted_by") @db.Uuid
-  submittedAt     DateTime      @default(now()) @map("submitted_at")
-  managerResponse String?       @map("manager_response") @db.VarChar(4000)
-  respondedAt     DateTime?     @map("responded_at")
-  closedAt        DateTime?     @map("closed_at")
-  version         Int           @default(1)
-  updatedAt       DateTime      @updatedAt @map("updated_at")
-  student         Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  linkedTask      TaskInstance? @relation("IssueLinkedTask", fields: [linkedTaskId], references: [id], onDelete: SetNull)
-  convertedTask   TaskInstance? @relation("IssueConvertedTask", fields: [convertedTaskId], references: [id], onDelete: SetNull)
-  submittedBy     User          @relation("IssueSubmitter", fields: [submittedById], references: [id], onDelete: Restrict)
-  logs            IssueLog[]
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId          String              @map("student_id") @db.Uuid
+  linkedTaskId       String?             @map("linked_task_id") @db.Uuid
+  convertedTaskId    String?             @map("converted_task_id") @db.Uuid
+  category           String              @db.VarChar(64)
+  description        String              @db.VarChar(2000)
+  context            String              @db.VarChar(4000)
+  priority           String?             @db.VarChar(32)
+  ownerId            String?             @map("owner_id") @db.Uuid
+  dueAt              DateTime?           @map("due_at")
+  status             IssueStatus         @default(OPEN)
+  submittedById      String              @map("submitted_by") @db.Uuid
+  submittedAt        DateTime            @default(now()) @map("submitted_at")
+  managerResponse    String?             @map("manager_response") @db.VarChar(4000)
+  respondedAt        DateTime?           @map("responded_at")
+  closedAt           DateTime?           @map("closed_at")
+  version            Int                 @default(1)
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  student            Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  linkedTask         TaskInstance?       @relation("IssueLinkedTask", fields: [linkedTaskId], references: [id], onDelete: SetNull)
+  convertedTask      TaskInstance?       @relation("IssueConvertedTask", fields: [convertedTaskId], references: [id], onDelete: SetNull)
+  submittedBy        User                @relation("IssueSubmitter", fields: [submittedById], references: [id], onDelete: Restrict)
+  owner              User?               @relation("IssueOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  logs               IssueLog[]
+  rectificationItems RectificationItem[]
 
   @@index([studentId, status, updatedAt])
   @@index([submittedById, status])
+  @@index([ownerId, status, dueAt])
   @@map("issues")
+}
+
+model RectificationRecord {
+  id           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  butlerId     String              @map("butler_id") @db.Uuid
+  createdById  String              @map("created_by") @db.Uuid
+  summary      String              @db.VarChar(2000)
+  dueAt        DateTime            @map("due_at")
+  status       RectificationStatus @default(PENDING_RECTIFICATION)
+  responseNote String?             @map("response_note") @db.VarChar(4000)
+  submittedAt  DateTime?           @map("submitted_at")
+  reviewNote   String?             @map("review_note") @db.VarChar(4000)
+  reviewedById String?             @map("reviewed_by") @db.Uuid
+  reviewedAt   DateTime?           @map("reviewed_at")
+  closedAt     DateTime?           @map("closed_at")
+  version      Int                 @default(1)
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+  butler       User                @relation("RectificationButler", fields: [butlerId], references: [id], onDelete: Restrict)
+  createdBy    User                @relation("RectificationCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  reviewedBy   User?               @relation("RectificationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  items        RectificationItem[]
+
+  @@index([butlerId, status, dueAt])
+  @@index([status, updatedAt])
+  @@map("rectification_records")
+}
+
+model RectificationItem {
+  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rectificationId String              @map("rectification_id") @db.Uuid
+  taskId          String?             @map("task_id") @db.Uuid
+  issueId         String?             @map("issue_id") @db.Uuid
+  titleSnapshot   String              @map("title_snapshot") @db.VarChar(200)
+  createdAt       DateTime            @default(now()) @map("created_at")
+  rectification   RectificationRecord @relation(fields: [rectificationId], references: [id], onDelete: Cascade)
+  task            TaskInstance?       @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  issue           Issue?              @relation(fields: [issueId], references: [id], onDelete: Restrict)
+
+  @@unique([rectificationId, taskId])
+  @@unique([rectificationId, issueId])
+  @@index([taskId])
+  @@index([issueId])
+  @@map("rectification_items")
+}
+
+model ButlerAnomaly {
+  id                  String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  butlerId            String                   @map("butler_id") @db.Uuid
+  taskId              String?                  @map("task_id") @db.Uuid
+  blockerId           String?                  @map("blocker_id") @db.Uuid
+  type                ButlerAnomalyType
+  status              ButlerAnomalyStatus      @default(OPEN)
+  sourceKey           String                   @unique @map("source_key") @db.VarChar(255)
+  titleSnapshot       String                   @map("title_snapshot") @db.VarChar(200)
+  studentIdSnapshot   String?                  @map("student_id_snapshot") @db.Uuid
+  studentNoSnapshot   String?                  @map("student_no_snapshot") @db.VarChar(32)
+  studentNameSnapshot String?                  @map("student_name_snapshot") @db.VarChar(100)
+  deadlineSnapshot    DateTime?                @map("deadline_snapshot")
+  occurredAt          DateTime                 @map("occurred_at")
+  factDetail          Json?                    @map("fact_detail")
+  resolvedAt          DateTime?                @map("resolved_at")
+  resolutionNote      String?                  @map("resolution_note") @db.VarChar(2000)
+  resolvedById        String?                  @map("resolved_by") @db.Uuid
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime                 @updatedAt @map("updated_at")
+  butler              User                     @relation("ButlerAnomalyButler", fields: [butlerId], references: [id], onDelete: Restrict)
+  task                TaskInstance?            @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  blocker             TaskStudentBlocker?      @relation(fields: [blockerId], references: [id], onDelete: Restrict)
+  resolvedBy          User?                    @relation("ButlerAnomalyResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  weeklyItems         ButlerWeeklyReviewItem[]
+
+  @@index([butlerId, occurredAt])
+  @@index([butlerId, status, resolvedAt])
+  @@index([taskId, type])
+  @@map("butler_anomalies")
+}
+
+model ButlerWeeklyReview {
+  id            String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  butlerId      String                   @map("butler_id") @db.Uuid
+  weekStart     DateTime                 @map("week_start")
+  weekEnd       DateTime                 @map("week_end")
+  status        ButlerWeeklyReviewStatus @default(LIVE)
+  frozenAt      DateTime?                @map("frozen_at")
+  responseDueAt DateTime?                @map("response_due_at")
+  submittedAt   DateTime?                @map("submitted_at")
+  reviewedById  String?                  @map("reviewed_by") @db.Uuid
+  reviewedAt    DateTime?                @map("reviewed_at")
+  reviewNote    String?                  @map("review_note") @db.VarChar(2000)
+  version       Int                      @default(1)
+  createdAt     DateTime                 @default(now()) @map("created_at")
+  updatedAt     DateTime                 @updatedAt @map("updated_at")
+  butler        User                     @relation("ButlerWeeklyReviewButler", fields: [butlerId], references: [id], onDelete: Restrict)
+  reviewedBy    User?                    @relation("ButlerWeeklyReviewReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  items         ButlerWeeklyReviewItem[]
+
+  @@unique([butlerId, weekStart])
+  @@index([status, weekStart])
+  @@map("butler_weekly_reviews")
+}
+
+model ButlerWeeklyReviewItem {
+  id           String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reviewId     String             @map("review_id") @db.Uuid
+  anomalyId    String             @map("anomaly_id") @db.Uuid
+  itemKind     String             @map("item_kind") @db.VarChar(16)
+  responseNote String?            @map("response_note") @db.VarChar(2000)
+  respondedAt  DateTime?          @map("responded_at")
+  createdAt    DateTime           @default(now()) @map("created_at")
+  review       ButlerWeeklyReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  anomaly      ButlerAnomaly      @relation(fields: [anomalyId], references: [id], onDelete: Restrict)
+
+  @@unique([reviewId, anomalyId])
+  @@index([anomalyId])
+  @@map("butler_weekly_review_items")
 }
 
 model IssueLog {

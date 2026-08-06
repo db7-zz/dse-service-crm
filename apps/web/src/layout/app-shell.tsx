@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   AuditOutlined,
+  BarChartOutlined,
   BellOutlined,
   DashboardOutlined,
   DownOutlined,
@@ -32,6 +33,7 @@ const { Header, Sider, Content } = Layout;
 
 const ICONS: Record<string, ReactNode> = {
   workspace: <DashboardOutlined />,
+  butlers: <BarChartOutlined />,
   supervision: <SafetyCertificateOutlined />,
   students: <UsergroupAddOutlined />,
   sop: <SnippetsOutlined />,
@@ -84,6 +86,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!loading && !user) {
       router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+    } else if (!loading && user?.mustChangePassword) {
+      router.replace("/change-password");
     }
   }, [loading, pathname, router, user]);
 

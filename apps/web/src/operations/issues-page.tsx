@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  Alert,
   Button,
   Descriptions,
   Drawer,
@@ -15,6 +16,7 @@ import {
   Table,
   Tag,
   Timeline,
+  Typography,
   message,
 } from "antd";
 import { PermissionCode } from "@dse/shared";
@@ -154,16 +156,23 @@ export function IssuesPage() {
               ),
             },
             {
-              title: "提交人",
-              dataIndex: "submittedBy",
+              title: "负责人",
+              dataIndex: "owner",
               width: 110,
-              render: (value: IssueView["submittedBy"]) => value.displayName,
+              render: (value: IssueView["owner"]) => value?.displayName ?? "待分配",
             },
             {
-              title: "更新时间",
-              dataIndex: "updatedAt",
+              title: "处理截止",
+              dataIndex: "dueAt",
               width: 180,
-              render: (value: string) => new Date(value).toLocaleString("zh-CN"),
+              render: (value: string | null, item) =>
+                value ? (
+                  <Typography.Text type={item.isOverdue ? "danger" : undefined}>
+                    {new Date(value).toLocaleString("zh-CN")}
+                  </Typography.Text>
+                ) : (
+                  "—"
+                ),
             },
           ]}
         />
@@ -210,6 +219,16 @@ export function IssuesPage() {
                 },
                 { key: "description", label: "问题描述", children: selected.description },
                 { key: "context", label: "背景与已尝试方案", children: selected.context },
+                {
+                  key: "owner",
+                  label: "负责人",
+                  children: selected.owner?.displayName ?? "待分配",
+                },
+                {
+                  key: "dueAt",
+                  label: "处理截止",
+                  children: selected.dueAt ? new Date(selected.dueAt).toLocaleString("zh-CN") : "—",
+                },
                 { key: "response", label: "管理员回复", children: selected.managerResponse ?? "—" },
                 {
                   key: "task",
@@ -299,9 +318,16 @@ export function IssuesPage() {
               options={[
                 { value: "NORMAL", label: "普通" },
                 { value: "HIGH", label: "高" },
+                { value: "URGENT", label: "紧急" },
               ]}
             />
           </Form.Item>
+          <Alert
+            type="info"
+            showIcon
+            title="系统会自动指定管理员负责人和处理截止时间"
+            description="普通问题默认 72 小时，高优先级 48 小时，紧急问题 24 小时。"
+          />
         </Form>
       </Modal>
       <Modal

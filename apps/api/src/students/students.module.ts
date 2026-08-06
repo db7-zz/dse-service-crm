@@ -4,10 +4,17 @@ import { StudentWorkflowService } from "./student-workflow.service.js";
 import { MyStudentsController, StudentsController } from "./students.controller.js";
 import { StudentsService } from "./students.service.js";
 import { ServiceProgressService } from "./service-progress.service.js";
+import { StudentHandoffsController } from "./student-handoffs.controller.js";
+import { StudentHandoffsService } from "./student-handoffs.service.js";
 
 @Module({
   imports: [AuthModule],
-  controllers: [StudentsController, MyStudentsController],
-  providers: [StudentsService, StudentWorkflowService, ServiceProgressService],
+  controllers: [StudentsController, MyStudentsController, StudentHandoffsController],
+  providers: [
+    StudentsService,
+    StudentWorkflowService,
+    ServiceProgressService,
+    StudentHandoffsService,
+  ],
 })
 export class StudentsModule {}

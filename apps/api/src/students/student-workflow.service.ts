@@ -1,7 +1,8 @@
-import { createHash } from "node:crypto";
+import { createHash, randomInt } from "node:crypto";
 import { ErrorCode, RoleCode, type AuthenticatedUser } from "@dse/shared";
 import { Prisma, type PrismaClient } from "@dse/database";
 import { HttpStatus, Inject, Injectable } from "@nestjs/common";
+import { hashPassword } from "../auth/password.js";
 import { ApiException } from "../common/api-exception.js";
 import type { RequestContext } from "../common/request-context.js";
 import { PRISMA } from "../database/database.module.js";
@@ -13,6 +14,17 @@ import type {
 
 const ACTIVE_TASK_STATUSES = ["TODO", "IN_PROGRESS"] as const;
 
+export function activationMissingRequirements(student: { defaultButlerId: string | null }) {
+  return student.defaultButlerId ? [] : ["管家"];
+}
+
+export function taskCompletionWindowSnapshot(
+  sourceType: "SOP" | "MANUAL" | "MATERIAL" | "APPLICATION" | "ISSUE",
+  completionWindowHours: number,
+) {
+  return sourceType === "SOP" ? completionWindowHours : null;
+}
+
 @Injectable()
 export class StudentWorkflowService {
   public constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
@@ -21,8 +33,11 @@ export class StudentWorkflowService {
     studentId: string,
     body: ActivateStudentServiceDto,
     request: RequestContext,
+    expectedButlerId?: string,
   ) {
     const actor = request.authenticatedUser as AuthenticatedUser;
+    const temporaryPassword = this.createTemporaryPassword();
+    const passwordHash = await hashPassword(temporaryPassword);
     return this.prisma.$transaction(async (transaction) => {
       const student = await transaction.student.findUnique({
         where: { id: studentId },
@@ -32,11 +47,20 @@ export class StudentWorkflowService {
           name: true,
           serviceStatus: true,
           defaultButlerId: true,
+          plannerId: true,
+          portalUserId: true,
           version: true,
         },
       });
       if (!student) {
         throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND, "学生不存在");
+      }
+      if (expectedButlerId && student.defaultButlerId !== expectedButlerId) {
+        throw new ApiException(
+          HttpStatus.FORBIDDEN,
+          ErrorCode.STUDENT_RELATION_FORBIDDEN,
+          "只能为本人负责的学生开通账号",
+        );
       }
       if (student.serviceStatus === "ENABLED") {
         throw new ApiException(
@@ -51,6 +75,22 @@ export class StudentWorkflowService {
           ErrorCode.STUDENT_VERSION_CONFLICT,
           "学生资料已被其他操作更新，请刷新后重试",
           { currentVersion: student.version },
+        );
+      }
+      const missingRequirements = activationMissingRequirements(student);
+      if (missingRequirements.length > 0) {
+        throw new ApiException(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          ErrorCode.SERVICE_ACTIVATION_UNAVAILABLE,
+          `启用服务前必须完成${missingRequirements.join("和")}分配`,
+          { missingRequirements },
+        );
+      }
+      if (student.portalUserId) {
+        throw new ApiException(
+          HttpStatus.CONFLICT,
+          ErrorCode.CONFLICT,
+          "该学生已经关联登录账号，请先核对账号状态",
         );
       }
 
@@ -95,6 +135,35 @@ export class StudentWorkflowService {
 
       const enabledAt = new Date();
       enabledAt.setUTCSeconds(0, 0);
+      const temporaryPasswordExpiresAt = new Date(enabledAt.getTime() + 72 * 60 * 60 * 1000);
+      const studentRole = await transaction.role.findUnique({ where: { code: RoleCode.STUDENT } });
+      if (!studentRole) {
+        throw new ApiException(
+          HttpStatus.CONFLICT,
+          ErrorCode.SERVICE_ACTIVATION_UNAVAILABLE,
+          "学生账号角色尚未配置，暂时无法启用服务",
+        );
+      }
+      const username = student.studentNo.toLowerCase();
+      const existingUsername = await transaction.user.findUnique({ where: { username } });
+      if (existingUsername) {
+        throw new ApiException(
+          HttpStatus.CONFLICT,
+          ErrorCode.CONFLICT,
+          "自动生成的学生登录账号已被占用，请联系管理员处理",
+        );
+      }
+      const portalUser = await transaction.user.create({
+        data: {
+          username,
+          displayName: student.name,
+          passwordHash,
+          mustChangePassword: true,
+          temporaryPasswordExpiresAt,
+          roles: { create: { roleId: studentRole.id } },
+        },
+        select: { id: true },
+      });
       const lock = await transaction.student.updateMany({
         where: {
           id: studentId,
@@ -103,6 +172,7 @@ export class StudentWorkflowService {
         },
         data: {
           serviceStatus: "ENABLED",
+          portalUserId: portalUser.id,
           version: { increment: 1 },
         },
       });
@@ -193,7 +263,10 @@ export class StudentWorkflowService {
               titleSnapshot: taskTemplate.name,
               descriptionSnapshot: taskTemplate.description,
               completionCriteriaSnapshot: taskTemplate.completionCriteria,
-              completionWindowHoursSnapshot: taskTemplate.completionWindowHours,
+              completionWindowHoursSnapshot: taskCompletionWindowSnapshot(
+                "SOP",
+                taskTemplate.completionWindowHours,
+              ),
               ownerId: student.defaultButlerId,
               originalDueAt: dueAt,
               currentDueAt: dueAt,
@@ -247,8 +320,8 @@ export class StudentWorkflowService {
 
       if (materialsStageInstanceId) {
         const coreMaterialTypes = await transaction.materialType.findMany({
-          where: { isActive: true, isCore: true },
-          orderBy: { name: "asc" },
+          where: { isActive: true },
+          orderBy: [{ sequenceNo: "asc" }, { name: "asc" }],
         });
         for (const materialType of coreMaterialTypes) {
           const dueAt = this.calculateDueAt(enabledAt, 168);
@@ -258,10 +331,13 @@ export class StudentWorkflowService {
               materialTypeId: materialType.id,
               title: materialType.name,
               requirement: materialType.description,
-              dueAt,
+              dueAt: materialType.collectionPhase === "CURRENT" ? dueAt : null,
               ownerId: student.defaultButlerId,
             },
           });
+          if (materialType.collectionPhase === "LATER") {
+            continue;
+          }
           const task = await transaction.taskInstance.create({
             data: {
               studentId,
@@ -275,7 +351,7 @@ export class StudentWorkflowService {
               titleSnapshot: `收集并审核：${materialType.name}`,
               descriptionSnapshot: materialType.description,
               completionCriteriaSnapshot: "资料已审核通过，或已记录不适用原因",
-              completionWindowHoursSnapshot: 168,
+              completionWindowHoursSnapshot: taskCompletionWindowSnapshot("MATERIAL", 168),
               ownerId: student.defaultButlerId,
               originalDueAt: dueAt,
               currentDueAt: dueAt,
@@ -365,9 +441,36 @@ export class StudentWorkflowService {
             stageCount: sop.stages.length,
             taskCount,
             assignedOwnerId: student.defaultButlerId,
+            plannerId: student.plannerId,
+            portalUserId: portalUser.id,
           },
         }),
       });
+
+      if (!student.plannerId) {
+        const administrators = await transaction.user.findMany({
+          where: {
+            status: "ACTIVE",
+            roles: { some: { expiredAt: null, role: { code: RoleCode.ADMINISTRATOR } } },
+          },
+          select: { id: true },
+        });
+        if (administrators.length > 0) {
+          await transaction.notification.createMany({
+            data: administrators.map((administrator) => ({
+              recipientId: administrator.id,
+              eventType: "PLANNER_ASSIGNMENT_REQUESTED" as const,
+              title: "新学生待分配规划老师",
+              content: `${student.name} 的账号和服务已开通，请分配规划老师。`,
+              objectType: "student",
+              objectId: student.id,
+              actionUrl: `/workspace/students/${student.id}`,
+              eventKey: `planner-assignment-requested:${student.id}:service-enabled:${administrator.id}`,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
 
       return {
         activationId: activation.id,
@@ -389,6 +492,259 @@ export class StudentWorkflowService {
         currentStage: firstStage,
         completedStageCount: 0,
         progressVersion: 1,
+        account: {
+          username,
+          temporaryPassword,
+          expiresAt: temporaryPasswordExpiresAt.toISOString(),
+        },
+      };
+    });
+  }
+
+  public async activateMine(
+    studentId: string,
+    body: ActivateStudentServiceDto,
+    request: RequestContext,
+  ) {
+    const actor = request.authenticatedUser as AuthenticatedUser;
+    if (!actor.roles.includes(RoleCode.BUTLER)) {
+      throw new ApiException(HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN, "只有管家可以执行此操作");
+    }
+    return this.activate(studentId, body, request, actor.id);
+  }
+
+  private createTemporaryPassword() {
+    return randomInt(0, 100_000_000).toString().padStart(8, "0");
+  }
+
+  public async repairPortalAccount(
+    studentId: string,
+    body: ActivateStudentServiceDto,
+    request: RequestContext,
+  ) {
+    const temporaryPassword = this.createTemporaryPassword();
+    const passwordHash = await hashPassword(temporaryPassword);
+    return this.prisma.$transaction(async (transaction) => {
+      const student = await transaction.student.findUnique({
+        where: { id: studentId },
+        select: {
+          id: true,
+          studentNo: true,
+          name: true,
+          serviceStatus: true,
+          defaultButlerId: true,
+          plannerId: true,
+          portalUserId: true,
+          version: true,
+        },
+      });
+      if (!student) {
+        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND, "学生不存在");
+      }
+      if (student.version !== body.version) {
+        throw new ApiException(
+          HttpStatus.CONFLICT,
+          ErrorCode.STUDENT_VERSION_CONFLICT,
+          "学生资料已被其他操作更新，请刷新后重试",
+          { currentVersion: student.version },
+        );
+      }
+      if (student.serviceStatus !== "ENABLED") {
+        throw new ApiException(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          ErrorCode.SERVICE_ACTIVATION_UNAVAILABLE,
+          "未启用服务的学生请通过统一建档流程创建账号并启用服务",
+        );
+      }
+      if (student.portalUserId) {
+        throw new ApiException(
+          HttpStatus.CONFLICT,
+          ErrorCode.CONFLICT,
+          "该学生已经关联登录账号，无需补建",
+        );
+      }
+      const missingRequirements = [...(!student.defaultButlerId ? ["管家"] : [])];
+      if (missingRequirements.length > 0) {
+        throw new ApiException(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          ErrorCode.SERVICE_ACTIVATION_UNAVAILABLE,
+          `补建账号前必须完成${missingRequirements.join("和")}分配`,
+          { missingRequirements },
+        );
+      }
+
+      const studentRole = await transaction.role.findUnique({ where: { code: RoleCode.STUDENT } });
+      if (!studentRole) {
+        throw new ApiException(
+          HttpStatus.CONFLICT,
+          ErrorCode.SERVICE_ACTIVATION_UNAVAILABLE,
+          "学生账号角色尚未配置，暂时无法补建账号",
+        );
+      }
+      const repairedAt = new Date();
+      const temporaryPasswordExpiresAt = new Date(repairedAt.getTime() + 72 * 60 * 60 * 1000);
+      const username = student.studentNo.toLowerCase();
+      const existingUser = await transaction.user.findUnique({
+        where: { username },
+        select: {
+          id: true,
+          portalStudent: { select: { id: true } },
+          roles: {
+            where: { expiredAt: null },
+            select: { role: { select: { code: true } } },
+          },
+        },
+      });
+      if (
+        existingUser &&
+        (existingUser.portalStudent ||
+          !existingUser.roles.some((role) => role.role.code === RoleCode.STUDENT))
+      ) {
+        throw new ApiException(
+          HttpStatus.CONFLICT,
+          ErrorCode.CONFLICT,
+          "同名账号已用于其他人员，无法自动补建，请先在账号管理中核对",
+        );
+      }
+      const portalUser = existingUser
+        ? await transaction.user.update({
+            where: { id: existingUser.id },
+            data: {
+              displayName: student.name,
+              passwordHash,
+              status: "ACTIVE",
+              mustChangePassword: true,
+              temporaryPasswordExpiresAt,
+              failedLoginCount: 0,
+              failedLoginWindowStartedAt: null,
+              lockedUntil: null,
+            },
+            select: { id: true },
+          })
+        : await transaction.user.create({
+            data: {
+              username,
+              displayName: student.name,
+              passwordHash,
+              mustChangePassword: true,
+              temporaryPasswordExpiresAt,
+              roles: { create: { roleId: studentRole.id } },
+            },
+            select: { id: true },
+          });
+      const lock = await transaction.student.updateMany({
+        where: {
+          id: studentId,
+          version: body.version,
+          serviceStatus: "ENABLED",
+          portalUserId: null,
+        },
+        data: {
+          portalUserId: portalUser.id,
+          version: { increment: 1 },
+        },
+      });
+      if (lock.count !== 1) {
+        throw new ApiException(
+          HttpStatus.CONFLICT,
+          ErrorCode.STUDENT_VERSION_CONFLICT,
+          "学生资料已被其他操作更新，请刷新后重试",
+        );
+      }
+      await transaction.auditLog.create({
+        data: this.auditData(request, {
+          action: "STUDENT_PORTAL_ACCOUNT_REPAIRED",
+          objectType: "student",
+          objectId: studentId,
+          beforeData: { portalUserId: null, version: body.version },
+          afterData: {
+            portalUserId: portalUser.id,
+            version: body.version + 1,
+            reusedExistingAccount: Boolean(existingUser),
+          },
+          reason: "修复历史学生缺失登录账号关联",
+        }),
+      });
+      return {
+        studentId,
+        version: body.version + 1,
+        account: {
+          username,
+          temporaryPassword,
+          expiresAt: temporaryPasswordExpiresAt.toISOString(),
+        },
+      };
+    });
+  }
+
+  public async resetPortalAccount(studentId: string, request: RequestContext) {
+    const actor = request.authenticatedUser as AuthenticatedUser;
+    const temporaryPassword = this.createTemporaryPassword();
+    const passwordHash = await hashPassword(temporaryPassword);
+    return this.prisma.$transaction(async (transaction) => {
+      const student = await transaction.student.findUnique({
+        where: { id: studentId },
+        select: {
+          id: true,
+          name: true,
+          studentNo: true,
+          defaultButlerId: true,
+          portalUserId: true,
+        },
+      });
+      if (!student) {
+        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND, "学生不存在");
+      }
+      const isAdministrator = actor.roles.includes(RoleCode.ADMINISTRATOR);
+      if (!isAdministrator && student.defaultButlerId !== actor.id) {
+        throw new ApiException(
+          HttpStatus.FORBIDDEN,
+          ErrorCode.FORBIDDEN,
+          "只有该学生的管家可以重置账号",
+        );
+      }
+      if (!student.portalUserId) {
+        throw new ApiException(
+          HttpStatus.CONFLICT,
+          ErrorCode.PORTAL_BINDING_MISSING,
+          "学生账号尚未开通，请先完成服务开通",
+        );
+      }
+      const resetAt = new Date();
+      const temporaryPasswordExpiresAt = new Date(resetAt.getTime() + 72 * 60 * 60 * 1000);
+      const account = await transaction.user.update({
+        where: { id: student.portalUserId },
+        data: {
+          passwordHash,
+          status: "ACTIVE",
+          mustChangePassword: true,
+          temporaryPasswordExpiresAt,
+          failedLoginCount: 0,
+          failedLoginWindowStartedAt: null,
+          lockedUntil: null,
+        },
+        select: { username: true },
+      });
+      await transaction.session.updateMany({
+        where: { userId: student.portalUserId, revokedAt: null },
+        data: { revokedAt: resetAt },
+      });
+      await transaction.auditLog.create({
+        data: this.auditData(request, {
+          action: "STUDENT_PORTAL_ACCOUNT_RESET",
+          objectType: "student",
+          objectId: student.id,
+          afterData: { accountStatus: "ACTIVE", sessionsRevoked: true },
+          reason: "管家或管理员重置学生临时密码并解锁账号",
+        }),
+      });
+      return {
+        studentId: student.id,
+        account: {
+          username: account.username,
+          temporaryPassword,
+          expiresAt: temporaryPasswordExpiresAt.toISOString(),
+        },
       };
     });
   }

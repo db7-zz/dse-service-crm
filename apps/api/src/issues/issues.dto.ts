@@ -76,6 +76,16 @@ export class CreateIssueDto {
   @IsString()
   @MaxLength(32)
   priority?: string | null;
+
+  @ApiPropertyOptional({ format: "uuid", nullable: true })
+  @IsOptional()
+  @IsUUID()
+  ownerId?: string | null;
+
+  @ApiPropertyOptional({ format: "date-time", nullable: true })
+  @IsOptional()
+  @IsDateString()
+  dueAt?: string | null;
 }
 
 export class IssueActionDto {

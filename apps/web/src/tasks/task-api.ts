@@ -1,7 +1,11 @@
 import { apiClient } from "../auth/api";
 import { arrayBufferToBase64, validateUploadFile } from "../files/file-upload";
 import type {
+  ButlerDashboard,
+  ButlerSupervisionDashboard,
+  ButlerWeeklyReview,
   OverdueAlertPage,
+  SupervisionFocusPage,
   SupervisionSummary,
   TaskDetail,
   TaskPage,
@@ -18,6 +22,7 @@ export interface TaskFilters {
   overdue?: boolean;
   unassigned?: boolean;
   openAlert?: boolean;
+  attentionOnly?: boolean;
   dueFrom?: string;
   dueTo?: string;
 }
@@ -33,6 +38,9 @@ function taskQuery(filters: TaskFilters) {
   if (filters.overdue !== undefined) query.set("overdue", String(filters.overdue));
   if (filters.unassigned !== undefined) query.set("unassigned", String(filters.unassigned));
   if (filters.openAlert !== undefined) query.set("openAlert", String(filters.openAlert));
+  if (filters.attentionOnly !== undefined) {
+    query.set("attentionOnly", String(filters.attentionOnly));
+  }
   return query.toString();
 }
 
@@ -47,6 +55,68 @@ export function listSupervisionTasks(filters: TaskFilters) {
 export function getSupervisionSummary(filters: TaskFilters) {
   return apiClient.request<SupervisionSummary>(
     `/admin/task-supervision/summary?${taskQuery({ ...filters, page: 1, pageSize: 100 })}`,
+  );
+}
+
+export function getButlerDashboard() {
+  return apiClient.request<ButlerDashboard>("/admin/task-supervision/butlers");
+}
+
+export function getButlerSupervision(weekStart?: string) {
+  const query = weekStart ? `?weekStart=${encodeURIComponent(weekStart)}` : "";
+  return apiClient.request<ButlerSupervisionDashboard>(`/admin/butler-supervision${query}`);
+}
+
+export function rejectStudentBlocker(blockerId: string, note: string) {
+  return apiClient.request(`/admin/butler-supervision/student-blockers/${blockerId}/reject`, {
+    method: "POST",
+    body: JSON.stringify({ note: note.trim() }),
+  });
+}
+
+export function reviewButlerWeekly(input: {
+  reviewId: string;
+  version: number;
+  note: string;
+  items: Array<{
+    anomalyId: string;
+    decision: "RECTIFIED" | "APPEAL_ACCEPTED" | "APPEAL_REJECTED";
+  }>;
+}) {
+  return apiClient.request<ButlerWeeklyReview>(
+    `/admin/butler-supervision/weekly-reviews/${input.reviewId}/review`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        version: input.version,
+        note: input.note.trim(),
+        items: input.items,
+      }),
+    },
+  );
+}
+
+export function listMyWeeklyReviews() {
+  return apiClient.request<{ items: ButlerWeeklyReview[] }>("/my/tasks/weekly-reviews");
+}
+
+export function submitMyWeeklyReview(input: {
+  reviewId: string;
+  version: number;
+  items: Array<{ anomalyId: string; responseNote: string }>;
+}) {
+  return apiClient.request<ButlerWeeklyReview>(
+    `/my/tasks/weekly-reviews/${input.reviewId}/submit`,
+    {
+      method: "POST",
+      body: JSON.stringify({ version: input.version, items: input.items }),
+    },
+  );
+}
+
+export function listSupervisionFocus(filters: TaskFilters) {
+  return apiClient.request<SupervisionFocusPage>(
+    `/admin/task-supervision/focus?${taskQuery(filters)}`,
   );
 }
 
@@ -74,12 +144,10 @@ export function updateTaskProgress(input: {
   taskId: string;
   version: number;
   progressNote: string;
-  progressPercent?: number;
 }) {
   return taskWrite(`/tasks/${input.taskId}/progress`, "progress", input.taskId, {
     version: input.version,
     progressNote: input.progressNote.trim(),
-    ...(input.progressPercent !== undefined ? { progressPercent: input.progressPercent } : {}),
   });
 }
 
@@ -93,6 +161,29 @@ export function reportTaskExtension(input: {
     version: input.version,
     reason: input.reason.trim(),
     expectedFinishAt: input.expectedFinishAt,
+  });
+}
+
+export function reportStudentBlocker(input: {
+  taskId: string;
+  version: number;
+  category: string;
+  description: string;
+  expectedRecoveryAt: string;
+}) {
+  return apiClient.request<{
+    id: string;
+    taskId: string;
+    reportedInTime: boolean;
+    taskVersion: number;
+  }>(`/tasks/${input.taskId}/student-blockers`, {
+    method: "POST",
+    body: JSON.stringify({
+      version: input.version,
+      category: input.category,
+      description: input.description.trim(),
+      expectedRecoveryAt: input.expectedRecoveryAt,
+    }),
   });
 }
 

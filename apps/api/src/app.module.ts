@@ -24,6 +24,7 @@ import { MaterialsModule } from "./materials/materials.module.js";
 import { NotificationsModule } from "./notifications/notifications.module.js";
 import { PortalModule } from "./portal/portal.module.js";
 import { StudentRecordsModule } from "./student-records/student-records.module.js";
+import { RectificationsModule } from "./rectifications/rectifications.module.js";
 
 const rootEnvironmentFile = fileURLToPath(new URL("../../../.env", import.meta.url));
 
@@ -70,6 +71,7 @@ const rootEnvironmentFile = fileURLToPath(new URL("../../../.env", import.meta.u
     ApplicationsModule,
     IssuesModule,
     PortalModule,
+    RectificationsModule,
     HealthModule,
   ],
   providers: [

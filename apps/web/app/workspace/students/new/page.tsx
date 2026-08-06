@@ -1,5 +1,5 @@
-import { StudentFormPage } from "../../../../src/students/student-form-page";
+import { StudentOnboardingPage } from "../../../../src/students/student-onboarding-page";
 
 export default function NewStudentPage() {
-  return <StudentFormPage mode="create" />;
+  return <StudentOnboardingPage />;
 }

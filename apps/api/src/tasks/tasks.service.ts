@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { ConfigService } from "@nestjs/config";
-import { ErrorCode, PermissionCode, type AuthenticatedUser } from "@dse/shared";
+import { ErrorCode, PermissionCode, RoleCode, type AuthenticatedUser } from "@dse/shared";
 import { Prisma, type PrismaClient } from "@dse/database";
 import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { ApiException } from "../common/api-exception.js";
@@ -28,6 +28,7 @@ import type {
 import { OverdueScannerService } from "./overdue-scanner.service.js";
 
 const ACTIVE_STATUSES = ["TODO", "IN_PROGRESS"] as const;
+const DUE_SOON_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const EVIDENCE_FILE_TYPES: Record<string, string[]> = {
   ".pdf": ["application/pdf"],
@@ -100,6 +101,22 @@ const TASK_DETAIL_INCLUDE = {
     include: { uploadedBy: { select: { id: true, displayName: true } } },
     orderBy: { createdAt: "desc" as const },
   },
+  studentBlockers: {
+    include: {
+      reportedBy: { select: { id: true, displayName: true } },
+      reviewedBy: { select: { id: true, displayName: true } },
+    },
+    orderBy: { reportedAt: "desc" as const },
+  },
+} satisfies Prisma.TaskInstanceInclude;
+
+const TASK_FOCUS_INCLUDE = {
+  ...TASK_LIST_INCLUDE,
+  progressRecords: {
+    select: { createdAt: true },
+    orderBy: { createdAt: "desc" as const },
+    take: 1,
+  },
 } satisfies Prisma.TaskInstanceInclude;
 
 type TaskListRecord = Prisma.TaskInstanceGetPayload<{ include: typeof TASK_LIST_INCLUDE }>;
@@ -163,6 +180,354 @@ export class TasksService {
           ACTIVE_STATUSES.includes(task.status as (typeof ACTIVE_STATUSES)[number]),
       ).length,
       openAlerts: tasks.reduce((total, task) => total + task.overdueAlerts.length, 0),
+    };
+  }
+
+  public async supervisionFocus(query: ListTasksQueryDto) {
+    await this.overdueScanner.scan();
+    const now = new Date();
+    const dueSoonThreshold = new Date(now.getTime() + DUE_SOON_WINDOW_MS);
+    const where = this.taskWhere({
+      ...query,
+      attentionOnly: query.attentionOnly ?? true,
+    });
+    const tasks = await this.prisma.taskInstance.findMany({
+      where,
+      include: TASK_FOCUS_INCLUDE,
+      orderBy: [{ currentDueAt: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+    });
+    const reasonPriority = {
+      OVERDUE: 5,
+      OPEN_ALERT: 4,
+      UNASSIGNED: 3,
+      DUE_SOON: 1,
+    } as const;
+
+    const focusTasks = tasks.map((task) => {
+      const lastFollowUpAt = task.progressRecords[0]?.createdAt ?? task.startedAt;
+      const isActive = ACTIVE_STATUSES.includes(task.status as (typeof ACTIVE_STATUSES)[number]);
+      const attentionReasons: Array<keyof typeof reasonPriority> = [];
+      if (isActive && task.currentDueAt < now) attentionReasons.push("OVERDUE");
+      if (task.overdueAlerts.some((alert) => alert.status === "OPEN")) {
+        attentionReasons.push("OPEN_ALERT");
+      }
+      if (isActive && !task.ownerId) attentionReasons.push("UNASSIGNED");
+      if (
+        task.status === "TODO" &&
+        task.currentDueAt >= now &&
+        task.currentDueAt <= dueSoonThreshold
+      ) {
+        attentionReasons.push("DUE_SOON");
+      }
+      return {
+        ...this.serializeListTask(task),
+        attentionReasons,
+        lastFollowUpAt: lastFollowUpAt?.toISOString() ?? null,
+      };
+    });
+    type FocusTask = (typeof focusTasks)[number];
+    const grouped = new Map<string, { student: FocusTask["student"]; tasks: FocusTask[] }>();
+    for (const task of focusTasks) {
+      const group = grouped.get(task.student.id) ?? { student: task.student, tasks: [] };
+      group.tasks.push(task);
+      grouped.set(task.student.id, group);
+    }
+    const taskPriority = (task: FocusTask) =>
+      task.attentionReasons.reduce(
+        (priority, reason) => Math.max(priority, reasonPriority[reason]),
+        0,
+      );
+
+    const studentGroups = Array.from(grouped.values()).map((group) => {
+      group.tasks.sort(
+        (left, right) =>
+          taskPriority(right) - taskPriority(left) ||
+          new Date(left.currentDueAt).getTime() - new Date(right.currentDueAt).getTime(),
+      );
+      const owners = new Map<string, { id: string; displayName: string }>();
+      let lastFollowUpAt: string | null = null;
+      for (const task of group.tasks) {
+        if (task.owner) owners.set(task.owner.id, task.owner);
+        if (
+          task.lastFollowUpAt &&
+          (!lastFollowUpAt || new Date(task.lastFollowUpAt) > new Date(lastFollowUpAt))
+        ) {
+          lastFollowUpAt = task.lastFollowUpAt;
+        }
+      }
+      const countReason = (reason: keyof typeof reasonPriority) =>
+        group.tasks.filter((task) => task.attentionReasons.includes(reason)).length;
+      return {
+        student: group.student,
+        taskCount: group.tasks.length,
+        attentionCount: group.tasks.filter((task) => task.attentionReasons.length > 0).length,
+        overdueCount: countReason("OVERDUE"),
+        openAlertCount: countReason("OPEN_ALERT"),
+        unassignedCount: countReason("UNASSIGNED"),
+        staleCount: 0,
+        dueSoonCount: countReason("DUE_SOON"),
+        nearestDueAt: group.tasks[0]!.currentDueAt,
+        lastFollowUpAt,
+        owners: Array.from(owners.values()),
+        tasks: group.tasks,
+      };
+    });
+    studentGroups.sort(
+      (left, right) =>
+        Math.max(...right.tasks.map(taskPriority)) - Math.max(...left.tasks.map(taskPriority)) ||
+        new Date(left.nearestDueAt).getTime() - new Date(right.nearestDueAt).getTime(),
+    );
+
+    const pageSize = Math.min(100, Math.max(1, Number(query.pageSize) || 20));
+    const requestedPage = Math.max(1, Number(query.page) || 1);
+    const page = Math.min(requestedPage, Math.max(1, Math.ceil(studentGroups.length / pageSize)));
+    return {
+      items: studentGroups.slice((page - 1) * pageSize, page * pageSize),
+      page,
+      pageSize,
+      total: studentGroups.length,
+      taskTotal: focusTasks.length,
+    };
+  }
+
+  public async butlerDashboard() {
+    await this.overdueScanner.scan();
+    const now = new Date();
+    const completedSince = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const dueSoonThreshold = new Date(now.getTime() + DUE_SOON_WINDOW_MS);
+    const urgentOverdueThreshold = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+
+    const butlers = await this.prisma.user.findMany({
+      where: {
+        status: "ACTIVE",
+        roles: {
+          some: {
+            expiredAt: null,
+            role: { code: RoleCode.BUTLER },
+          },
+        },
+      },
+      select: {
+        id: true,
+        displayName: true,
+        studentsAsDefaultButler: { select: { id: true } },
+        issuesAssigned: {
+          where: {
+            status: { notIn: ["RESOLVED", "CLOSED"] },
+            dueAt: { not: null },
+          },
+          select: {
+            id: true,
+            category: true,
+            description: true,
+            dueAt: true,
+            student: { select: { id: true, studentNo: true, name: true } },
+          },
+        },
+        rectificationsAssigned: {
+          where: { status: { not: "CLOSED" } },
+          select: { id: true, status: true, dueAt: true },
+        },
+        tasksOwned: {
+          where: {
+            OR: [
+              { status: { in: [...ACTIVE_STATUSES] } },
+              { status: "COMPLETED", completedAt: { gte: completedSince } },
+            ],
+          },
+          select: {
+            id: true,
+            titleSnapshot: true,
+            status: true,
+            currentDueAt: true,
+            startedAt: true,
+            completedAt: true,
+            updatedAt: true,
+            isBlockingSnapshot: true,
+            student: { select: { id: true, studentNo: true, name: true } },
+            overdueAlerts: {
+              where: { status: "OPEN" },
+              select: { id: true },
+            },
+            progressRecords: {
+              select: { createdAt: true },
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
+          },
+        },
+      },
+      orderBy: { displayName: "asc" },
+    });
+
+    const attentionItems: Array<{
+      taskId: string;
+      title: string;
+      reason: "OVERDUE" | "DUE_SOON";
+      owner: { id: string; displayName: string };
+      student: { id: string; studentNo: string; name: string };
+      currentDueAt: string;
+      lastFollowUpAt: string | null;
+      openAlertCount: number;
+    }> = [];
+
+    const items = butlers.map((butler) => {
+      const activeTasks = butler.tasksOwned.filter((task) =>
+        ACTIVE_STATUSES.includes(task.status as (typeof ACTIVE_STATUSES)[number]),
+      );
+      const completedLast7Days = butler.tasksOwned.filter(
+        (task) =>
+          task.status === "COMPLETED" && task.completedAt && task.completedAt >= completedSince,
+      ).length;
+      let latestFollowUpAt: Date | null = null;
+      let overdue = 0;
+      let openAlerts = 0;
+      let attentionCount = 0;
+
+      for (const task of activeTasks) {
+        const lastFollowUpAt =
+          task.progressRecords[0]?.createdAt ?? task.startedAt ?? task.updatedAt;
+        if (!latestFollowUpAt || lastFollowUpAt > latestFollowUpAt) {
+          latestFollowUpAt = lastFollowUpAt;
+        }
+        const isOverdue = task.currentDueAt < now;
+        const isDueSoon =
+          task.status === "TODO" && !isOverdue && task.currentDueAt <= dueSoonThreshold;
+        const reason = isOverdue ? ("OVERDUE" as const) : isDueSoon ? ("DUE_SOON" as const) : null;
+
+        if (isOverdue) overdue += 1;
+        openAlerts += task.overdueAlerts.length;
+        if (reason) {
+          attentionCount += 1;
+          attentionItems.push({
+            taskId: task.id,
+            title: task.titleSnapshot,
+            reason,
+            owner: { id: butler.id, displayName: butler.displayName },
+            student: task.student,
+            currentDueAt: task.currentDueAt.toISOString(),
+            lastFollowUpAt: lastFollowUpAt.toISOString(),
+            openAlertCount: task.overdueAlerts.length,
+          });
+        }
+      }
+
+      const overdueIssues = butler.issuesAssigned.filter(
+        (issue) => issue.dueAt && issue.dueAt < now,
+      );
+      const overdueRectifications = butler.rectificationsAssigned.filter(
+        (record) => record.dueAt < now,
+      );
+      const affectedStudents = new Map<string, { id: string; studentNo: string; name: string }>();
+      for (const task of activeTasks.filter((candidate) => candidate.currentDueAt < now)) {
+        affectedStudents.set(task.student.id, task.student);
+      }
+      for (const issue of overdueIssues) {
+        affectedStudents.set(issue.student.id, issue.student);
+      }
+      const overdueDates = [
+        ...activeTasks.filter((task) => task.currentDueAt < now).map((task) => task.currentDueAt),
+        ...overdueIssues.flatMap((issue) => (issue.dueAt ? [issue.dueAt] : [])),
+        ...overdueRectifications.map((record) => record.dueAt),
+      ];
+      const oldestOverdueAt = overdueDates.sort(
+        (left, right) => left.getTime() - right.getTime(),
+      )[0];
+      const urgent =
+        overdueRectifications.length > 0 ||
+        activeTasks.some(
+          (task) =>
+            task.currentDueAt < now &&
+            (task.currentDueAt <= urgentOverdueThreshold || task.isBlockingSnapshot),
+        ) ||
+        overdueIssues.some((issue) => issue.dueAt && issue.dueAt <= urgentOverdueThreshold);
+      const riskLevel = urgent
+        ? ("URGENT" as const)
+        : overdue + overdueIssues.length > 0
+          ? ("WARNING" as const)
+          : attentionCount > 0
+            ? ("REMINDER" as const)
+            : ("NORMAL" as const);
+
+      const workStatus =
+        riskLevel === "URGENT" || riskLevel === "WARNING" || openAlerts > 0
+          ? ("NEEDS_ACTION" as const)
+          : riskLevel === "REMINDER"
+            ? ("WATCH" as const)
+            : activeTasks.length === 0
+              ? ("IDLE" as const)
+              : ("NORMAL" as const);
+
+      return {
+        id: butler.id,
+        displayName: butler.displayName,
+        studentCount: butler.studentsAsDefaultButler.length,
+        activeTaskCount: activeTasks.length,
+        todo: activeTasks.filter((task) => task.status === "TODO").length,
+        inProgress: activeTasks.filter((task) => task.status === "IN_PROGRESS").length,
+        completedLast7Days,
+        overdue,
+        overdueIssueCount: overdueIssues.length,
+        overdueRectificationCount: overdueRectifications.length,
+        openAlerts,
+        attentionCount: attentionCount + overdueIssues.length + overdueRectifications.length,
+        lastFollowUpAt: latestFollowUpAt?.toISOString() ?? null,
+        oldestOverdueAt: oldestOverdueAt?.toISOString() ?? null,
+        affectedStudents: Array.from(affectedStudents.values()),
+        activeRectificationCount: butler.rectificationsAssigned.length,
+        riskLevel,
+        anomalies: [
+          ...activeTasks
+            .filter((task) => task.currentDueAt < now)
+            .map((task) => ({
+              type: "TASK" as const,
+              id: task.id,
+              title: task.titleSnapshot,
+              dueAt: task.currentDueAt.toISOString(),
+              student: task.student,
+              isBlocking: task.isBlockingSnapshot,
+            })),
+          ...overdueIssues.map((issue) => ({
+            type: "ISSUE" as const,
+            id: issue.id,
+            title: `${issue.category}：${issue.description}`,
+            dueAt: issue.dueAt!.toISOString(),
+            student: issue.student,
+            isBlocking: false,
+          })),
+        ],
+        workStatus,
+      };
+    });
+
+    const workStatusPriority = { NEEDS_ACTION: 3, WATCH: 2, NORMAL: 1, IDLE: 0 } as const;
+    items.sort(
+      (left, right) =>
+        workStatusPriority[right.workStatus] - workStatusPriority[left.workStatus] ||
+        right.attentionCount - left.attentionCount ||
+        left.displayName.localeCompare(right.displayName, "zh-Hans-CN"),
+    );
+    const attentionPriority = { OVERDUE: 2, DUE_SOON: 1 } as const;
+    attentionItems.sort(
+      (left, right) =>
+        attentionPriority[right.reason] - attentionPriority[left.reason] ||
+        new Date(left.currentDueAt).getTime() - new Date(right.currentDueAt).getTime(),
+    );
+
+    return {
+      summary: {
+        butlerCount: items.length,
+        studentCount: items.reduce((total, item) => total + item.studentCount, 0),
+        inProgress: items.reduce((total, item) => total + item.inProgress, 0),
+        attentionCount: items.reduce((total, item) => total + item.attentionCount, 0),
+        abnormalButlerCount: items.filter((item) => item.riskLevel !== "NORMAL").length,
+        pendingReviewCount: await this.prisma.rectificationRecord.count({
+          where: { status: "PENDING_REVIEW" },
+        }),
+      },
+      items,
+      attentionItems,
+      generatedAt: now.toISOString(),
     };
   }
 
@@ -251,33 +616,21 @@ export class TasksService {
       idempotencyKey,
       request,
       async (transaction, actor) => {
-        const task = await this.loadTaskForWrite(transaction, taskId, body.version, actor, [
-          "IN_PROGRESS",
-        ]);
-        await this.updateTaskVersioned(transaction, taskId, body.version, {
-          ...(body.progressPercent !== undefined ? { progressPercent: body.progressPercent } : {}),
-        });
+        await this.loadTaskForWrite(transaction, taskId, body.version, actor, ["IN_PROGRESS"]);
+        await this.updateTaskVersioned(transaction, taskId, body.version, {});
         await transaction.taskProgressRecord.create({
           data: {
             taskId,
             progressNote: body.progressNote.trim(),
-            progressPercent: body.progressPercent,
             createdById: actor.id,
           },
         });
         await this.recordTimeline(transaction, request, {
           taskId,
           eventType: "PROGRESS_UPDATED",
-          summary:
-            body.progressPercent === undefined
-              ? "管家更新任务进展"
-              : `任务进度更新为 ${body.progressPercent}%`,
-          beforeData: {
-            progressPercent: task.progressPercent,
-            version: body.version,
-          },
+          summary: "管家更新任务进展",
+          beforeData: { version: body.version },
           afterData: {
-            progressPercent: body.progressPercent ?? task.progressPercent,
             progressNote: body.progressNote.trim(),
             version: body.version + 1,
           },
@@ -285,12 +638,8 @@ export class TasksService {
         await this.recordTaskAudit(transaction, request, {
           action: "TASK_PROGRESS_UPDATED",
           taskId,
-          beforeData: {
-            progressPercent: task.progressPercent,
-            version: body.version,
-          },
+          beforeData: { version: body.version },
           afterData: {
-            progressPercent: body.progressPercent ?? task.progressPercent,
             progressNote: body.progressNote.trim(),
             version: body.version + 1,
           },
@@ -1046,6 +1395,26 @@ export class TasksService {
 
   private taskWhere(query: ListTasksQueryDto, forcedOwnerId?: string) {
     const now = new Date();
+    const dueSoonThreshold = new Date(now.getTime() + DUE_SOON_WINDOW_MS);
+    const and: Prisma.TaskInstanceWhereInput[] = [];
+    if (query.overdue === false) {
+      and.push({
+        OR: [{ status: { in: ["COMPLETED", "CANCELED"] } }, { currentDueAt: { gte: now } }],
+      });
+    }
+    if (query.attentionOnly === true) {
+      and.push({
+        OR: [
+          { status: { in: [...ACTIVE_STATUSES] }, currentDueAt: { lt: now } },
+          { overdueAlerts: { some: { status: "OPEN" } } },
+          { status: { in: [...ACTIVE_STATUSES] }, ownerId: null },
+          {
+            status: "TODO",
+            currentDueAt: { gte: now, lte: dueSoonThreshold },
+          },
+        ],
+      });
+    }
     return {
       ...(query.status ? { status: query.status } : { status: { in: [...ACTIVE_STATUSES] } }),
       ...(!forcedOwnerId && query.ownerId ? { ownerId: query.ownerId } : {}),
@@ -1071,11 +1440,6 @@ export class TasksService {
             currentDueAt: { lt: now },
           }
         : {}),
-      ...(query.overdue === false
-        ? {
-            OR: [{ status: { in: ["COMPLETED", "CANCELED"] } }, { currentDueAt: { gte: now } }],
-          }
-        : {}),
       ...(query.dueFrom || query.dueTo
         ? {
             currentDueAt: {
@@ -1086,6 +1450,7 @@ export class TasksService {
           }
         : {}),
       ...(forcedOwnerId ? { ownerId: forcedOwnerId } : {}),
+      ...(and.length > 0 ? { AND: and } : {}),
     } satisfies Prisma.TaskInstanceWhereInput;
   }
 
@@ -1436,6 +1801,19 @@ export class TasksService {
         expectedFinishAt: report.expectedFinishAt.toISOString(),
         reportedBy: report.reportedBy,
         reportedAt: report.reportedAt.toISOString(),
+      })),
+      studentBlockers: task.studentBlockers.map((blocker) => ({
+        id: blocker.id,
+        category: blocker.category,
+        description: blocker.description,
+        expectedRecoveryAt: blocker.expectedRecoveryAt.toISOString(),
+        reportedAt: blocker.reportedAt.toISOString(),
+        reportedInTime: blocker.reportedInTime,
+        status: blocker.status,
+        reportedBy: blocker.reportedBy,
+        reviewedBy: blocker.reviewedBy,
+        reviewedAt: blocker.reviewedAt?.toISOString() ?? null,
+        reviewNote: blocker.reviewNote,
       })),
       dueDateChanges: task.dueDateChanges.map((change) => ({
         id: change.id,

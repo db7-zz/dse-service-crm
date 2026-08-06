@@ -1,8 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { PermissionCode, RoleCode } from "@dse/shared";
-import { Button, Form, Input, Select, Space, Typography, App, type TableColumnsType } from "antd";
+import {
+  Button,
+  Form,
+  Input,
+  Select,
+  Space,
+  Typography,
+  App,
+  Tabs,
+  Tag,
+  type TableColumnsType,
+} from "antd";
 import {
   DataTable,
   ErrorState,
@@ -34,16 +46,53 @@ interface UserPage {
   total: number;
 }
 
+interface StudentAccountRecord {
+  id: string;
+  studentNo: string;
+  name: string;
+  serviceStatus: string;
+  profileStatus: string;
+  defaultButler: { id: string; displayName: string } | null;
+  account: null | {
+    id: string;
+    username: string;
+    status: "ACTIVE" | "DISABLED" | "LOCKED";
+    mustChangePassword: boolean;
+    lastLoginAt: string | null;
+  };
+  accountState:
+    | "ACTIVE"
+    | "DISABLED"
+    | "LOCKED"
+    | "PENDING_BUTLER_ACCEPTANCE"
+    | "PENDING_ACTIVATION"
+    | "ACTIVATION_FAILED";
+  createdAt: string;
+}
+
+interface StudentAccountPage {
+  items: StudentAccountRecord[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
 const ROLE_OPTIONS = [
   { value: RoleCode.ADMINISTRATOR, label: "管理员" },
   { value: RoleCode.BUTLER, label: "管家" },
   { value: RoleCode.PLANNER, label: "规划老师" },
   { value: RoleCode.SPECIALIST, label: "专项老师" },
-  { value: RoleCode.STUDENT, label: "学生" },
 ];
 
 export default function UsersPage() {
+  const [activeTab, setActiveTab] = useState<"staff" | "students">("staff");
   const [data, setData] = useState<UserPage>({ items: [], page: 1, pageSize: 20, total: 0 });
+  const [studentData, setStudentData] = useState<StudentAccountPage>({
+    items: [],
+    page: 1,
+    pageSize: 20,
+    total: 0,
+  });
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>();
   const [loading, setLoading] = useState(true);
@@ -55,8 +104,16 @@ export default function UsersPage() {
   const [roleForm] = Form.useForm();
   const { message } = App.useApp();
 
+  useEffect(() => {
+    if (!roleUser) return;
+    roleForm.setFieldsValue({
+      roleCodes: roleUser.roles.map((role) => role.code),
+      reason: "",
+    });
+  }, [roleForm, roleUser]);
+
   const load = useCallback(
-    async (page = data.page, pageSize = data.pageSize) => {
+    async (page = 1, pageSize = 20) => {
       setLoading(true);
       setError(undefined);
       try {
@@ -70,12 +127,34 @@ export default function UsersPage() {
         setLoading(false);
       }
     },
-    [data.page, data.pageSize, search, status],
+    [search, status],
+  );
+
+  const loadStudents = useCallback(
+    async (page = 1, pageSize = 20) => {
+      setLoading(true);
+      setError(undefined);
+      try {
+        const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+        if (search) query.set("search", search);
+        setStudentData(
+          await apiClient.request<StudentAccountPage>(
+            `/admin/users/student-accounts?${query.toString()}`,
+          ),
+        );
+      } catch (exception) {
+        setError(exception instanceof Error ? exception.message : "学生账号列表加载失败");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [search],
   );
 
   useEffect(() => {
-    void load(1);
-  }, [load]);
+    if (activeTab === "staff") void load(1);
+    else void loadStudents(1);
+  }, [activeTab, load, loadStudents]);
 
   const changeState = async (record: UserRecord, action: "enable" | "disable") => {
     await apiClient.request(`/admin/users/${record.id}/${action}`, {
@@ -130,12 +209,14 @@ export default function UsersPage() {
         <Space>
           <Button
             size="small"
+            disabled={record.roles.some((role) => role.code === RoleCode.STUDENT)}
+            title={
+              record.roles.some((role) => role.code === RoleCode.STUDENT)
+                ? "学生角色由新生建档流程维护"
+                : undefined
+            }
             onClick={() => {
               setRoleUser(record);
-              roleForm.setFieldsValue({
-                roleCodes: record.roles.map((role) => role.code),
-                reason: "",
-              });
             }}
           >
             调整角色
@@ -163,16 +244,94 @@ export default function UsersPage() {
     },
   ];
 
+  const studentColumns: TableColumnsType<StudentAccountRecord> = [
+    {
+      title: "学生",
+      render: (_, record) => (
+        <div>
+          <Link href={`/workspace/students/${record.id}`}>
+            <Typography.Text strong>{record.name}</Typography.Text>
+          </Link>
+          <br />
+          <Typography.Text type="secondary">{record.studentNo}</Typography.Text>
+        </div>
+      ),
+    },
+    {
+      title: "学生账号",
+      render: (_, record) =>
+        record.account ? (
+          <div>
+            <Typography.Text>@{record.account.username}</Typography.Text>
+            <br />
+            <Typography.Text type="secondary">
+              {record.account.mustChangePassword ? "等待首次修改密码" : "已设置正式密码"}
+            </Typography.Text>
+          </div>
+        ) : (
+          <Typography.Text type="secondary">尚未生成</Typography.Text>
+        ),
+    },
+    { title: "负责管家", render: (_, record) => record.defaultButler?.displayName ?? "待分配" },
+    {
+      title: "账号状态",
+      render: (_, record) => {
+        const labels: Record<string, string> = {
+          ACTIVE: "可登录",
+          DISABLED: "已停用",
+          LOCKED: "已锁定",
+          PENDING_BUTLER_ACCEPTANCE: "待管家接手",
+          PENDING_ACTIVATION: "待开通",
+          ACTIVATION_FAILED: "开通失败",
+        };
+        const colors: Record<string, string> = {
+          ACTIVE: "success",
+          DISABLED: "default",
+          LOCKED: "error",
+          PENDING_BUTLER_ACCEPTANCE: "processing",
+          PENDING_ACTIVATION: "warning",
+          ACTIVATION_FAILED: "error",
+        };
+        return (
+          <Tag color={colors[record.accountState]}>
+            {labels[record.accountState] ?? record.accountState}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: "建档状态",
+      render: (_, record) =>
+        (
+          ({
+            INFORMATION_PENDING: "待学生填写",
+            PENDING_REVIEW: "待管家确认",
+            CONFIRMED: "待分配规划老师",
+            PLANNER_ASSIGNED: "已分配规划老师",
+          }) as Record<string, string>
+        )[record.profileStatus] ?? record.profileStatus,
+    },
+    {
+      title: "最后登录",
+      render: (_, record) =>
+        record.account?.lastLoginAt
+          ? new Date(record.account.lastLoginAt).toLocaleString("zh-CN")
+          : "尚未登录",
+    },
+  ];
+
   return (
     <PermissionPage permission={PermissionCode.SYSTEM_USERS_READ}>
       <PageShell
         section="系统管理"
         title="账号管理"
-        description="创建、启停人员账号并维护角色。敏感操作会撤销会话并写入审计日志。"
+        description="员工账号由管理员维护；学生账号在管理员或管家新建学生时自动开通，异常记录仍会保留在列表中。"
         extra={
-          <Button type="primary" onClick={() => setCreateOpen(true)}>
-            新建账号
-          </Button>
+          activeTab === "staff" ? (
+            <Button type="primary" onClick={() => setCreateOpen(true)}>
+              新建员工账号
+            </Button>
+          ) : null
         }
       >
         <FilterBar>
@@ -193,11 +352,21 @@ export default function UsersPage() {
               { value: "LOCKED", label: "临时锁定" },
             ]}
           />
-          <Button onClick={() => void load(1)}>查询</Button>
+          <Button onClick={() => void (activeTab === "staff" ? load(1) : loadStudents(1))}>
+            查询
+          </Button>
         </FilterBar>
+        <Tabs
+          activeKey={activeTab}
+          onChange={(key) => setActiveTab(key as "staff" | "students")}
+          items={[
+            { key: "staff", label: "员工账号" },
+            { key: "students", label: "学生账号" },
+          ]}
+        />
         {error ? (
           <ErrorState message={error} onRetry={() => void load()} />
-        ) : (
+        ) : activeTab === "staff" ? (
           <DataTable<UserRecord>
             columns={columns}
             dataSource={data.items}
@@ -210,10 +379,23 @@ export default function UsersPage() {
               onChange: (page, pageSize) => void load(page, pageSize),
             }}
           />
+        ) : (
+          <DataTable<StudentAccountRecord>
+            columns={studentColumns}
+            dataSource={studentData.items}
+            loading={loading}
+            pagination={{
+              current: studentData.page,
+              pageSize: studentData.pageSize,
+              total: studentData.total,
+              showSizeChanger: true,
+              onChange: (page, pageSize) => void loadStudents(page, pageSize),
+            }}
+          />
         )}
 
         <FormModal
-          title="新建账号"
+          title="新建员工账号"
           open={createOpen}
           submitting={submitting}
           onCancel={() => setCreateOpen(false)}

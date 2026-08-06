@@ -2,8 +2,10 @@ import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module.js";
 import { DatabaseModule } from "../database/database.module.js";
 import { OverdueScannerService } from "./overdue-scanner.service.js";
+import { ButlerSupervisionService } from "./butler-supervision.service.js";
 import {
   AdminTasksController,
+  ButlerSupervisionController,
   MyTasksController,
   OverdueAlertsController,
   TasksController,
@@ -18,11 +20,17 @@ import { MaterialsModule } from "../materials/materials.module.js";
   controllers: [
     TasksController,
     MyTasksController,
+    ButlerSupervisionController,
     TaskSupervisionController,
     AdminTasksController,
     OverdueAlertsController,
   ],
-  providers: [TasksService, OverdueScannerService, ServiceProgressService],
+  providers: [
+    TasksService,
+    ButlerSupervisionService,
+    OverdueScannerService,
+    ServiceProgressService,
+  ],
   exports: [TasksService, OverdueScannerService],
 })
 export class TasksModule {}

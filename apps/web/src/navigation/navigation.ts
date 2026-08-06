@@ -57,9 +57,9 @@ const NAVIGATION: NavigationItem[] = [
     permission: PermissionCode.TASKS_OWN_READ,
   },
   {
-    key: "supervision",
-    label: "监督管理看板",
-    href: "/workspace/supervision",
+    key: "butlers",
+    label: "管家监督",
+    href: "/workspace/butlers",
     permission: PermissionCode.TASK_SUPERVISION_READ,
   },
   {
@@ -92,6 +92,9 @@ export function navigationFor(user: AuthenticatedUser): NavigationItem[] {
 }
 
 export function defaultRouteFor(user: AuthenticatedUser): string {
+  if (user.mustChangePassword) {
+    return "/change-password";
+  }
   if (user.permissions.includes(PermissionCode.PORTAL_ACCESS)) {
     return "/portal";
   }
@@ -105,7 +108,7 @@ export function defaultRouteFor(user: AuthenticatedUser): string {
     return "/workspace/my-tasks";
   }
   if (user.permissions.includes(PermissionCode.TASK_SUPERVISION_READ)) {
-    return "/workspace/supervision";
+    return "/workspace/butlers";
   }
   if (user.permissions.includes(PermissionCode.STUDENTS_READ)) {
     return "/workspace/students";

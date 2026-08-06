@@ -44,6 +44,20 @@ export class UsersController {
     return this.usersService.list({ page, pageSize: Math.min(pageSize, 100), search, status });
   }
 
+  @Get("student-accounts")
+  @RequiresPermission(PermissionCode.SYSTEM_USERS_READ)
+  public listStudentAccounts(
+    @Query("page", new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query("pageSize", new DefaultValuePipe(20), ParseIntPipe) pageSize: number,
+    @Query("search") search?: string,
+  ) {
+    return this.usersService.listStudentAccounts({
+      page,
+      pageSize: Math.min(pageSize, 100),
+      search,
+    });
+  }
+
   @Post()
   @RequiresPermission(PermissionCode.SYSTEM_USERS_WRITE)
   @UseGuards(OriginGuard, CsrfGuard)

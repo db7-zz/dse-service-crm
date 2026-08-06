@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import type { PrismaClient } from "@dse/database";
 import { PRISMA } from "../database/database.module.js";
+import { ButlerSupervisionService } from "./butler-supervision.service.js";
 
 const ACTIVE_STATUSES = ["TODO", "IN_PROGRESS"] as const;
 
@@ -15,7 +16,11 @@ export class OverdueScannerService implements OnModuleInit, OnModuleDestroy {
     failed: number;
   }>;
 
-  public constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
+  public constructor(
+    @Inject(PRISMA) private readonly prisma: PrismaClient,
+    @Inject(ButlerSupervisionService)
+    private readonly butlerSupervision: ButlerSupervisionService,
+  ) {}
 
   public onModuleInit() {
     void this.scan().catch((error: unknown) => {
@@ -49,10 +54,18 @@ export class OverdueScannerService implements OnModuleInit, OnModuleDestroy {
 
   private async performScan() {
     const now = new Date();
+    await this.butlerSupervision.sync(now);
     const overdueTasks = await this.prisma.taskInstance.findMany({
       where: {
         status: { in: [...ACTIVE_STATUSES] },
         currentDueAt: { lt: now },
+        studentBlockers: {
+          none: {
+            status: "ACTIVE",
+            reportedInTime: true,
+            expectedRecoveryAt: { gt: now },
+          },
+        },
         overdueAlerts: {
           none: { status: { in: ["OPEN", "HANDLED"] } },
         },
@@ -208,17 +221,8 @@ export class OverdueScannerService implements OnModuleInit, OnModuleDestroy {
             requestId: `overdue-scan-${now.getTime()}`,
           },
         });
-        const recipients = new Set<string>();
-        if (task.ownerId) recipients.add(task.ownerId);
-        const managers = await transaction.user.findMany({
-          where: {
-            status: "ACTIVE",
-            roles: { some: { expiredAt: null, role: { code: "ADMINISTRATOR" } } },
-          },
-          select: { id: true },
-        });
-        for (const manager of managers) recipients.add(manager.id);
-        for (const recipientId of recipients) {
+        if (task.ownerId) {
+          const recipientId = task.ownerId;
           const eventKey = `task-overdue:${alert.id}:${recipientId}`;
           await transaction.notification.upsert({
             where: { eventKey },

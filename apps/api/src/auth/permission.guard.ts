@@ -15,6 +15,14 @@ export class PermissionGuard implements CanActivate {
   ) {}
 
   public async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest<RequestContext>();
+    if (request.authenticatedUser?.mustChangePassword) {
+      throw new ApiException(
+        HttpStatus.FORBIDDEN,
+        ErrorCode.AUTH_PASSWORD_CHANGE_REQUIRED,
+        "首次登录必须先修改临时密码",
+      );
+    }
     const required = this.reflector.getAllAndOverride<PermissionCode>(REQUIRED_PERMISSION, [
       context.getHandler(),
       context.getClass(),
@@ -22,7 +30,6 @@ export class PermissionGuard implements CanActivate {
     if (!required) {
       return true;
     }
-    const request = context.switchToHttp().getRequest<RequestContext>();
     if (!request.authenticatedUser?.permissions.includes(required)) {
       await this.prisma.auditLog.create({
         data: {

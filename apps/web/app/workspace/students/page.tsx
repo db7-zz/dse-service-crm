@@ -52,6 +52,10 @@ export default function StudentsPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const administratorView = Boolean(user?.permissions.includes(PermissionCode.STUDENTS_READ));
+  const canCreateStudent = Boolean(
+    user?.permissions.includes(PermissionCode.STUDENTS_WRITE) ||
+    user?.permissions.includes(PermissionCode.STUDENTS_OWN_WRITE),
+  );
   const [initialInput] = useState<StudentListInput>(() => ({
     page: positiveInteger(searchParams.get("page"), 1),
     pageSize: Math.min(100, positiveInteger(searchParams.get("pageSize"), 20)),
@@ -200,9 +204,9 @@ export default function StudentsPage() {
             <p className={styles.lead}>
               {administratorView
                 ? "查看学生档案、负责人和八阶段服务进度，及时定位阻塞、逾期与前序遗留任务。"
-                : "按学生维度查看本人当前负责学生的八阶段服务进度；此页面为只读视图。"}
+                : "查看本人负责学生的服务进度、建档提交与账号状态；日常资料由学生平台提交，无需在微信群重复登记。"}
             </p>
-            {administratorView ? (
+            {canCreateStudent ? (
               <div className={styles.heroActions}>
                 <Link href="/workspace/students/new">
                   <Button
@@ -355,17 +359,17 @@ export default function StudentsPage() {
                 {hasFilters
                   ? "调整筛选条件，或清除筛选查看全部学生。"
                   : administratorView
-                    ? "新建第一位学生，只需填写姓名即可保存。"
+                    ? "新建学生时分配负责管家，并立即开通学生账号。"
                     : "当前没有由你担任默认管家的学生。"}
               </p>
               {hasFilters ? (
                 <Button className={styles.secondaryButton} onClick={clearFilters}>
                   清除筛选
                 </Button>
-              ) : administratorView ? (
+              ) : canCreateStudent ? (
                 <Link href="/workspace/students/new">
                   <Button type="primary" className={styles.primaryButton}>
-                    新建第一位学生
+                    新建学生
                   </Button>
                 </Link>
               ) : null}

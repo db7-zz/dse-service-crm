@@ -1,6 +1,6 @@
 import path from "node:path";
 import { ConfigService } from "@nestjs/config";
-import { ErrorCode, type AuthenticatedUser } from "@dse/shared";
+import { ErrorCode, RoleCode, type AuthenticatedUser } from "@dse/shared";
 import { Prisma, type PrismaClient, type TaskStatus } from "@dse/database";
 import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { StudentAccessService } from "../access/student-access.service.js";
@@ -54,6 +54,16 @@ const MATERIAL_INCLUDE = {
   },
 } as const;
 
+const PLANNER_VISIBLE_MATERIAL_CODES = [
+  "BASIC_INFORMATION",
+  "SELF_RECOMMENDATION",
+  "TRANSCRIPT",
+  "RECOMMENDATION",
+  "ACTIVITY_EVIDENCE",
+  "PREDICTED_GRADES",
+  "LANGUAGE_SCORE",
+];
+
 @Injectable()
 export class MaterialsService {
   private readonly maxUploadBytes: number;
@@ -78,13 +88,22 @@ export class MaterialsService {
 
   public async list(studentId: string, request: RequestContext) {
     await this.access.assertInternalAccess(studentId, request);
+    const actor = request.authenticatedUser as AuthenticatedUser;
+    const isPlanner = actor.roles.includes(RoleCode.PLANNER);
+    const isAdministrator = actor.roles.includes(RoleCode.ADMINISTRATOR);
     const items = await this.prisma.materialItem.findMany({
-      where: { studentId },
+      where: {
+        studentId,
+        ...(isPlanner ? { materialType: { code: { in: PLANNER_VISIBLE_MATERIAL_CODES } } } : {}),
+      },
       include: MATERIAL_INCLUDE,
-      orderBy: [{ materialType: { isCore: "desc" } }, { createdAt: "asc" }],
+      orderBy: [{ materialType: { sequenceNo: "asc" } }, { createdAt: "asc" }],
     });
     return {
-      items: items.map((item) => this.serialize(item)),
+      items: items.map((item) => {
+        const serialized = this.serialize(item);
+        return isAdministrator ? { ...serialized, currentVersion: null, versions: [] } : serialized;
+      }),
       summary: this.summary(items),
     };
   }
@@ -395,13 +414,31 @@ export class MaterialsService {
   public async download(versionId: string, request: RequestContext, expectedStudentId?: string) {
     const version = await this.prisma.materialVersion.findUnique({
       where: { id: versionId },
-      include: { materialItem: { include: { student: true } } },
+      include: { materialItem: { include: { student: true, materialType: true } } },
     });
     if (!version || (expectedStudentId && version.materialItem.studentId !== expectedStudentId)) {
       throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND, "资料版本不存在");
     }
     if (!expectedStudentId) {
       await this.access.assertInternalAccess(version.materialItem.studentId, request);
+      const actor = request.authenticatedUser as AuthenticatedUser;
+      if (actor.roles.includes(RoleCode.ADMINISTRATOR)) {
+        throw new ApiException(
+          HttpStatus.FORBIDDEN,
+          ErrorCode.FORBIDDEN,
+          "管理员默认仅查看资料状态，原始文件由负责管家处理",
+        );
+      }
+      if (
+        actor.roles.includes(RoleCode.PLANNER) &&
+        !PLANNER_VISIBLE_MATERIAL_CODES.includes(version.materialItem.materialType.code)
+      ) {
+        throw new ApiException(
+          HttpStatus.FORBIDDEN,
+          ErrorCode.FORBIDDEN,
+          "该资料不属于规划老师的工作范围",
+        );
+      }
     }
     await this.prisma.auditLog.create({
       data: this.audit(request, "material_version", version.id, "MATERIAL_DOWNLOADED", {

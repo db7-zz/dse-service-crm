@@ -32,6 +32,9 @@ export const PermissionCode = {
   STUDENTS_OWN_READ: "students.own.read",
   STUDENTS_WRITE: "students.write",
   STUDENTS_PLANNING_WRITE: "students.planning.write",
+  STUDENTS_OWN_WRITE: "students.own.write",
+  STUDENT_HANDOFFS_READ: "student-handoffs.read",
+  STUDENT_HANDOFFS_WRITE: "student-handoffs.write",
   SOP_READ: "sop.read",
   SOP_WRITE: "sop.write",
   SERVICE_ACTIVATION_WRITE: "service.activation.write",
@@ -58,6 +61,8 @@ export const ErrorCode = {
   AUTH_INVALID_CREDENTIALS: "AUTH_INVALID_CREDENTIALS",
   AUTH_ACCOUNT_DISABLED: "AUTH_ACCOUNT_DISABLED",
   AUTH_ACCOUNT_LOCKED: "AUTH_ACCOUNT_LOCKED",
+  AUTH_TEMPORARY_PASSWORD_EXPIRED: "AUTH_TEMPORARY_PASSWORD_EXPIRED",
+  AUTH_PASSWORD_CHANGE_REQUIRED: "AUTH_PASSWORD_CHANGE_REQUIRED",
   AUTH_SESSION_EXPIRED: "AUTH_SESSION_EXPIRED",
   AUTH_CSRF_INVALID: "AUTH_CSRF_INVALID",
   UNAUTHENTICATED: "UNAUTHENTICATED",
@@ -130,6 +135,7 @@ export interface AuthenticatedUser {
   displayName: string;
   roles: RoleCode[];
   permissions: PermissionCode[];
+  mustChangePassword: boolean;
 }
 
 export interface AuditEvent {

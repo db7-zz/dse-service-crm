@@ -8,10 +8,10 @@ import {
   ApiTooManyRequestsResponse,
 } from "@nestjs/swagger";
 import { ConfigService } from "@nestjs/config";
-import { Throttle } from "@nestjs/throttler";
+import { SkipThrottle } from "@nestjs/throttler";
 import type { Environment } from "../config/environment.js";
 import type { RequestContext } from "../common/request-context.js";
-import { LoginDto } from "./auth.dto.js";
+import { ChangePasswordDto, LoginDto } from "./auth.dto.js";
 import { AuthService } from "./auth.service.js";
 import { CsrfGuard } from "./csrf.guard.js";
 import { OriginGuard } from "./origin.guard.js";
@@ -28,7 +28,7 @@ export class AuthController {
 
   @Post("login")
   @UseGuards(OriginGuard)
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @SkipThrottle()
   @ApiOperation({ summary: "使用用户名和密码登录" })
   @ApiCreatedResponse({ description: "登录成功并设置会话Cookie" })
   @ApiTooManyRequestsResponse({ description: "登录请求过于频繁" })
@@ -56,6 +56,13 @@ export class AuthController {
   @ApiCookieAuth()
   public me(@Req() request: RequestContext) {
     return request.authenticatedUser;
+  }
+
+  @Post("change-password")
+  @UseGuards(SessionAuthGuard, OriginGuard, CsrfGuard)
+  @ApiCookieAuth()
+  public changePassword(@Body() body: ChangePasswordDto, @Req() request: RequestContext) {
+    return this.authService.changePassword(body.currentPassword, body.newPassword, request);
   }
 
   @Get("csrf")

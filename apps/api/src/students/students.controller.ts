@@ -25,7 +25,9 @@ import {
   ActivateStudentServiceDto,
   AssignResponsiblePersonDto,
   BulkAssignUnassignedTasksDto,
+  CheckStudentNameQueryDto,
   CreateStudentDto,
+  ConfirmStudentProfileDto,
   CreateManualTaskDto,
   ListStudentsQueryDto,
   UpdateStudentDto,
@@ -64,6 +66,12 @@ export class StudentsController {
   @UseGuards(OriginGuard, CsrfGuard)
   public create(@Body() body: CreateStudentDto, @Req() request: RequestContext) {
     return this.studentsService.create(body, request);
+  }
+
+  @Get("name-duplicates")
+  @RequiresPermission(PermissionCode.STUDENTS_WRITE)
+  public checkNameDuplicates(@Query() query: CheckStudentNameQueryDto) {
+    return this.studentsService.checkNameDuplicates(query.name);
   }
 
   @Get(":studentId")
@@ -147,6 +155,27 @@ export class StudentsController {
     return this.studentWorkflowService.activate(studentId, body, request);
   }
 
+  @Post(":studentId/account-repair")
+  @RequiresPermission(PermissionCode.SERVICE_ACTIVATION_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public repairPortalAccount(
+    @Param("studentId", new ParseUUIDPipe({ version: "4" })) studentId: string,
+    @Body() body: ActivateStudentServiceDto,
+    @Req() request: RequestContext,
+  ) {
+    return this.studentWorkflowService.repairPortalAccount(studentId, body, request);
+  }
+
+  @Post(":studentId/account-reset")
+  @RequiresPermission(PermissionCode.SERVICE_ACTIVATION_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public resetPortalAccount(
+    @Param("studentId", new ParseUUIDPipe({ version: "4" })) studentId: string,
+    @Req() request: RequestContext,
+  ) {
+    return this.studentWorkflowService.resetPortalAccount(studentId, request);
+  }
+
   @Post(":studentId/assign-unassigned-tasks")
   @RequiresPermission(PermissionCode.TASK_SUPERVISION_WRITE)
   @UseGuards(OriginGuard, CsrfGuard)
@@ -167,10 +196,26 @@ export class StudentsController {
 export class MyStudentsController {
   public constructor(@Inject(StudentsService) private readonly studentsService: StudentsService) {}
 
+  @Inject(StudentWorkflowService)
+  private readonly studentWorkflowService!: StudentWorkflowService;
+
   @Get()
   @RequiresPermission(PermissionCode.STUDENTS_OWN_READ)
   public list(@Query() query: ListStudentsQueryDto, @Req() request: RequestContext) {
     return this.studentsService.listMine(query, request);
+  }
+
+  @Post()
+  @RequiresPermission(PermissionCode.STUDENTS_OWN_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public create(@Body() body: CreateStudentDto, @Req() request: RequestContext) {
+    return this.studentsService.createMine(body, request);
+  }
+
+  @Get("name-duplicates")
+  @RequiresPermission(PermissionCode.STUDENTS_OWN_WRITE)
+  public checkNameDuplicates(@Query() query: CheckStudentNameQueryDto) {
+    return this.studentsService.checkNameDuplicates(query.name);
   }
 
   @Get(":studentId")
@@ -189,5 +234,46 @@ export class MyStudentsController {
     @Req() request: RequestContext,
   ) {
     return this.studentsService.serviceProgressMine(studentId, request);
+  }
+
+  @Get(":studentId/profile-submission")
+  @RequiresPermission(PermissionCode.STUDENTS_OWN_READ)
+  public profileSubmission(
+    @Param("studentId", new ParseUUIDPipe({ version: "4" })) studentId: string,
+    @Req() request: RequestContext,
+  ) {
+    return this.studentsService.profileSubmissionMine(studentId, request);
+  }
+
+  @Post(":studentId/profile-submission/confirm")
+  @RequiresPermission(PermissionCode.STUDENTS_OWN_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public confirmProfileSubmission(
+    @Param("studentId", new ParseUUIDPipe({ version: "4" })) studentId: string,
+    @Body() body: ConfirmStudentProfileDto,
+    @Req() request: RequestContext,
+  ) {
+    return this.studentsService.confirmProfileSubmissionMine(studentId, body, request);
+  }
+
+  @Post(":studentId/account-reset")
+  @RequiresPermission(PermissionCode.STUDENTS_OWN_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public resetPortalAccount(
+    @Param("studentId", new ParseUUIDPipe({ version: "4" })) studentId: string,
+    @Req() request: RequestContext,
+  ) {
+    return this.studentWorkflowService.resetPortalAccount(studentId, request);
+  }
+
+  @Post(":studentId/service-activation")
+  @RequiresPermission(PermissionCode.STUDENTS_OWN_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public activateService(
+    @Param("studentId", new ParseUUIDPipe({ version: "4" })) studentId: string,
+    @Body() body: ActivateStudentServiceDto,
+    @Req() request: RequestContext,
+  ) {
+    return this.studentWorkflowService.activateMine(studentId, body, request);
   }
 }
