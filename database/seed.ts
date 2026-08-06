@@ -811,7 +811,7 @@ async function main(): Promise<void> {
       { code: "IDENTITY", status: "APPROVED" as const, dueDays: 3 },
       { code: "TRANSCRIPT", status: "PENDING_REVIEW" as const, dueDays: 4 },
       { code: "PREDICTED_GRADES", status: "PARTIALLY_MISSING" as const, dueDays: 7 },
-      { code: "PERSONAL_STATEMENT", status: "REQUIRED" as const, dueDays: 10 },
+      { code: "SELF_RECOMMENDATION", status: "REQUIRED" as const, dueDays: 10 },
     ];
     const materialItems = new Map<string, { id: string; taskId: string }>();
     for (const scenario of materialScenarios) {
