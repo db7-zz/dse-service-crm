@@ -6,6 +6,13 @@ import { ApiException } from "../common/api-exception.js";
 import type { RequestContext } from "../common/request-context.js";
 import { PRISMA } from "../database/database.module.js";
 import { MaterialsService } from "../materials/materials.service.js";
+import { MaterialSubmissionsService } from "../materials/material-submissions.service.js";
+import type {
+  CreateMaterialSubmissionDto,
+  RemoveMaterialSubmissionFileDto,
+  RequestMaterialNotApplicableDto,
+  WithdrawMaterialSubmissionDto,
+} from "../materials/materials.dto.js";
 import type {
   PortalUploadMaterialDto,
   RespondConfirmationDto,
@@ -18,6 +25,8 @@ export class PortalService {
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(StudentAccessService) private readonly access: StudentAccessService,
     @Inject(MaterialsService) private readonly materials: MaterialsService,
+    @Inject(MaterialSubmissionsService)
+    private readonly materialSubmissions: MaterialSubmissionsService,
   ) {}
 
   public async summary(request: RequestContext) {
@@ -235,8 +244,22 @@ export class PortalService {
       where: { studentId: student.id },
       include: {
         materialType: true,
+        sopMaterialTemplate: {
+          include: {
+            stageTemplate: {
+              select: { stageCode: true, name: true, sequenceNo: true },
+            },
+          },
+        },
         currentVersion: true,
         versions: { orderBy: { versionNo: "desc" } },
+        currentSubmission: {
+          include: { files: { where: { removedAt: null }, orderBy: { uploadedAt: "asc" } } },
+        },
+        submissions: {
+          include: { files: { where: { removedAt: null }, orderBy: { uploadedAt: "asc" } } },
+          orderBy: { submissionNo: "desc" },
+        },
       },
       orderBy: [
         { materialType: { collectionPhase: "asc" } },
@@ -256,7 +279,20 @@ export class PortalService {
           sequenceNo: item.materialType.sequenceNo,
         },
         requirement: item.requirement,
+        sopMaterialTemplate: item.sopMaterialTemplate
+          ? {
+              id: item.sopMaterialTemplate.id,
+              templateKey: item.sopMaterialTemplate.templateKey,
+              sequenceNo: item.sopMaterialTemplate.sequenceNo,
+              stage: item.sopMaterialTemplate.stageTemplate,
+            }
+          : null,
+        origin: item.origin,
+        requirementKind: item.requirementKind,
+        conditionMatched: item.conditionMatched,
+        deadlineRule: item.deadlineRule,
         dueAt: item.dueAt?.toISOString() ?? null,
+        correctionDueAt: item.correctionDueAt?.toISOString() ?? null,
         status: item.status,
         missingReason: item.missingReason,
         expectedSubmitAt: item.expectedSubmitAt?.toISOString() ?? null,
@@ -265,9 +301,17 @@ export class PortalService {
               id: item.currentVersion.id,
               versionNo: item.currentVersion.versionNo,
               fileName: item.currentVersion.fileName,
+              mimeType: item.currentVersion.mimeType,
+              fileSize: item.currentVersion.fileSize,
               reviewStatus: item.currentVersion.reviewStatus,
               reviewComment: item.currentVersion.reviewComment,
               uploadedAt: item.currentVersion.uploadedAt.toISOString(),
+              downloadUrl: `/api/v1/portal/me/material-versions/${item.currentVersion.id}/download`,
+              previewUrl:
+                item.currentVersion.mimeType === "application/pdf" ||
+                item.currentVersion.mimeType.startsWith("image/")
+                  ? `/api/v1/portal/me/material-versions/${item.currentVersion.id}/download?preview=true`
+                  : null,
             }
           : null,
         versions: item.versions.map((version) => ({
@@ -278,7 +322,17 @@ export class PortalService {
           reviewComment: version.reviewComment,
           uploadedAt: version.uploadedAt.toISOString(),
           downloadUrl: `/api/v1/portal/me/material-versions/${version.id}/download`,
+          previewUrl:
+            version.mimeType === "application/pdf" || version.mimeType.startsWith("image/")
+              ? `/api/v1/portal/me/material-versions/${version.id}/download?preview=true`
+              : null,
         })),
+        currentSubmission: item.currentSubmission
+          ? this.serializePortalSubmission(item.currentSubmission)
+          : null,
+        submissions: item.submissions.map((submission) =>
+          this.serializePortalSubmission(submission),
+        ),
       })),
     };
   }
@@ -295,6 +349,120 @@ export class PortalService {
   public async downloadMaterial(versionId: string, request: RequestContext) {
     const student = await this.access.portalStudent(request);
     return this.materials.download(versionId, request, student.id);
+  }
+
+  public async createMaterialSubmission(
+    materialId: string,
+    body: CreateMaterialSubmissionDto,
+    request: RequestContext,
+  ) {
+    const student = await this.access.portalStudent(request);
+    return this.materialSubmissions.createDraft(materialId, body, request, student.id);
+  }
+
+  public async materialSubmissionDetail(submissionId: string, request: RequestContext) {
+    const student = await this.access.portalStudent(request);
+    return this.materialSubmissions.detail(submissionId, request, student.id);
+  }
+
+  public async addMaterialSubmissionFile(
+    submissionId: string,
+    body: PortalUploadMaterialDto,
+    request: RequestContext,
+  ) {
+    const student = await this.access.portalStudent(request);
+    return this.materialSubmissions.addFile(submissionId, body, request, student.id);
+  }
+
+  public async removeMaterialSubmissionFile(
+    submissionId: string,
+    fileId: string,
+    body: RemoveMaterialSubmissionFileDto,
+    request: RequestContext,
+  ) {
+    const student = await this.access.portalStudent(request);
+    return this.materialSubmissions.removeFile(submissionId, fileId, body, request, student.id);
+  }
+
+  public async submitMaterialSubmission(submissionId: string, request: RequestContext) {
+    const student = await this.access.portalStudent(request);
+    return this.materialSubmissions.submit(submissionId, request, student.id);
+  }
+
+  public async withdrawMaterialSubmission(
+    submissionId: string,
+    body: WithdrawMaterialSubmissionDto,
+    request: RequestContext,
+  ) {
+    const student = await this.access.portalStudent(request);
+    return this.materialSubmissions.withdraw(submissionId, body, request, student.id);
+  }
+
+  public async requestMaterialNotApplicable(
+    materialId: string,
+    body: RequestMaterialNotApplicableDto,
+    request: RequestContext,
+  ) {
+    const student = await this.access.portalStudent(request);
+    return this.materialSubmissions.requestNotApplicable(materialId, body, request, student.id);
+  }
+
+  public async downloadMaterialSubmissionFile(fileId: string, request: RequestContext) {
+    const student = await this.access.portalStudent(request);
+    return this.materialSubmissions.downloadFile(fileId, request, student.id);
+  }
+
+  private serializePortalSubmission(submission: {
+    id: string;
+    submissionNo: number;
+    status: string;
+    source: string;
+    submissionReason: string | null;
+    submittedAt: Date | null;
+    withdrawnAt: Date | null;
+    reviewStartedAt: Date | null;
+    reviewedAt: Date | null;
+    reviewComment: string | null;
+    correctionDueAt: Date | null;
+    files: Array<{
+      id: string;
+      fileName: string;
+      mimeType: string;
+      fileSize: number;
+      uploadedAt: Date;
+      reviewStatus: string;
+      reviewComment: string | null;
+      copiedFromFileId: string | null;
+    }>;
+  }) {
+    return {
+      id: submission.id,
+      submissionNo: submission.submissionNo,
+      status: submission.status,
+      source: submission.source,
+      submissionReason: submission.submissionReason,
+      submittedAt: submission.submittedAt?.toISOString() ?? null,
+      withdrawnAt: submission.withdrawnAt?.toISOString() ?? null,
+      reviewStartedAt: submission.reviewStartedAt?.toISOString() ?? null,
+      reviewedAt: submission.reviewedAt?.toISOString() ?? null,
+      reviewComment: submission.reviewComment,
+      correctionDueAt: submission.correctionDueAt?.toISOString() ?? null,
+      files: submission.files.map((file) => ({
+        id: file.id,
+        fileName: file.fileName,
+        mimeType: file.mimeType,
+        fileSize: file.fileSize,
+        uploadedAt: file.uploadedAt.toISOString(),
+        reviewStatus: file.reviewStatus,
+        reviewComment: file.reviewComment,
+        copiedFromFileId: file.copiedFromFileId,
+        downloadUrl: `/api/v1/portal/me/material-submission-files/${file.id}/download`,
+        previewUrl:
+          file.mimeType === "application/pdf" || file.mimeType.startsWith("image/")
+            ? `/api/v1/portal/me/material-submission-files/${file.id}/download?preview=true`
+            : null,
+      })),
+    };
   }
 
   public async progress(request: RequestContext) {

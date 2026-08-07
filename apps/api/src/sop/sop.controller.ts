@@ -18,7 +18,12 @@ import { PermissionGuard } from "../auth/permission.guard.js";
 import { RequiresPermission } from "../auth/requires-permission.decorator.js";
 import { SessionAuthGuard } from "../auth/session-auth.guard.js";
 import type { RequestContext } from "../common/request-context.js";
-import { PublishSopVersionDto, UpdateSopVersionDto } from "./sop.dto.js";
+import {
+  ApplySopMaterialBackfillDto,
+  PreviewSopMaterialBackfillDto,
+  PublishSopVersionDto,
+  UpdateSopVersionDto,
+} from "./sop.dto.js";
 import { SopService } from "./sop.service.js";
 
 @ApiTags("sop-versions")
@@ -74,5 +79,26 @@ export class SopController {
     @Req() request: RequestContext,
   ) {
     return this.sopService.publish(versionId, body, request);
+  }
+
+  @Post(":versionId/material-backfill/preview")
+  @RequiresPermission(PermissionCode.SOP_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public previewMaterialBackfill(
+    @Param("versionId", new ParseUUIDPipe({ version: "4" })) versionId: string,
+    @Body() body: PreviewSopMaterialBackfillDto,
+  ) {
+    return this.sopService.previewMaterialBackfill(versionId, body);
+  }
+
+  @Post(":versionId/material-backfill/apply")
+  @RequiresPermission(PermissionCode.SOP_WRITE)
+  @UseGuards(OriginGuard, CsrfGuard)
+  public applyMaterialBackfill(
+    @Param("versionId", new ParseUUIDPipe({ version: "4" })) versionId: string,
+    @Body() body: ApplySopMaterialBackfillDto,
+    @Req() request: RequestContext,
+  ) {
+    return this.sopService.applyMaterialBackfill(versionId, body, request);
   }
 }

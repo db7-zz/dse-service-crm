@@ -1,10 +1,17 @@
 import { apiClient } from "../auth/api";
 import type {
+  SopMaterialBackfillPreview,
+  SopMaterialBackfillResult,
+  SopMaterialType,
   SopStageTemplate,
   SopValidationResult,
   SopVersion,
   SopVersionList,
 } from "./sop-types";
+
+export function listSopMaterialTypes() {
+  return apiClient.request<SopMaterialType[]>("/material-types");
+}
 
 export function listSopVersions() {
   return apiClient.request<SopVersionList>("/sop-versions");
@@ -34,9 +41,44 @@ export function saveSopDraft(versionId: string, version: number, stages: SopStag
           completionWindowHours: task.completionWindowHours,
           isBlocking: task.isBlocking,
         })),
+        materials: stage.materials.map((material) => ({
+          templateKey: material.templateKey,
+          materialTypeId: material.materialType.id,
+          title: material.title,
+          requirement: material.requirement,
+          requirementKind: material.requirementKind,
+          deadlineRule: material.deadlineRule,
+          deadlineOffsetDays: material.deadlineOffsetDays,
+          fixedDueAt: material.fixedDueAt,
+          conditionRule: material.conditionRule,
+        })),
       })),
     }),
   });
+}
+
+export function previewSopMaterialBackfill(versionId: string, studentIds?: string[]) {
+  return apiClient.request<SopMaterialBackfillPreview>(
+    `/sop-versions/${versionId}/material-backfill/preview`,
+    {
+      method: "POST",
+      body: JSON.stringify(studentIds?.length ? { studentIds } : {}),
+    },
+  );
+}
+
+export function applySopMaterialBackfill(
+  versionId: string,
+  previewFingerprint: string,
+  studentIds?: string[],
+) {
+  return apiClient.request<SopMaterialBackfillResult>(
+    `/sop-versions/${versionId}/material-backfill/apply`,
+    {
+      method: "POST",
+      body: JSON.stringify({ previewFingerprint, ...(studentIds?.length ? { studentIds } : {}) }),
+    },
+  );
 }
 
 export function validateSopVersion(versionId: string) {

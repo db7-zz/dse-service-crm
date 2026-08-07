@@ -163,7 +163,31 @@
   display: grid;
   gap: 10px;
   min-width: 0;
-  margin-top: 16px;
+  margin-top: 10px;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.sectionHeading > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sectionHeading strong {
+  font-size: 15px;
+}
+
+.sectionHeading small {
+  color: #73737a;
+  font-size: 12px;
 }
 
 .task {
@@ -185,6 +209,99 @@
 
 .task :global(.ant-input-number) {
   width: 100%;
+}
+
+.materials {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin-top: 10px;
+}
+
+.material {
+  min-width: 0;
+  padding: 16px;
+  background: linear-gradient(145deg, #fff, #fbfcff);
+  border: 1px solid rgb(0 113 227 / 12%);
+  border-radius: 18px;
+}
+
+.materialHeading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.materialHeading > span:first-child {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  color: #0066cc;
+  font-size: 11px;
+  font-weight: 700;
+  background: #eaf3ff;
+  border-radius: 999px;
+}
+
+.materialHeading strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.materialHeading :global(.ant-btn) {
+  margin-left: auto;
+}
+
+.materialGrid {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.9fr) minmax(220px, 1.3fr) minmax(130px, 0.75fr) minmax(
+      150px,
+      0.85fr
+    );
+  gap: 12px;
+  min-width: 0;
+}
+
+.materialGrid label,
+.conditionEditor label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.materialGrid label > span:first-child,
+.conditionEditor label > span:first-child {
+  color: #66666d;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.materialGrid :global(.ant-input-number),
+.materialGrid :global(.ant-select),
+.conditionEditor :global(.ant-select) {
+  width: 100%;
+}
+
+.materialTitleField {
+  grid-column: span 1;
+}
+
+.conditionEditor {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(150px, 0.75fr) minmax(150px, 0.75fr) minmax(260px, 1.5fr);
+  gap: 12px;
+  padding: 12px;
+  background: #f4f8ff;
+  border: 1px solid #dceaff;
+  border-radius: 14px;
+}
+
+.requirementField {
+  grid-column: 1 / -1;
 }
 
 .blockingControl {
@@ -240,6 +357,10 @@
   .blockingControl {
     grid-column: 1 / span 2;
   }
+
+  .materialGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (width <= 1180px) {
@@ -254,11 +375,26 @@
 
 @media (width <= 720px) {
   .stageHeader,
-  .task {
+  .task,
+  .materialGrid,
+  .conditionEditor {
     grid-template-columns: 1fr;
   }
 
   .blockingControl {
     grid-column: auto;
+  }
+
+  .material {
+    padding: 13px;
+  }
+
+  .conditionEditor,
+  .requirementField {
+    grid-column: auto;
+  }
+
+  .sectionHeading {
+    align-items: flex-start;
   }
 }

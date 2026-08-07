@@ -52,7 +52,18 @@ export interface PortalMaterial {
     sequenceNo: number;
   };
   requirement: string | null;
+  sopMaterialTemplate: null | {
+    id: string;
+    templateKey: string;
+    sequenceNo: number;
+    stage: { stageCode: string; name: string; sequenceNo: number };
+  };
+  origin: "SOP_TEMPLATE" | "SPECIAL";
+  requirementKind: "REQUIRED" | "CONDITIONAL" | "OPTIONAL";
+  conditionMatched: boolean;
+  deadlineRule: "ACTIVATION_OFFSET" | "STAGE_OFFSET" | "FIXED_DATE" | null;
   dueAt: string | null;
+  correctionDueAt: string | null;
   status: string;
   missingReason: string | null;
   expectedSubmitAt: string | null;
@@ -63,6 +74,10 @@ export interface PortalMaterial {
     reviewStatus: string;
     reviewComment: string | null;
     uploadedAt: string;
+    mimeType?: string;
+    fileSize?: number;
+    downloadUrl?: string;
+    previewUrl?: string | null;
   };
   versions: Array<{
     id: string;
@@ -72,7 +87,38 @@ export interface PortalMaterial {
     reviewComment: string | null;
     uploadedAt: string;
     downloadUrl: string;
+    previewUrl?: string | null;
   }>;
+  currentSubmission: PortalMaterialSubmission | null;
+  submissions: PortalMaterialSubmission[];
+}
+
+export interface PortalMaterialSubmissionFile {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedAt: string;
+  reviewStatus: "PENDING" | "APPROVED" | "REJECTED";
+  reviewComment: string | null;
+  copiedFromFileId: string | null;
+  downloadUrl: string;
+  previewUrl?: string | null;
+}
+
+export interface PortalMaterialSubmission {
+  id: string;
+  submissionNo: number;
+  status: "DRAFT" | "PENDING_REVIEW" | "IN_REVIEW" | "NEEDS_CORRECTION" | "APPROVED" | "WITHDRAWN";
+  source: "STUDENT" | "BUTLER" | "LEGACY";
+  submissionReason: string | null;
+  submittedAt: string | null;
+  withdrawnAt: string | null;
+  reviewStartedAt: string | null;
+  reviewedAt: string | null;
+  reviewComment: string | null;
+  correctionDueAt: string | null;
+  files: PortalMaterialSubmissionFile[];
 }
 
 export function getPortalSummary() {
@@ -133,6 +179,62 @@ export function uploadPortalMaterial(materialId: string, file: File) {
       }),
     }),
   );
+}
+
+export function createPortalMaterialSubmission(materialId: string) {
+  return apiClient.request<PortalMaterialSubmission>(
+    `/portal/me/materials/${materialId}/submissions`,
+    { method: "POST", body: JSON.stringify({}) },
+  );
+}
+
+export function addPortalMaterialSubmissionFile(submissionId: string, file: File) {
+  const { mimeType } = validateUploadFile(file);
+  return file.arrayBuffer().then((buffer) =>
+    apiClient.request<PortalMaterialSubmissionFile>(
+      `/portal/me/material-submissions/${submissionId}/files`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          fileName: file.name,
+          mimeType,
+          contentBase64: arrayBufferToBase64(buffer),
+        }),
+      },
+    ),
+  );
+}
+
+export function removePortalMaterialSubmissionFile(
+  submissionId: string,
+  fileId: string,
+  reason = "学生在提交前移除文件",
+) {
+  return apiClient.request<PortalMaterialSubmission>(
+    `/portal/me/material-submissions/${submissionId}/files/${fileId}/remove`,
+    { method: "POST", body: JSON.stringify({ reason }) },
+  );
+}
+
+export function submitPortalMaterialSubmission(submissionId: string) {
+  return apiClient.request<PortalMaterialSubmission>(
+    `/portal/me/material-submissions/${submissionId}/submit`,
+    { method: "POST" },
+  );
+}
+
+export function withdrawPortalMaterialSubmission(submissionId: string, reason: string) {
+  return apiClient.request<PortalMaterialSubmission>(
+    `/portal/me/material-submissions/${submissionId}/withdraw`,
+    { method: "POST", body: JSON.stringify({ reason }) },
+  );
+}
+
+export function requestPortalMaterialNotApplicable(materialId: string, reason: string) {
+  return apiClient.request(`/portal/me/materials/${materialId}/not-applicable-requests`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
 }
 
 export function getPortalProgress() {

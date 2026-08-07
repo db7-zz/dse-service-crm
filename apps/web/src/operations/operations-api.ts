@@ -4,6 +4,7 @@ import type {
   ApplicationView,
   IssueView,
   MaterialItemView,
+  MaterialSubmissionView,
   NotificationView,
   StudentFullRecordView,
 } from "./operations-types";
@@ -27,10 +28,99 @@ export function getMaterials(studentId: string) {
   }>(`/students/${studentId}/materials`);
 }
 
+export function runMaterialAutomationScan() {
+  return apiClient.request<{
+    dueSoonNotified: number;
+    overdueNotified: number;
+    reviewSlaNotified: number;
+    failed: number;
+  }>("/material-automation/scan", { method: "POST" });
+}
+
 export function createMaterial(studentId: string, input: object) {
   return apiClient.request<MaterialItemView>(`/students/${studentId}/materials`, {
     method: "POST",
     body: JSON.stringify(input),
+  });
+}
+
+export function createMaterialSubmission(materialId: string, reason: string) {
+  return apiClient.request<MaterialSubmissionView>(`/materials/${materialId}/submissions`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export function addMaterialSubmissionFile(submissionId: string, file: File) {
+  const { mimeType } = validateUploadFile(file);
+  return file.arrayBuffer().then((buffer) =>
+    apiClient.request<MaterialSubmissionView["files"][number]>(
+      `/material-submissions/${submissionId}/files`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          fileName: file.name,
+          mimeType,
+          contentBase64: arrayBufferToBase64(buffer),
+        }),
+      },
+    ),
+  );
+}
+
+export function removeMaterialSubmissionFile(submissionId: string, fileId: string, reason: string) {
+  return apiClient.request<MaterialSubmissionView>(
+    `/material-submissions/${submissionId}/files/${fileId}/remove`,
+    { method: "POST", body: JSON.stringify({ reason }) },
+  );
+}
+
+export function submitMaterialSubmission(submissionId: string) {
+  return apiClient.request<MaterialSubmissionView>(`/material-submissions/${submissionId}/submit`, {
+    method: "POST",
+  });
+}
+
+export function startMaterialSubmissionReview(submissionId: string) {
+  return apiClient.request<MaterialSubmissionView>(
+    `/material-submissions/${submissionId}/review/start`,
+    { method: "POST" },
+  );
+}
+
+export function reviewMaterialSubmission(
+  submissionId: string,
+  input: {
+    outcome: "APPROVED" | "NEEDS_CORRECTION";
+    comment?: string;
+    correctionDueAt?: string;
+    fileDecisions: Array<{
+      fileId: string;
+      outcome: "APPROVED" | "CORRECTION_REQUIRED";
+      comment?: string;
+    }>;
+  },
+) {
+  return apiClient.request<MaterialSubmissionView>(`/material-submissions/${submissionId}/review`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function reviewMaterialApplicability(
+  requestId: string,
+  input: { outcome: "APPROVED" | "REJECTED"; comment?: string },
+) {
+  return apiClient.request(`/material-applicability-requests/${requestId}/review`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function cancelSpecialMaterial(materialId: string, version: number, reason: string) {
+  return apiClient.request(`/materials/${materialId}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({ version, reason }),
   });
 }
 

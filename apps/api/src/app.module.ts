@@ -46,6 +46,7 @@ const rootEnvironmentFile = fileURLToPath(new URL("../../../.env", import.meta.u
             paths: [
               "req.headers.authorization",
               "req.headers.cookie",
+              "req.headers.x-csrf-token",
               "req.body.password",
               "res.headers.set-cookie",
             ],

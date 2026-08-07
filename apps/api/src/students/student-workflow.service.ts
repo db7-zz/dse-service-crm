@@ -6,6 +6,10 @@ import { hashPassword } from "../auth/password.js";
 import { ApiException } from "../common/api-exception.js";
 import type { RequestContext } from "../common/request-context.js";
 import { PRISMA } from "../database/database.module.js";
+import {
+  calculateMaterialDueAt,
+  matchesMaterialCondition,
+} from "../materials/material-template.logic.js";
 import type {
   ActivateStudentServiceDto,
   BulkAssignUnassignedTasksDto,
@@ -49,6 +53,12 @@ export class StudentWorkflowService {
           defaultButlerId: true,
           plannerId: true,
           portalUserId: true,
+          cohortYear: true,
+          grade: true,
+          identityCategory: true,
+          examCandidateType: true,
+          targetDirection: true,
+          dseSubjects: true,
           version: true,
         },
       });
@@ -99,7 +109,13 @@ export class StudentWorkflowService {
         include: {
           stages: {
             orderBy: { sequenceNo: "asc" },
-            include: { tasks: { orderBy: { sequenceNo: "asc" } } },
+            include: {
+              tasks: { orderBy: { sequenceNo: "asc" } },
+              materials: {
+                orderBy: { sequenceNo: "asc" },
+                include: { materialType: true },
+              },
+            },
           },
         },
       });
@@ -209,7 +225,6 @@ export class StudentWorkflowService {
         name: string;
         sequenceNo: number;
       } = null;
-      let materialsStageInstanceId: string | null = null;
       for (const stage of sop.stages) {
         const isFirstStage = stage.sequenceNo === 1;
         const stageInstance = await transaction.stageInstance.create({
@@ -227,9 +242,6 @@ export class StudentWorkflowService {
             version: isFirstStage ? 1 : 0,
           },
         });
-        if (stage.stageCode === "MATERIALS") {
-          materialsStageInstanceId = stageInstance.id;
-        }
         if (isFirstStage) {
           firstStage = {
             id: stageInstance.id,
@@ -316,42 +328,60 @@ export class StudentWorkflowService {
           }
           taskCount += 1;
         }
-      }
-
-      if (materialsStageInstanceId) {
-        const coreMaterialTypes = await transaction.materialType.findMany({
-          where: { isActive: true },
-          orderBy: [{ sequenceNo: "asc" }, { name: "asc" }],
-        });
-        for (const materialType of coreMaterialTypes) {
-          const dueAt = this.calculateDueAt(enabledAt, 168);
+        for (const materialTemplate of stage.materials) {
+          const conditionMatched =
+            materialTemplate.requirementKind !== "CONDITIONAL" ||
+            matchesMaterialCondition(materialTemplate.conditionRule, student);
+          const dueAt = calculateMaterialDueAt({
+            rule: materialTemplate.deadlineRule,
+            offsetDays: materialTemplate.deadlineOffsetDays,
+            fixedDueAt: materialTemplate.fixedDueAt,
+            activationAt: enabledAt,
+            stageStartedAt: stageInstance.startedAt,
+          });
           const material = await transaction.materialItem.create({
             data: {
               studentId,
-              materialTypeId: materialType.id,
-              title: materialType.name,
-              requirement: materialType.description,
-              dueAt: materialType.collectionPhase === "CURRENT" ? dueAt : null,
+              materialTypeId: materialTemplate.materialTypeId,
+              sopMaterialTemplateId: materialTemplate.id,
+              templateKeySnapshot: materialTemplate.templateKey,
+              title: materialTemplate.title,
+              requirement: materialTemplate.requirement,
+              origin: "SOP_TEMPLATE",
+              requirementKind: materialTemplate.requirementKind,
+              deadlineRule: materialTemplate.deadlineRule,
+              deadlineOffsetDays: materialTemplate.deadlineOffsetDays,
+              fixedDueAtSnapshot: materialTemplate.fixedDueAt,
+              conditionRuleSnapshot: materialTemplate.conditionRule ?? undefined,
+              conditionMatched,
+              dueAt,
               ownerId: student.defaultButlerId,
+              createdById: actor.id,
+              status: conditionMatched ? "REQUIRED" : "NOT_APPLICABLE",
             },
           });
-          if (materialType.collectionPhase === "LATER") {
+          if (!dueAt || materialTemplate.requirementKind === "OPTIONAL" || !conditionMatched) {
             continue;
           }
           const task = await transaction.taskInstance.create({
             data: {
               studentId,
               serviceActivationId: activation.id,
-              stageInstanceId: materialsStageInstanceId,
+              stageInstanceId: stageInstance.id,
               sopVersionId: sop.id,
               sourceType: "MATERIAL",
               sourceObjectId: material.id,
               isBlockingSnapshot: true,
               externalVisible: true,
-              titleSnapshot: `收集并审核：${materialType.name}`,
-              descriptionSnapshot: materialType.description,
+              titleSnapshot: `收集并审核：${materialTemplate.title}`,
+              descriptionSnapshot: materialTemplate.requirement,
               completionCriteriaSnapshot: "资料已审核通过，或已记录不适用原因",
-              completionWindowHoursSnapshot: taskCompletionWindowSnapshot("MATERIAL", 168),
+              completionWindowHoursSnapshot: taskCompletionWindowSnapshot(
+                "MATERIAL",
+                materialTemplate.deadlineOffsetDays === null
+                  ? 24
+                  : Math.max(1, materialTemplate.deadlineOffsetDays * 24),
+              ),
               ownerId: student.defaultButlerId,
               originalDueAt: dueAt,
               currentDueAt: dueAt,
@@ -366,7 +396,8 @@ export class StudentWorkflowService {
               summary: "启用服务时生成核心资料阻塞任务",
               afterData: {
                 materialId: material.id,
-                materialTypeCode: materialType.code,
+                materialTypeCode: materialTemplate.materialType.code,
+                materialTemplateId: materialTemplate.id,
                 status: "TODO",
               },
             },

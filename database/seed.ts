@@ -73,7 +73,6 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "overdue-alerts.write",
     "students.planning.write",
     "materials.read",
-    "materials.write",
     "materials.review",
     "applications.read",
     "applications.write",
@@ -478,11 +477,30 @@ async function main(): Promise<void> {
                 isBlocking: true,
               },
             },
+            materials:
+              stageCode === "MATERIALS"
+                ? {
+                    create: MATERIAL_TYPES.map(
+                      ([code, materialName, description, isCore, , , sequenceNo]) => ({
+                        materialType: { connect: { code } },
+                        title: materialName,
+                        requirement: description,
+                        requirementKind: isCore ? ("REQUIRED" as const) : ("OPTIONAL" as const),
+                        deadlineRule: "ACTIVATION_OFFSET" as const,
+                        deadlineOffsetDays: sequenceNo + 2,
+                        sequenceNo,
+                      }),
+                    ),
+                  }
+                : undefined,
           })),
         },
       },
       include: {
-        stages: { include: { tasks: true }, orderBy: { sequenceNo: "asc" } },
+        stages: {
+          include: { tasks: true, materials: { include: { materialType: true } } },
+          orderBy: { sequenceNo: "asc" },
+        },
       },
     });
 
@@ -807,71 +825,89 @@ async function main(): Promise<void> {
     });
 
     const materialStage = stageInstances.get("MATERIALS")!;
-    const materialScenarios = [
-      { code: "IDENTITY", status: "APPROVED" as const, dueDays: 3 },
-      { code: "TRANSCRIPT", status: "PENDING_REVIEW" as const, dueDays: 4 },
-      { code: "PREDICTED_GRADES", status: "PARTIALLY_MISSING" as const, dueDays: 7 },
-      { code: "SELF_RECOMMENDATION", status: "REQUIRED" as const, dueDays: 10 },
-    ];
-    const materialItems = new Map<string, { id: string; taskId: string }>();
-    for (const scenario of materialScenarios) {
-      const materialType = await prisma.materialType.findUniqueOrThrow({
-        where: { code: scenario.code },
-      });
-      const dueAt = shiftDays(now, scenario.dueDays);
+    const materialScenarios = new Map([
+      ["IDENTITY", { status: "APPROVED" as const, dueDays: 3 }],
+      ["TRANSCRIPT", { status: "PENDING_REVIEW" as const, dueDays: 4 }],
+      ["PREDICTED_GRADES", { status: "PARTIALLY_MISSING" as const, dueDays: 7 }],
+      ["SELF_RECOMMENDATION", { status: "REQUIRED" as const, dueDays: 10 }],
+    ]);
+    const materialTemplates = sop.stages
+      .flatMap((stage) => stage.materials)
+      .sort((left, right) => left.sequenceNo - right.sequenceNo);
+    const materialItems = new Map<string, { id: string; taskId: string | null }>();
+    for (const template of materialTemplates) {
+      const scenario = materialScenarios.get(template.materialType.code);
+      const status = scenario?.status ?? ("REQUIRED" as const);
+      const dueAt = shiftDays(now, scenario?.dueDays ?? template.deadlineOffsetDays ?? 7);
       const item = await prisma.materialItem.create({
         data: {
           studentId: student.id,
-          materialTypeId: materialType.id,
-          title: materialType.name,
-          requirement: materialType.description,
+          materialTypeId: template.materialTypeId,
+          sopMaterialTemplateId: template.id,
+          templateKeySnapshot: template.templateKey,
+          title: template.title,
+          requirement: template.requirement,
+          origin: "SOP_TEMPLATE",
+          requirementKind: template.requirementKind,
+          deadlineRule: template.deadlineRule,
+          deadlineOffsetDays: template.deadlineOffsetDays,
+          fixedDueAtSnapshot: template.fixedDueAt,
+          conditionRuleSnapshot: template.conditionRule ?? undefined,
+          conditionMatched: true,
           dueAt,
           ownerId: butler.id,
-          status: scenario.status,
-          missingReason:
-            scenario.status === "PARTIALLY_MISSING" ? "学校尚未出具最终预测成绩证明" : null,
-          expectedSubmitAt: scenario.status === "PARTIALLY_MISSING" ? shiftDays(now, 6) : null,
+          status,
+          missingReason: status === "PARTIALLY_MISSING" ? "学校尚未出具最终预测成绩证明" : null,
+          expectedSubmitAt: status === "PARTIALLY_MISSING" ? shiftDays(now, 6) : null,
         },
       });
-      const taskCompleted = scenario.status === "APPROVED";
-      const taskInProgress = scenario.status === "PENDING_REVIEW";
-      const task = await prisma.taskInstance.create({
-        data: {
-          studentId: student.id,
-          serviceActivationId: activation.id,
-          stageInstanceId: materialStage.id,
-          sopVersionId: sop.id,
-          sourceType: "MATERIAL",
-          sourceObjectId: item.id,
-          isBlockingSnapshot: true,
-          externalVisible: true,
-          titleSnapshot: `收集并审核：${materialType.name}`,
-          descriptionSnapshot: materialType.description,
-          completionCriteriaSnapshot: "资料已审核通过，或已记录缺失原因和补交时间",
-          ownerId: butler.id,
-          status: taskCompleted ? "COMPLETED" : taskInProgress ? "IN_PROGRESS" : "TODO",
-          progressPercent: taskCompleted ? 100 : taskInProgress ? 80 : 0,
-          originalDueAt: dueAt,
-          currentDueAt: dueAt,
-          startedAt: taskCompleted || taskInProgress ? shiftDays(now, -3) : null,
-          completedAt: taskCompleted ? shiftDays(now, -2) : null,
-          completionNote: taskCompleted ? "学生已上传，管家审核通过。" : null,
-        },
-      });
-      await prisma.taskTimelineEvent.create({
-        data: {
-          taskId: task.id,
-          eventType: taskCompleted ? "COMPLETED" : taskInProgress ? "PROGRESS_UPDATED" : "CREATED",
-          actorId: taskCompleted || taskInProgress ? butler.id : administrator.id,
-          actorRole: taskCompleted || taskInProgress ? "BUTLER" : "ADMINISTRATOR",
-          summary: taskCompleted
-            ? "管家审核资料并完成关联任务"
-            : taskInProgress
-              ? "学生已上传资料，等待管家审核"
-              : "启用服务时生成核心资料任务",
-        },
-      });
-      materialItems.set(scenario.code, { id: item.id, taskId: task.id });
+      let taskId: string | null = null;
+      if (template.requirementKind !== "OPTIONAL") {
+        const taskCompleted = status === "APPROVED";
+        const taskInProgress = status === "PENDING_REVIEW";
+        const task = await prisma.taskInstance.create({
+          data: {
+            studentId: student.id,
+            serviceActivationId: activation.id,
+            stageInstanceId: materialStage.id,
+            sopVersionId: sop.id,
+            sourceType: "MATERIAL",
+            sourceObjectId: item.id,
+            isBlockingSnapshot: true,
+            externalVisible: true,
+            titleSnapshot: `收集并审核：${template.title}`,
+            descriptionSnapshot: template.requirement,
+            completionCriteriaSnapshot: "资料已审核通过，或已记录缺失原因和补交时间",
+            ownerId: butler.id,
+            status: taskCompleted ? "COMPLETED" : taskInProgress ? "IN_PROGRESS" : "TODO",
+            progressPercent: taskCompleted ? 100 : taskInProgress ? 80 : 0,
+            originalDueAt: dueAt,
+            currentDueAt: dueAt,
+            startedAt: taskCompleted || taskInProgress ? shiftDays(now, -3) : null,
+            completedAt: taskCompleted ? shiftDays(now, -2) : null,
+            completionNote: taskCompleted ? "学生已上传，管家审核通过。" : null,
+          },
+        });
+        taskId = task.id;
+        await prisma.taskTimelineEvent.create({
+          data: {
+            taskId,
+            eventType: taskCompleted
+              ? "COMPLETED"
+              : taskInProgress
+                ? "PROGRESS_UPDATED"
+                : "CREATED",
+            actorId: taskCompleted || taskInProgress ? butler.id : administrator.id,
+            actorRole: taskCompleted || taskInProgress ? "BUTLER" : "ADMINISTRATOR",
+            summary: taskCompleted
+              ? "管家审核资料并完成关联任务"
+              : taskInProgress
+                ? "学生已上传资料，等待管家审核"
+                : "启用服务时生成核心资料任务",
+          },
+        });
+      }
+      materialItems.set(template.materialType.code, { id: item.id, taskId });
     }
 
     for (const scenario of [
@@ -898,16 +934,49 @@ async function main(): Promise<void> {
           reviewComment: scenario.reviewStatus === "APPROVED" ? "文件清晰完整，已审核通过。" : null,
         },
       });
+      const submittedAt = shiftDays(now, -3);
+      const approved = scenario.reviewStatus === "APPROVED";
+      const submission = await prisma.materialSubmission.create({
+        data: {
+          materialItemId: material.id,
+          submissionNo: 1,
+          status: approved ? "APPROVED" : "PENDING_REVIEW",
+          source: "STUDENT",
+          createdById: portalUser.id,
+          submittedById: portalUser.id,
+          submittedAt,
+          reviewStartedById: approved ? butler.id : null,
+          reviewStartedAt: approved ? shiftDays(now, -2) : null,
+          reviewedById: approved ? butler.id : null,
+          reviewedAt: approved ? shiftDays(now, -2) : null,
+          reviewComment: approved ? "文件清晰完整，已审核通过。" : null,
+          files: {
+            create: {
+              fileName: `${scenario.title}.pdf`,
+              mimeType: "application/pdf",
+              fileSize: stored.fileSize,
+              storageKey,
+              fileHash: stored.fileHash,
+              uploadedById: portalUser.id,
+              uploadedAt: submittedAt,
+              reviewStatus: scenario.reviewStatus,
+              reviewedById: approved ? butler.id : null,
+              reviewedAt: approved ? shiftDays(now, -2) : null,
+              reviewComment: approved ? "文件清晰完整，已审核通过。" : null,
+            },
+          },
+        },
+      });
       await prisma.materialItem.update({
         where: { id: material.id },
-        data: { currentVersionId: version.id },
+        data: { currentVersionId: version.id, currentSubmissionId: submission.id },
       });
     }
 
     await prisma.materialFollowup.create({
       data: {
         materialItemId: materialItems.get("PREDICTED_GRADES")!.id,
-        taskId: materialItems.get("PREDICTED_GRADES")!.taskId,
+        taskId: materialItems.get("PREDICTED_GRADES")!.taskId!,
         followupNote: "管家已提醒学生向学校申请正式预测成绩，预计 6 天内补交。",
         followedById: butler.id,
         followedAt: shiftDays(now, -1),
@@ -1012,7 +1081,7 @@ async function main(): Promise<void> {
     const issue = await prisma.issue.create({
       data: {
         studentId: student.id,
-        linkedTaskId: materialItems.get("TRANSCRIPT")!.taskId,
+        linkedTaskId: materialItems.get("TRANSCRIPT")!.taskId!,
         category: "资料审核",
         description: "学生上传的成绩单缺少学校盖章页，请确认补交流程。",
         context: "管家审核学生上传的中六成绩单时发现最后一页缺少学校盖章。",

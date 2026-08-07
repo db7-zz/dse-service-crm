@@ -1,0 +1,140 @@
+.selectorHeader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 22px;
+  background: linear-gradient(135deg, rgb(255 255 255 / 96%), rgb(240 247 255 / 90%));
+  border: 1px solid #e4edf8;
+  border-radius: 22px;
+}
+
+.selectorHeader :global(.ant-typography) {
+  margin: 0;
+}
+
+.studentSearch {
+  width: min(100%, 390px);
+}
+
+.studentCard {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  min-height: 188px;
+  padding: 20px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid #e5eaf0;
+  border-radius: 22px;
+  box-shadow: 0 10px 32px rgb(44 66 99 / 7%);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.studentCard:hover,
+.studentCard:focus-visible {
+  border-color: rgb(22 119 255 / 55%);
+  outline: none;
+  box-shadow: 0 18px 42px rgb(22 119 255 / 14%);
+  transform: translateY(-2px);
+}
+
+.studentAvatar {
+  display: grid;
+  flex: 0 0 52px;
+  width: 52px;
+  height: 52px;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  background: linear-gradient(145deg, #1677ff, #635bff);
+  border-radius: 17px;
+  place-items: center;
+}
+
+.studentCardBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.studentNameRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.studentNameRow strong {
+  overflow: hidden;
+  font-size: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studentNumber,
+.studentMeta {
+  margin-top: 7px;
+  overflow: hidden;
+  color: #64748b;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.enterHint {
+  margin-top: auto;
+  padding-top: 14px;
+  color: #1677ff;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.statCard,
+.materialTableCard {
+  overflow: hidden;
+  border: 1px solid #e8edf4;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgb(44 66 99 / 5%);
+}
+
+.muted {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.fileIcon {
+  padding: 10px;
+  color: #1677ff;
+  font-size: 20px;
+  background: #edf5ff;
+  border-radius: 12px;
+}
+
+@media (width <= 640px) {
+  .selectorHeader {
+    padding: 18px;
+  }
+
+  .studentSearch {
+    width: 100%;
+  }
+
+  .studentCard {
+    min-height: 168px;
+    padding: 17px;
+  }
+
+  .studentAvatar {
+    flex-basis: 46px;
+    width: 46px;
+    height: 46px;
+  }
+}

@@ -15,22 +15,90 @@ export interface MaterialVersionView {
   uploadedBy?: PersonRef;
   reviewedBy?: PersonRef | null;
   downloadUrl: string;
+  previewUrl?: string | null;
+}
+
+export interface MaterialSubmissionFileView {
+  id: string;
+  submissionId?: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedAt: string;
+  uploadedBy?: PersonRef;
+  reviewStatus: "PENDING" | "APPROVED" | "REJECTED";
+  reviewedAt?: string | null;
+  reviewedBy?: PersonRef | null;
+  reviewComment: string | null;
+  copiedFromFileId: string | null;
+  removedAt?: string | null;
+  removalReason?: string | null;
+  downloadUrl: string;
+  previewUrl?: string | null;
+}
+
+export interface MaterialSubmissionView {
+  id: string;
+  materialItemId?: string;
+  submissionNo: number;
+  status: "DRAFT" | "PENDING_REVIEW" | "IN_REVIEW" | "NEEDS_CORRECTION" | "APPROVED" | "WITHDRAWN";
+  source: "STUDENT" | "BUTLER" | "LEGACY";
+  createdBy?: PersonRef;
+  submittedBy?: PersonRef | null;
+  submissionReason: string | null;
+  submittedAt: string | null;
+  withdrawnAt: string | null;
+  withdrawalReason?: string | null;
+  reviewStartedBy?: PersonRef | null;
+  reviewStartedAt: string | null;
+  reviewedBy?: PersonRef | null;
+  reviewedAt: string | null;
+  reviewComment: string | null;
+  correctionDueAt: string | null;
+  files: MaterialSubmissionFileView[];
 }
 
 export interface MaterialItemView {
   id: string;
   studentId: string;
   materialType: { id: string; code: string; name: string; isCore: boolean };
+  sopMaterialTemplate: null | {
+    id: string;
+    templateKey: string;
+    sequenceNo: number;
+    stageTemplate: { stageCode: string; name: string; sequenceNo: number };
+  };
+  templateKeySnapshot: string | null;
   title: string;
   requirement: string | null;
+  origin: "SOP_TEMPLATE" | "SPECIAL";
+  requirementKind: "REQUIRED" | "CONDITIONAL" | "OPTIONAL";
+  deadlineRule: "ACTIVATION_OFFSET" | "STAGE_OFFSET" | "FIXED_DATE" | null;
+  deadlineOffsetDays: number | null;
+  conditionMatched: boolean;
   dueAt: string | null;
   status: string;
   missingReason: string | null;
   expectedSubmitAt: string | null;
+  correctionDueAt: string | null;
   owner: PersonRef | null;
+  createdBy?: PersonRef | null;
+  creationReason?: string | null;
   version: number;
   currentVersion: MaterialVersionView | null;
   versions: MaterialVersionView[];
+  currentSubmission: MaterialSubmissionView | null;
+  submissions: MaterialSubmissionView[];
+  applicabilityRequests: Array<{
+    id: string;
+    reason: string;
+    status: "PENDING" | "APPROVED" | "REJECTED";
+    requestedBy: PersonRef;
+    createdAt: string;
+    reviewedBy: PersonRef | null;
+    reviewedAt: string | null;
+    reviewComment: string | null;
+  }>;
 }
 
 export interface ApplicationView {

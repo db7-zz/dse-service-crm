@@ -37,6 +37,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AuthController_changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/csrf": {
         parameters: {
             query?: never;
@@ -127,6 +143,22 @@ export interface paths {
         get: operations["UsersController_list"];
         put?: never;
         post: operations["UsersController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/student-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["UsersController_listStudentAccounts"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -277,6 +309,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sop-versions/{versionId}/material-backfill/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SopController_previewMaterialBackfill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sop-versions/{versionId}/material-backfill/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SopController_applyMaterialBackfill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/students/responsible-person-options": {
         parameters: {
             query?: never;
@@ -303,6 +367,22 @@ export interface paths {
         get: operations["StudentsController_list"];
         put?: never;
         post: operations["StudentsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/students/name-duplicates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StudentsController_checkNameDuplicates"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -421,6 +501,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/students/{studentId}/account-repair": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StudentsController_repairPortalAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/students/{studentId}/account-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StudentsController_resetPortalAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/students/{studentId}/assign-unassigned-tasks": {
         parameters: {
             query?: never;
@@ -445,6 +557,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["MyStudentsController_list"];
+        put?: never;
+        post: operations["MyStudentsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/my/students/name-duplicates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MyStudentsController_checkNameDuplicates"];
         put?: never;
         post?: never;
         delete?: never;
@@ -479,6 +607,102 @@ export interface paths {
         get: operations["MyStudentsController_serviceProgress"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/my/students/{studentId}/profile-submission": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MyStudentsController_profileSubmission"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/my/students/{studentId}/profile-submission/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MyStudentsController_confirmProfileSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/my/students/{studentId}/account-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MyStudentsController_resetPortalAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/my/students/{studentId}/service-activation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MyStudentsController_activateService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/student-handoffs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StudentHandoffsController_list"];
+        put?: never;
+        post: operations["StudentHandoffsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/student-handoffs/{handoffId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StudentHandoffsController_accept"];
         delete?: never;
         options?: never;
         head?: never;
@@ -565,6 +789,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tasks/{taskId}/student-blockers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TasksController_reportStudentBlocker"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tasks/{taskId}/complete": {
         parameters: {
             query?: never;
@@ -645,6 +885,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/my/tasks/weekly-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MyTasksController_weeklyReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/my/tasks/weekly-reviews/{reviewId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MyTasksController_submitWeeklyReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/butler-supervision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ButlerSupervisionController_dashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/butler-supervision/student-blockers/{blockerId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ButlerSupervisionController_rejectBlocker"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/butler-supervision/weekly-reviews/{reviewId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ButlerSupervisionController_reviewWeekly"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/task-supervision/summary": {
         parameters: {
             query?: never;
@@ -653,6 +973,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["TaskSupervisionController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/task-supervision/butlers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TaskSupervisionController_butlers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/task-supervision/focus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TaskSupervisionController_focus"];
         put?: never;
         post?: never;
         delete?: never;
@@ -767,6 +1119,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["OverdueAlertsController_handle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/material-automation/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MaterialsController_automationStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/material-automation/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MaterialsController_runAutomationScan"];
         delete?: never;
         options?: never;
         head?: never;
@@ -893,6 +1277,182 @@ export interface paths {
             cookie?: never;
         };
         get: operations["MaterialsController_download"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/material-submissions/{submissionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MaterialsController_submissionDetail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/materials/{materialId}/submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MaterialsController_createSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/material-submissions/{submissionId}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MaterialsController_addSubmissionFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/material-submissions/{submissionId}/files/{fileId}/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MaterialsController_removeSubmissionFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/material-submissions/{submissionId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MaterialsController_submitSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/material-submissions/{submissionId}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MaterialsController_withdrawSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/material-submissions/{submissionId}/review/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MaterialsController_startSubmissionReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/material-submissions/{submissionId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MaterialsController_reviewSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/material-applicability-requests/{requestId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MaterialsController_reviewApplicability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/materials/{materialId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MaterialsController_cancelSpecial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/material-submission-files/{fileId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MaterialsController_downloadSubmissionFile"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1157,6 +1717,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PortalController_profile"];
+        put?: never;
+        post: operations["PortalController_submitProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/me/materials": {
         parameters: {
             query?: never;
@@ -1197,6 +1773,134 @@ export interface paths {
             cookie?: never;
         };
         get: operations["PortalController_download"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me/materials/{materialId}/submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PortalController_createMaterialSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me/material-submissions/{submissionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PortalController_materialSubmissionDetail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me/material-submissions/{submissionId}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PortalController_addMaterialSubmissionFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me/material-submissions/{submissionId}/files/{fileId}/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PortalController_removeMaterialSubmissionFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me/material-submissions/{submissionId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PortalController_submitMaterialSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me/material-submissions/{submissionId}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PortalController_withdrawMaterialSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me/materials/{materialId}/not-applicable-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PortalController_requestMaterialNotApplicable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/me/material-submission-files/{fileId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PortalController_downloadMaterialSubmissionFile"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1269,6 +1973,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/rectifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AdminRectificationsController_list"];
+        put?: never;
+        post: operations["AdminRectificationsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/rectifications/{rectificationId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AdminRectificationsController_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/my/rectifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MyRectificationsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/my/rectifications/{rectificationId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MyRectificationsController_submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health/live": {
         parameters: {
             query?: never;
@@ -1311,7 +2079,12 @@ export interface components {
             /** Format: password */
             password: string;
         };
-        Object: Record<string, never>;
+        ChangePasswordDto: {
+            /** Format: password */
+            currentPassword: string;
+            /** Format: password */
+            newPassword: string;
+        };
         CreateUserDto: {
             /** @example staff.name */
             username: string;
@@ -1345,11 +2118,31 @@ export interface components {
              */
             isBlocking: Record<string, never>;
         };
+        SopMaterialTemplateInputDto: {
+            /**
+             * Format: uuid
+             * @description 跨SOP版本保持不变的资料模板标识
+             */
+            templateKey?: string;
+            /** Format: uuid */
+            materialTypeId: string;
+            title: string;
+            requirement?: Record<string, never> | null;
+            /** @enum {string} */
+            requirementKind: "REQUIRED" | "CONDITIONAL" | "OPTIONAL";
+            /** @enum {string} */
+            deadlineRule: "ACTIVATION_OFFSET" | "STAGE_OFFSET" | "FIXED_DATE";
+            deadlineOffsetDays?: Record<string, never> | null;
+            /** Format: date-time */
+            fixedDueAt?: Record<string, never> | null;
+            conditionRule?: Record<string, never> | null;
+        };
         SopStageTemplateInputDto: {
             stageCode: string;
             name: string;
             description?: Record<string, never> | null;
             tasks: components["schemas"]["SopTaskTemplateInputDto"][];
+            materials?: components["schemas"]["SopMaterialTemplateInputDto"][];
         };
         UpdateSopVersionDto: {
             /** @description 乐观锁版本号 */
@@ -1359,6 +2152,14 @@ export interface components {
         PublishSopVersionDto: {
             /** @description 乐观锁版本号 */
             version: number;
+        };
+        PreviewSopMaterialBackfillDto: {
+            studentIds?: string[];
+        };
+        ApplySopMaterialBackfillDto: {
+            studentIds?: string[];
+            /** @description 预览接口返回的内容指纹 */
+            previewFingerprint: string;
         };
         CreateStudentDto: {
             /** @example 黄翰 */
@@ -1421,19 +2222,50 @@ export interface components {
             reason: string;
             tasks: components["schemas"]["BulkAssignTaskItemDto"][];
         };
+        ConfirmStudentProfileDto: {
+            /** @description 学生提交版本 */
+            version: number;
+        };
+        Object: Record<string, never>;
+        CreateStudentHandoffDto: {
+            studentName: string;
+            studentPhone?: Record<string, never>;
+            studentWechat?: Record<string, never>;
+            parentName: string;
+            parentRelationship?: Record<string, never>;
+            parentPhone: string;
+            parentWechat?: Record<string, never>;
+            school?: Record<string, never>;
+            grade?: Record<string, never>;
+            cohortYear?: Record<string, never>;
+            /** Format: uuid */
+            assignedButlerId: string;
+            /** Format: date-time */
+            wechatGroupCreatedAt: string;
+        };
+        AcceptStudentHandoffDto: {
+            version: number;
+        };
         TaskVersionDto: {
             version: number;
         };
         AddTaskProgressDto: {
             version: number;
             progressNote: string;
-            progressPercent?: number;
         };
         ReportTaskExtensionDto: {
             version: number;
             reason: string;
             /** Format: date-time */
             expectedFinishAt: string;
+        };
+        ReportStudentBlockerDto: {
+            version: number;
+            /** @enum {string} */
+            category: "STUDENT_COOPERATION" | "FAMILY" | "SCHOOL" | "EXTERNAL_DOCUMENT" | "OTHER";
+            description: string;
+            /** Format: date-time */
+            expectedRecoveryAt: string;
         };
         CompleteTaskDto: {
             version: number;
@@ -1449,6 +2281,29 @@ export interface components {
             mimeType: string;
             /** @description Base64编码文件内容，解码后最大50MB */
             contentBase64: string;
+        };
+        WeeklyReviewResponseItemDto: {
+            /** Format: uuid */
+            anomalyId: string;
+            responseNote: string;
+        };
+        SubmitWeeklyReviewDto: {
+            version: number;
+            items: components["schemas"]["WeeklyReviewResponseItemDto"][];
+        };
+        RejectStudentBlockerDto: {
+            note: string;
+        };
+        WeeklyReviewDecisionItemDto: {
+            /** Format: uuid */
+            anomalyId: string;
+            /** @enum {string} */
+            decision: "RECTIFIED" | "APPEAL_ACCEPTED" | "APPEAL_REJECTED";
+        };
+        ReviewWeeklyReviewDto: {
+            version: number;
+            note: string;
+            items: components["schemas"]["WeeklyReviewDecisionItemDto"][];
         };
         RescheduleTaskDto: {
             version: number;
@@ -1484,12 +2339,24 @@ export interface components {
             dueAt?: Record<string, never> | null;
             /** Format: uuid */
             ownerId?: Record<string, never> | null;
+            /** @description 新增特殊资料的业务原因 */
+            creationReason: string;
+            /**
+             * @default REQUIRED
+             * @enum {string}
+             */
+            requirementKind: "REQUIRED" | "OPTIONAL";
         };
         UploadMaterialVersionDto: {
             fileName: string;
             mimeType: string;
             /** @description Base64编码文件内容，解码后最大50MB */
             contentBase64: string;
+            /**
+             * Format: uuid
+             * @description 补正时被替换的问题文件
+             */
+            replacesFileId?: Record<string, never> | null;
         };
         ReviewMaterialDto: {
             /** @enum {string} */
@@ -1516,6 +2383,40 @@ export interface components {
             /** @enum {string} */
             archiveStatus: "ARCHIVED" | "ARCHIVE_FAILED";
             note: string;
+        };
+        CreateMaterialSubmissionDto: {
+            /** @description 管家代传时必填 */
+            reason?: Record<string, never> | null;
+        };
+        RemoveMaterialSubmissionFileDto: {
+            reason: string;
+        };
+        WithdrawMaterialSubmissionDto: {
+            reason: string;
+        };
+        MaterialSubmissionFileDecisionDto: {
+            /** Format: uuid */
+            fileId: string;
+            /** @enum {string} */
+            outcome: "APPROVED" | "CORRECTION_REQUIRED";
+            comment?: Record<string, never> | null;
+        };
+        ReviewMaterialSubmissionDto: {
+            /** @enum {string} */
+            outcome: "APPROVED" | "NEEDS_CORRECTION";
+            comment?: Record<string, never> | null;
+            /** Format: date-time */
+            correctionDueAt?: Record<string, never> | null;
+            fileDecisions: components["schemas"]["MaterialSubmissionFileDecisionDto"][];
+        };
+        ReviewMaterialApplicabilityDto: {
+            /** @enum {string} */
+            outcome: "APPROVED" | "REJECTED";
+            comment?: Record<string, never> | null;
+        };
+        CancelSpecialMaterialDto: {
+            reason: string;
+            version: number;
         };
         StudentScoreInputDto: {
             subjectName: string;
@@ -1621,6 +2522,10 @@ export interface components {
             description: string;
             context: string;
             priority?: Record<string, never> | null;
+            /** Format: uuid */
+            ownerId?: Record<string, never> | null;
+            /** Format: date-time */
+            dueAt?: Record<string, never> | null;
         };
         IssueActionDto: {
             note: string;
@@ -1644,15 +2549,56 @@ export interface components {
             /** @default false */
             evidenceRequired: Record<string, never>;
         };
+        SubmitPortalProfileDto: {
+            studentName: string;
+            cohortYear: number;
+            grade: string;
+            school: string;
+            studentPhone: string;
+            studentWechat: string;
+            parentName: string;
+            parentRelationship: string;
+            parentPhone: string;
+            parentWechat: string;
+            identityCategory: string;
+            examCandidateType: string;
+            dseSubjects: string[];
+            scoreSummary: string;
+            targetDirection: string;
+        };
         PortalUploadMaterialDto: {
             fileName: string;
             mimeType: string;
             contentBase64: string;
+            /** Format: uuid */
+            replacesFileId?: Record<string, never> | null;
+        };
+        RequestMaterialNotApplicableDto: {
+            reason: string;
         };
         RespondConfirmationDto: {
             /** @enum {string} */
             status: "CONFIRMED" | "DECLINED";
             note?: Record<string, never> | null;
+        };
+        CreateRectificationDto: {
+            /** Format: uuid */
+            butlerId: string;
+            taskIds: string[];
+            issueIds: string[];
+            summary: string;
+            /** Format: date-time */
+            dueAt: string;
+        };
+        ReviewRectificationDto: {
+            note: string;
+            version: number;
+            /** @description true 表示复核通过并关闭，false 表示退回整改 */
+            approve: boolean;
+        };
+        SubmitRectificationDto: {
+            note: string;
+            version: number;
         };
         ApiError: {
             code: string;
@@ -1729,6 +2675,29 @@ export interface operations {
             };
         };
     };
+    AuthController_changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
     AuthController_csrf: {
         parameters: {
             query?: never;
@@ -1770,8 +2739,8 @@ export interface operations {
     NotificationsController_list: {
         parameters: {
             query?: {
-                page?: components["schemas"]["Object"];
-                pageSize?: components["schemas"]["Object"];
+                page?: number;
+                pageSize?: number;
                 unreadOnly?: boolean;
             };
             header?: never;
@@ -1868,6 +2837,29 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    UsersController_listStudentAccounts: {
+        parameters: {
+            query: {
+                page: number;
+                pageSize: number;
+                search: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2131,6 +3123,56 @@ export interface operations {
             };
         };
     };
+    SopController_previewMaterialBackfill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewSopMaterialBackfillDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    SopController_applyMaterialBackfill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplySopMaterialBackfillDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
     StudentsController_responsiblePersonOptions: {
         parameters: {
             query?: never;
@@ -2153,8 +3195,8 @@ export interface operations {
     StudentsController_list: {
         parameters: {
             query?: {
-                page?: components["schemas"]["Object"];
-                pageSize?: components["schemas"]["Object"];
+                page?: number;
+                pageSize?: number;
                 search?: string;
                 serviceStatus?: "NOT_ENABLED" | "ENABLED" | "PAUSED" | "TERMINATED";
                 defaultButlerId?: string;
@@ -2199,6 +3241,27 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    StudentsController_checkNameDuplicates: {
+        parameters: {
+            query: {
+                name: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2396,6 +3459,52 @@ export interface operations {
             };
         };
     };
+    StudentsController_repairPortalAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivateStudentServiceDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    StudentsController_resetPortalAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
     StudentsController_bulkAssignUnassignedTasks: {
         parameters: {
             query?: never;
@@ -2424,8 +3533,8 @@ export interface operations {
     MyStudentsController_list: {
         parameters: {
             query?: {
-                page?: components["schemas"]["Object"];
-                pageSize?: components["schemas"]["Object"];
+                page?: number;
+                pageSize?: number;
                 search?: string;
                 serviceStatus?: "NOT_ENABLED" | "ENABLED" | "PAUSED" | "TERMINATED";
                 defaultButlerId?: string;
@@ -2439,6 +3548,50 @@ export interface operations {
                 hasCurrentBlockers?: boolean;
                 sortBy?: "stageProgress" | "currentBlockers" | "overdueTasks";
                 sortOrder?: "asc" | "desc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MyStudentsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateStudentDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MyStudentsController_checkNameDuplicates: {
+        parameters: {
+            query: {
+                name: string;
             };
             header?: never;
             path?: never;
@@ -2489,6 +3642,168 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MyStudentsController_profileSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MyStudentsController_confirmProfileSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmStudentProfileDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MyStudentsController_resetPortalAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MyStudentsController_activateService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivateStudentServiceDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    StudentHandoffsController_list: {
+        parameters: {
+            query?: {
+                page?: components["schemas"]["Object"];
+                pageSize?: components["schemas"]["Object"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    StudentHandoffsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateStudentHandoffDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    StudentHandoffsController_accept: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                handoffId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptStudentHandoffDto"];
+            };
+        };
+        responses: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2615,6 +3930,31 @@ export interface operations {
             };
         };
     };
+    TasksController_reportStudentBlocker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportStudentBlockerDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
     TasksController_complete: {
         parameters: {
             query?: never;
@@ -2715,8 +4055,8 @@ export interface operations {
     MyTasksController_list: {
         parameters: {
             query?: {
-                page?: components["schemas"]["Object"];
-                pageSize?: components["schemas"]["Object"];
+                page?: number;
+                pageSize?: number;
                 status?: "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELED" | "NOT_APPLICABLE";
                 ownerId?: string;
                 studentId?: string;
@@ -2724,6 +4064,7 @@ export interface operations {
                 overdue?: boolean;
                 unassigned?: boolean;
                 openAlert?: boolean;
+                attentionOnly?: boolean;
                 dueFrom?: string;
                 dueTo?: string;
             };
@@ -2743,11 +4084,126 @@ export interface operations {
             };
         };
     };
+    MyTasksController_weeklyReviews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MyTasksController_submitWeeklyReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reviewId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitWeeklyReviewDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    ButlerSupervisionController_dashboard: {
+        parameters: {
+            query?: {
+                weekStart?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    ButlerSupervisionController_rejectBlocker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                blockerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectStudentBlockerDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    ButlerSupervisionController_reviewWeekly: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reviewId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewWeeklyReviewDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
     TaskSupervisionController_summary: {
         parameters: {
             query?: {
-                page?: components["schemas"]["Object"];
-                pageSize?: components["schemas"]["Object"];
+                page?: number;
+                pageSize?: number;
                 status?: "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELED" | "NOT_APPLICABLE";
                 ownerId?: string;
                 studentId?: string;
@@ -2755,6 +4211,58 @@ export interface operations {
                 overdue?: boolean;
                 unassigned?: boolean;
                 openAlert?: boolean;
+                attentionOnly?: boolean;
+                dueFrom?: string;
+                dueTo?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    TaskSupervisionController_butlers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    TaskSupervisionController_focus: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                status?: "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELED" | "NOT_APPLICABLE";
+                ownerId?: string;
+                studentId?: string;
+                stageCode?: string;
+                overdue?: boolean;
+                unassigned?: boolean;
+                openAlert?: boolean;
+                attentionOnly?: boolean;
                 dueFrom?: string;
                 dueTo?: string;
             };
@@ -2777,8 +4285,8 @@ export interface operations {
     TaskSupervisionController_tasks: {
         parameters: {
             query?: {
-                page?: components["schemas"]["Object"];
-                pageSize?: components["schemas"]["Object"];
+                page?: number;
+                pageSize?: number;
                 status?: "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELED" | "NOT_APPLICABLE";
                 ownerId?: string;
                 studentId?: string;
@@ -2786,6 +4294,7 @@ export interface operations {
                 overdue?: boolean;
                 unassigned?: boolean;
                 openAlert?: boolean;
+                attentionOnly?: boolean;
                 dueFrom?: string;
                 dueTo?: string;
             };
@@ -2908,8 +4417,8 @@ export interface operations {
     OverdueAlertsController_list: {
         parameters: {
             query?: {
-                page?: components["schemas"]["Object"];
-                pageSize?: components["schemas"]["Object"];
+                page?: number;
+                pageSize?: number;
                 status?: "OPEN" | "HANDLED" | "RESOLVED";
             };
             header?: never;
@@ -2942,6 +4451,44 @@ export interface operations {
                 "application/json": components["schemas"]["HandleOverdueAlertDto"];
             };
         };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_automationStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_runAutomationScan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             201: {
                 headers: {
@@ -3164,6 +4711,266 @@ export interface operations {
             };
         };
     };
+    MaterialsController_submissionDetail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                submissionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_createSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateMaterialSubmissionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_addSubmissionFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                submissionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UploadMaterialVersionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_removeSubmissionFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                submissionId: string;
+                fileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemoveMaterialSubmissionFileDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_submitSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                submissionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_withdrawSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                submissionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WithdrawMaterialSubmissionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_startSubmissionReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                submissionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_reviewSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                submissionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewMaterialSubmissionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_reviewApplicability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewMaterialApplicabilityDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_cancelSpecial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelSpecialMaterialDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MaterialsController_downloadSubmissionFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
     StudentRecordsController_detail: {
         parameters: {
             query?: never;
@@ -3263,8 +5070,8 @@ export interface operations {
     ApplicationsController_list: {
         parameters: {
             query?: {
-                page?: components["schemas"]["Object"];
-                pageSize?: components["schemas"]["Object"];
+                page?: number;
+                pageSize?: number;
                 search?: string;
                 studentId?: string;
                 channel?: "HK_DIRECT" | "JUPAS";
@@ -3409,8 +5216,8 @@ export interface operations {
     IssuesController_list: {
         parameters: {
             query?: {
-                page?: components["schemas"]["Object"];
-                pageSize?: components["schemas"]["Object"];
+                page?: number;
+                pageSize?: number;
                 studentId?: string;
                 status?: "OPEN" | "NEEDS_INFO" | "RESPONDED" | "CONVERTED_TO_TASK" | "RESOLVED" | "CLOSED";
             };
@@ -3643,6 +5450,48 @@ export interface operations {
             };
         };
     };
+    PortalController_profile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    PortalController_submitProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitPortalProfileDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
     PortalController_materials: {
         parameters: {
             query?: never;
@@ -3693,6 +5542,195 @@ export interface operations {
             header?: never;
             path: {
                 versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    PortalController_createMaterialSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateMaterialSubmissionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    PortalController_materialSubmissionDetail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                submissionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    PortalController_addMaterialSubmissionFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                submissionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalUploadMaterialDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    PortalController_removeMaterialSubmissionFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                submissionId: string;
+                fileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemoveMaterialSubmissionFileDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    PortalController_submitMaterialSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                submissionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    PortalController_withdrawMaterialSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                submissionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WithdrawMaterialSubmissionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    PortalController_requestMaterialNotApplicable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestMaterialNotApplicableDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    PortalController_downloadMaterialSubmissionFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fileId: string;
             };
             cookie?: never;
         };
@@ -3777,6 +5815,127 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["RespondConfirmationDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    AdminRectificationsController_list: {
+        parameters: {
+            query?: {
+                page?: components["schemas"]["Object"];
+                pageSize?: components["schemas"]["Object"];
+                status?: "PENDING_RECTIFICATION" | "PENDING_REVIEW" | "CLOSED";
+                butlerId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    AdminRectificationsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRectificationDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    AdminRectificationsController_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rectificationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRectificationDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MyRectificationsController_list: {
+        parameters: {
+            query?: {
+                page?: components["schemas"]["Object"];
+                pageSize?: components["schemas"]["Object"];
+                status?: "PENDING_RECTIFICATION" | "PENDING_REVIEW" | "CLOSED";
+                butlerId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiEnvelope"];
+                };
+            };
+        };
+    };
+    MyRectificationsController_submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rectificationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitRectificationDto"];
             };
         };
         responses: {

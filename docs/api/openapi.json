@@ -69,6 +69,42 @@
         ]
       }
     },
+    "/api/v1/auth/change-password": {
+      "post": {
+        "operationId": "AuthController_changePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "authentication"
+        ]
+      }
+    },
     "/api/v1/auth/csrf": {
       "get": {
         "operationId": "AuthController_csrf",
@@ -132,11 +168,7 @@
             "schema": {
               "minimum": 1,
               "default": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -147,11 +179,7 @@
               "minimum": 1,
               "maximum": 100,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -325,6 +353,57 @@
         },
         "responses": {
           "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "admin-users"
+        ]
+      }
+    },
+    "/api/v1/admin/users/student-accounts": {
+      "get": {
+        "operationId": "UsersController_listStudentAccounts",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
             "description": "",
             "content": {
               "application/json": {
@@ -792,6 +871,96 @@
         ]
       }
     },
+    "/api/v1/sop-versions/{versionId}/material-backfill/preview": {
+      "post": {
+        "operationId": "SopController_previewMaterialBackfill",
+        "parameters": [
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewSopMaterialBackfillDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "sop-versions"
+        ]
+      }
+    },
+    "/api/v1/sop-versions/{versionId}/material-backfill/apply": {
+      "post": {
+        "operationId": "SopController_applyMaterialBackfill",
+        "parameters": [
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplySopMaterialBackfillDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "sop-versions"
+        ]
+      }
+    },
     "/api/v1/students/responsible-person-options": {
       "get": {
         "operationId": "StudentsController_responsiblePersonOptions",
@@ -829,11 +998,7 @@
             "schema": {
               "minimum": 1,
               "default": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -844,11 +1009,7 @@
               "minimum": 1,
               "maximum": 100,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -1021,6 +1182,43 @@
         },
         "responses": {
           "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "students"
+        ]
+      }
+    },
+    "/api/v1/students/name-duplicates": {
+      "get": {
+        "operationId": "StudentsController_checkNameDuplicates",
+        "parameters": [
+          {
+            "name": "name",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "example": "黄翰",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
             "description": "",
             "content": {
               "application/json": {
@@ -1369,6 +1567,86 @@
         ]
       }
     },
+    "/api/v1/students/{studentId}/account-repair": {
+      "post": {
+        "operationId": "StudentsController_repairPortalAccount",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateStudentServiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "students"
+        ]
+      }
+    },
+    "/api/v1/students/{studentId}/account-reset": {
+      "post": {
+        "operationId": "StudentsController_resetPortalAccount",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "students"
+        ]
+      }
+    },
     "/api/v1/students/{studentId}/assign-unassigned-tasks": {
       "post": {
         "operationId": "StudentsController_bulkAssignUnassignedTasks",
@@ -1425,11 +1703,7 @@
             "schema": {
               "minimum": 1,
               "default": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -1440,11 +1714,7 @@
               "minimum": 1,
               "maximum": 100,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -1601,6 +1871,77 @@
         "tags": [
           "my-students"
         ]
+      },
+      "post": {
+        "operationId": "MyStudentsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStudentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "my-students"
+        ]
+      }
+    },
+    "/api/v1/my/students/name-duplicates": {
+      "get": {
+        "operationId": "MyStudentsController_checkNameDuplicates",
+        "parameters": [
+          {
+            "name": "name",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "maxLength": 100,
+              "example": "黄翰",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "my-students"
+        ]
       }
     },
     "/api/v1/my/students/{studentId}": {
@@ -1670,6 +2011,301 @@
         ],
         "tags": [
           "my-students"
+        ]
+      }
+    },
+    "/api/v1/my/students/{studentId}/profile-submission": {
+      "get": {
+        "operationId": "MyStudentsController_profileSubmission",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "my-students"
+        ]
+      }
+    },
+    "/api/v1/my/students/{studentId}/profile-submission/confirm": {
+      "post": {
+        "operationId": "MyStudentsController_confirmProfileSubmission",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmStudentProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "my-students"
+        ]
+      }
+    },
+    "/api/v1/my/students/{studentId}/account-reset": {
+      "post": {
+        "operationId": "MyStudentsController_resetPortalAccount",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "my-students"
+        ]
+      }
+    },
+    "/api/v1/my/students/{studentId}/service-activation": {
+      "post": {
+        "operationId": "MyStudentsController_activateService",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateStudentServiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "my-students"
+        ]
+      }
+    },
+    "/api/v1/student-handoffs": {
+      "get": {
+        "operationId": "StudentHandoffsController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-handoffs"
+        ]
+      },
+      "post": {
+        "operationId": "StudentHandoffsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStudentHandoffDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-handoffs"
+        ]
+      }
+    },
+    "/api/v1/student-handoffs/{handoffId}/accept": {
+      "post": {
+        "operationId": "StudentHandoffsController_accept",
+        "parameters": [
+          {
+            "name": "handoffId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptStudentHandoffDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-handoffs"
         ]
       }
     },
@@ -1852,6 +2488,51 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ReportTaskExtensionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/api/v1/tasks/{taskId}/student-blockers": {
+      "post": {
+        "operationId": "TasksController_reportStudentBlocker",
+        "parameters": [
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportStudentBlockerDto"
               }
             }
           }
@@ -2067,11 +2748,7 @@
             "schema": {
               "minimum": 1,
               "default": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -2082,11 +2759,7 @@
               "minimum": 1,
               "maximum": 100,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -2149,6 +2822,14 @@
           },
           {
             "name": "openAlert",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "attentionOnly",
             "required": false,
             "in": "query",
             "schema": {
@@ -2196,6 +2877,203 @@
         ]
       }
     },
+    "/api/v1/my/tasks/weekly-reviews": {
+      "get": {
+        "operationId": "MyTasksController_weeklyReviews",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "my-tasks"
+        ]
+      }
+    },
+    "/api/v1/my/tasks/weekly-reviews/{reviewId}/submit": {
+      "post": {
+        "operationId": "MyTasksController_submitWeeklyReview",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitWeeklyReviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "my-tasks"
+        ]
+      }
+    },
+    "/api/v1/admin/butler-supervision": {
+      "get": {
+        "operationId": "ButlerSupervisionController_dashboard",
+        "parameters": [
+          {
+            "name": "weekStart",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "butler-supervision"
+        ]
+      }
+    },
+    "/api/v1/admin/butler-supervision/student-blockers/{blockerId}/reject": {
+      "post": {
+        "operationId": "ButlerSupervisionController_rejectBlocker",
+        "parameters": [
+          {
+            "name": "blockerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectStudentBlockerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "butler-supervision"
+        ]
+      }
+    },
+    "/api/v1/admin/butler-supervision/weekly-reviews/{reviewId}/review": {
+      "post": {
+        "operationId": "ButlerSupervisionController_reviewWeekly",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewWeeklyReviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "butler-supervision"
+        ]
+      }
+    },
     "/api/v1/admin/task-supervision/summary": {
       "get": {
         "operationId": "TaskSupervisionController_summary",
@@ -2207,11 +3085,7 @@
             "schema": {
               "minimum": 1,
               "default": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -2222,11 +3096,7 @@
               "minimum": 1,
               "maximum": 100,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -2289,6 +3159,180 @@
           },
           {
             "name": "openAlert",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "attentionOnly",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "dueFrom",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dueTo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "task-supervision"
+        ]
+      }
+    },
+    "/api/v1/admin/task-supervision/butlers": {
+      "get": {
+        "operationId": "TaskSupervisionController_butlers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "task-supervision"
+        ]
+      }
+    },
+    "/api/v1/admin/task-supervision/focus": {
+      "get": {
+        "operationId": "TaskSupervisionController_focus",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "TODO",
+                "IN_PROGRESS",
+                "COMPLETED",
+                "CANCELED",
+                "NOT_APPLICABLE"
+              ]
+            }
+          },
+          {
+            "name": "ownerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "studentId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "stageCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 32,
+              "type": "string"
+            }
+          },
+          {
+            "name": "overdue",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "unassigned",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "openAlert",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "attentionOnly",
             "required": false,
             "in": "query",
             "schema": {
@@ -2347,11 +3391,7 @@
             "schema": {
               "minimum": 1,
               "default": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -2362,11 +3402,7 @@
               "minimum": 1,
               "maximum": 100,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -2429,6 +3465,14 @@
           },
           {
             "name": "openAlert",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "attentionOnly",
             "required": false,
             "in": "query",
             "schema": {
@@ -2667,11 +3711,7 @@
             "schema": {
               "minimum": 1,
               "default": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -2682,11 +3722,7 @@
               "minimum": 1,
               "maximum": 100,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -2767,6 +3803,58 @@
         ],
         "tags": [
           "overdue-alerts"
+        ]
+      }
+    },
+    "/api/v1/material-automation/status": {
+      "get": {
+        "operationId": "MaterialsController_automationStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/material-automation/scan": {
+      "post": {
+        "operationId": "MaterialsController_runAutomationScan",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
         ]
       }
     },
@@ -3134,6 +4222,469 @@
         ]
       }
     },
+    "/api/v1/material-submissions/{submissionId}": {
+      "get": {
+        "operationId": "MaterialsController_submissionDetail",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/materials/{materialId}/submissions": {
+      "post": {
+        "operationId": "MaterialsController_createSubmission",
+        "parameters": [
+          {
+            "name": "materialId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMaterialSubmissionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/material-submissions/{submissionId}/files": {
+      "post": {
+        "operationId": "MaterialsController_addSubmissionFile",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadMaterialVersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/material-submissions/{submissionId}/files/{fileId}/remove": {
+      "post": {
+        "operationId": "MaterialsController_removeSubmissionFile",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveMaterialSubmissionFileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/material-submissions/{submissionId}/submit": {
+      "post": {
+        "operationId": "MaterialsController_submitSubmission",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/material-submissions/{submissionId}/withdraw": {
+      "post": {
+        "operationId": "MaterialsController_withdrawSubmission",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawMaterialSubmissionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/material-submissions/{submissionId}/review/start": {
+      "post": {
+        "operationId": "MaterialsController_startSubmissionReview",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/material-submissions/{submissionId}/review": {
+      "post": {
+        "operationId": "MaterialsController_reviewSubmission",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewMaterialSubmissionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/material-applicability-requests/{requestId}/review": {
+      "post": {
+        "operationId": "MaterialsController_reviewApplicability",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewMaterialApplicabilityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/materials/{materialId}/cancel": {
+      "post": {
+        "operationId": "MaterialsController_cancelSpecial",
+        "parameters": [
+          {
+            "name": "materialId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelSpecialMaterialDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/material-submission-files/{fileId}/download": {
+      "get": {
+        "operationId": "MaterialsController_downloadSubmissionFile",
+        "parameters": [
+          {
+            "name": "fileId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "materials"
+        ]
+      }
+    },
     "/api/v1/students/{studentId}/record": {
       "get": {
         "operationId": "StudentRecordsController_detail",
@@ -3312,11 +4863,7 @@
             "in": "query",
             "schema": {
               "default": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -3326,11 +4873,7 @@
             "schema": {
               "maximum": 100,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -3628,11 +5171,7 @@
             "in": "query",
             "schema": {
               "default": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -3642,11 +5181,7 @@
             "schema": {
               "maximum": 100,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           },
           {
@@ -4062,6 +5597,66 @@
         ]
       }
     },
+    "/api/v1/portal/me/profile": {
+      "get": {
+        "operationId": "PortalController_profile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-portal"
+        ]
+      },
+      "post": {
+        "operationId": "PortalController_submitProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitPortalProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-portal"
+        ]
+      }
+    },
     "/api/v1/portal/me/materials": {
       "get": {
         "operationId": "PortalController_materials",
@@ -4139,6 +5734,344 @@
         "parameters": [
           {
             "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-portal"
+        ]
+      }
+    },
+    "/api/v1/portal/me/materials/{materialId}/submissions": {
+      "post": {
+        "operationId": "PortalController_createMaterialSubmission",
+        "parameters": [
+          {
+            "name": "materialId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMaterialSubmissionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-portal"
+        ]
+      }
+    },
+    "/api/v1/portal/me/material-submissions/{submissionId}": {
+      "get": {
+        "operationId": "PortalController_materialSubmissionDetail",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-portal"
+        ]
+      }
+    },
+    "/api/v1/portal/me/material-submissions/{submissionId}/files": {
+      "post": {
+        "operationId": "PortalController_addMaterialSubmissionFile",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalUploadMaterialDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-portal"
+        ]
+      }
+    },
+    "/api/v1/portal/me/material-submissions/{submissionId}/files/{fileId}/remove": {
+      "post": {
+        "operationId": "PortalController_removeMaterialSubmissionFile",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveMaterialSubmissionFileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-portal"
+        ]
+      }
+    },
+    "/api/v1/portal/me/material-submissions/{submissionId}/submit": {
+      "post": {
+        "operationId": "PortalController_submitMaterialSubmission",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-portal"
+        ]
+      }
+    },
+    "/api/v1/portal/me/material-submissions/{submissionId}/withdraw": {
+      "post": {
+        "operationId": "PortalController_withdrawMaterialSubmission",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawMaterialSubmissionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-portal"
+        ]
+      }
+    },
+    "/api/v1/portal/me/materials/{materialId}/not-applicable-requests": {
+      "post": {
+        "operationId": "PortalController_requestMaterialNotApplicable",
+        "parameters": [
+          {
+            "name": "materialId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestMaterialNotApplicableDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "student-portal"
+        ]
+      }
+    },
+    "/api/v1/portal/me/material-submission-files/{fileId}/download": {
+      "get": {
+        "operationId": "PortalController_downloadMaterialSubmissionFile",
+        "parameters": [
+          {
+            "name": "fileId",
             "required": true,
             "in": "path",
             "schema": {
@@ -4291,6 +6224,282 @@
         ]
       }
     },
+    "/api/v1/admin/rectifications": {
+      "get": {
+        "operationId": "AdminRectificationsController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maximum": 100,
+              "default": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING_RECTIFICATION",
+                "PENDING_REVIEW",
+                "CLOSED"
+              ]
+            }
+          },
+          {
+            "name": "butlerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "admin-rectifications"
+        ]
+      },
+      "post": {
+        "operationId": "AdminRectificationsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRectificationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "admin-rectifications"
+        ]
+      }
+    },
+    "/api/v1/admin/rectifications/{rectificationId}/review": {
+      "post": {
+        "operationId": "AdminRectificationsController_review",
+        "parameters": [
+          {
+            "name": "rectificationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRectificationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "admin-rectifications"
+        ]
+      }
+    },
+    "/api/v1/my/rectifications": {
+      "get": {
+        "operationId": "MyRectificationsController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maximum": 100,
+              "default": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING_RECTIFICATION",
+                "PENDING_REVIEW",
+                "CLOSED"
+              ]
+            }
+          },
+          {
+            "name": "butlerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "my-rectifications"
+        ]
+      }
+    },
+    "/api/v1/my/rectifications/{rectificationId}/submit": {
+      "post": {
+        "operationId": "MyRectificationsController_submit",
+        "parameters": [
+          {
+            "name": "rectificationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitRectificationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "my-rectifications"
+        ]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",
@@ -4369,9 +6578,24 @@
           "password"
         ]
       },
-      "Object": {
+      "ChangePasswordDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "format": "password",
+            "minLength": 6
+          },
+          "newPassword": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
       },
       "CreateUserDto": {
         "type": "object",
@@ -4499,6 +6723,65 @@
           "isBlocking"
         ]
       },
+      "SopMaterialTemplateInputDto": {
+        "type": "object",
+        "properties": {
+          "templateKey": {
+            "type": "string",
+            "format": "uuid",
+            "description": "跨SOP版本保持不变的资料模板标识"
+          },
+          "materialTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "requirement": {
+            "type": "object",
+            "maxLength": 2000,
+            "nullable": true
+          },
+          "requirementKind": {
+            "type": "string",
+            "enum": [
+              "REQUIRED",
+              "CONDITIONAL",
+              "OPTIONAL"
+            ]
+          },
+          "deadlineRule": {
+            "type": "string",
+            "enum": [
+              "ACTIVATION_OFFSET",
+              "STAGE_OFFSET",
+              "FIXED_DATE"
+            ]
+          },
+          "deadlineOffsetDays": {
+            "type": "object",
+            "minimum": 0,
+            "nullable": true
+          },
+          "fixedDueAt": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "conditionRule": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "materialTypeId",
+          "title",
+          "requirementKind",
+          "deadlineRule"
+        ]
+      },
       "SopStageTemplateInputDto": {
         "type": "object",
         "properties": {
@@ -4519,6 +6802,13 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SopTaskTemplateInputDto"
+            }
+          },
+          "materials": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SopMaterialTemplateInputDto"
             }
           }
         },
@@ -4561,6 +6851,41 @@
         },
         "required": [
           "version"
+        ]
+      },
+      "PreviewSopMaterialBackfillDto": {
+        "type": "object",
+        "properties": {
+          "studentIds": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "ApplySopMaterialBackfillDto": {
+        "type": "object",
+        "properties": {
+          "studentIds": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "previewFingerprint": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "description": "预览接口返回的内容指纹"
+          }
+        },
+        "required": [
+          "previewFingerprint"
         ]
       },
       "CreateStudentDto": {
@@ -4757,6 +7082,96 @@
           "tasks"
         ]
       },
+      "ConfirmStudentProfileDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "description": "学生提交版本"
+          }
+        },
+        "required": [
+          "version"
+        ]
+      },
+      "Object": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateStudentHandoffDto": {
+        "type": "object",
+        "properties": {
+          "studentName": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "studentPhone": {
+            "type": "object",
+            "maxLength": 32
+          },
+          "studentWechat": {
+            "type": "object",
+            "maxLength": 100
+          },
+          "parentName": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "parentRelationship": {
+            "type": "object",
+            "maxLength": 50
+          },
+          "parentPhone": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "parentWechat": {
+            "type": "object",
+            "maxLength": 100
+          },
+          "school": {
+            "type": "object",
+            "maxLength": 150
+          },
+          "grade": {
+            "type": "object",
+            "maxLength": 32
+          },
+          "cohortYear": {
+            "type": "object",
+            "minimum": 2000,
+            "maximum": 2200
+          },
+          "assignedButlerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "wechatGroupCreatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "studentName",
+          "parentName",
+          "parentPhone",
+          "assignedButlerId",
+          "wechatGroupCreatedAt"
+        ]
+      },
+      "AcceptStudentHandoffDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "version"
+        ]
+      },
       "TaskVersionDto": {
         "type": "object",
         "properties": {
@@ -4779,11 +7194,6 @@
           "progressNote": {
             "type": "string",
             "maxLength": 2000
-          },
-          "progressPercent": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 99
           }
         },
         "required": [
@@ -4811,6 +7221,39 @@
           "version",
           "reason",
           "expectedFinishAt"
+        ]
+      },
+      "ReportStudentBlockerDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "STUDENT_COOPERATION",
+              "FAMILY",
+              "SCHOOL",
+              "EXTERNAL_DOCUMENT",
+              "OTHER"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "expectedRecoveryAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "version",
+          "category",
+          "description",
+          "expectedRecoveryAt"
         ]
       },
       "CompleteTaskDto": {
@@ -4872,6 +7315,99 @@
           "fileName",
           "mimeType",
           "contentBase64"
+        ]
+      },
+      "WeeklyReviewResponseItemDto": {
+        "type": "object",
+        "properties": {
+          "anomalyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "responseNote": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "anomalyId",
+          "responseNote"
+        ]
+      },
+      "SubmitWeeklyReviewDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WeeklyReviewResponseItemDto"
+            }
+          }
+        },
+        "required": [
+          "version",
+          "items"
+        ]
+      },
+      "RejectStudentBlockerDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "note"
+        ]
+      },
+      "WeeklyReviewDecisionItemDto": {
+        "type": "object",
+        "properties": {
+          "anomalyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "RECTIFIED",
+              "APPEAL_ACCEPTED",
+              "APPEAL_REJECTED"
+            ]
+          }
+        },
+        "required": [
+          "anomalyId",
+          "decision"
+        ]
+      },
+      "ReviewWeeklyReviewDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WeeklyReviewDecisionItemDto"
+            }
+          }
+        },
+        "required": [
+          "version",
+          "note",
+          "items"
         ]
       },
       "RescheduleTaskDto": {
@@ -4990,11 +7526,25 @@
             "type": "object",
             "format": "uuid",
             "nullable": true
+          },
+          "creationReason": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "新增特殊资料的业务原因"
+          },
+          "requirementKind": {
+            "type": "string",
+            "enum": [
+              "REQUIRED",
+              "OPTIONAL"
+            ],
+            "default": "REQUIRED"
           }
         },
         "required": [
           "materialTypeId",
-          "title"
+          "title",
+          "creationReason"
         ]
       },
       "UploadMaterialVersionDto": {
@@ -5011,6 +7561,12 @@
           "contentBase64": {
             "type": "string",
             "description": "Base64编码文件内容，解码后最大50MB"
+          },
+          "replacesFileId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "补正时被替换的问题文件"
           }
         },
         "required": [
@@ -5112,6 +7668,136 @@
         "required": [
           "archiveStatus",
           "note"
+        ]
+      },
+      "CreateMaterialSubmissionDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "object",
+            "maxLength": 1000,
+            "nullable": true,
+            "description": "管家代传时必填"
+          }
+        }
+      },
+      "RemoveMaterialSubmissionFileDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "WithdrawMaterialSubmissionDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "MaterialSubmissionFileDecisionDto": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "APPROVED",
+              "CORRECTION_REQUIRED"
+            ]
+          },
+          "comment": {
+            "type": "object",
+            "maxLength": 1000,
+            "nullable": true
+          }
+        },
+        "required": [
+          "fileId",
+          "outcome"
+        ]
+      },
+      "ReviewMaterialSubmissionDto": {
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "APPROVED",
+              "NEEDS_CORRECTION"
+            ]
+          },
+          "comment": {
+            "type": "object",
+            "maxLength": 1000,
+            "nullable": true
+          },
+          "correctionDueAt": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "fileDecisions": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MaterialSubmissionFileDecisionDto"
+            }
+          }
+        },
+        "required": [
+          "outcome",
+          "fileDecisions"
+        ]
+      },
+      "ReviewMaterialApplicabilityDto": {
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "APPROVED",
+              "REJECTED"
+            ]
+          },
+          "comment": {
+            "type": "object",
+            "maxLength": 1000,
+            "nullable": true
+          }
+        },
+        "required": [
+          "outcome"
+        ]
+      },
+      "CancelSpecialMaterialDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "reason",
+          "version"
         ]
       },
       "StudentScoreInputDto": {
@@ -5516,6 +8202,16 @@
             "type": "object",
             "maxLength": 32,
             "nullable": true
+          },
+          "ownerId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "dueAt": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
           }
         },
         "required": [
@@ -5598,6 +8294,91 @@
           "dueAt"
         ]
       },
+      "SubmitPortalProfileDto": {
+        "type": "object",
+        "properties": {
+          "studentName": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "cohortYear": {
+            "type": "number",
+            "minimum": 2000,
+            "maximum": 2200
+          },
+          "grade": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "school": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "studentPhone": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "studentWechat": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "parentName": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "parentRelationship": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "parentPhone": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "parentWechat": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "identityCategory": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "examCandidateType": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "dseSubjects": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scoreSummary": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "targetDirection": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "studentName",
+          "cohortYear",
+          "grade",
+          "school",
+          "studentPhone",
+          "studentWechat",
+          "parentName",
+          "parentRelationship",
+          "parentPhone",
+          "parentWechat",
+          "identityCategory",
+          "examCandidateType",
+          "dseSubjects",
+          "scoreSummary",
+          "targetDirection"
+        ]
+      },
       "PortalUploadMaterialDto": {
         "type": "object",
         "properties": {
@@ -5611,12 +8392,29 @@
           },
           "contentBase64": {
             "type": "string"
+          },
+          "replacesFileId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "required": [
           "fileName",
           "mimeType",
           "contentBase64"
+        ]
+      },
+      "RequestMaterialNotApplicableDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "reason"
         ]
       },
       "RespondConfirmationDto": {
@@ -5637,6 +8435,83 @@
         },
         "required": [
           "status"
+        ]
+      },
+      "CreateRectificationDto": {
+        "type": "object",
+        "properties": {
+          "butlerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "taskIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "issueIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "butlerId",
+          "taskIds",
+          "issueIds",
+          "summary",
+          "dueAt"
+        ]
+      },
+      "ReviewRectificationDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "approve": {
+            "type": "boolean",
+            "description": "true 表示复核通过并关闭，false 表示退回整改"
+          }
+        },
+        "required": [
+          "note",
+          "version",
+          "approve"
+        ]
+      },
+      "SubmitRectificationDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "note",
+          "version"
         ]
       },
       "ApiError": {

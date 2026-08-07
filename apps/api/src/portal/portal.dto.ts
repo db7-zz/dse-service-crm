@@ -7,10 +7,12 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
   MinLength,
+  ValidateIf,
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
@@ -31,6 +33,12 @@ export class PortalUploadMaterialDto {
   @IsString()
   @IsBase64()
   contentBase64!: string;
+
+  @ApiPropertyOptional({ format: "uuid", nullable: true })
+  @IsOptional()
+  @ValidateIf((_object, value) => value !== null)
+  @IsUUID()
+  replacesFileId?: string | null;
 }
 
 export class RespondConfirmationDto {

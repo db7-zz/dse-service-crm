@@ -31,7 +31,12 @@ const ALLOWED_FILES: Record<string, string[]> = {
 
 const MATERIAL_INCLUDE = {
   materialType: true,
+  sopMaterialTemplate: {
+    include: { stageTemplate: { select: { stageCode: true, name: true, sequenceNo: true } } },
+  },
   owner: { select: { id: true, displayName: true } },
+  createdBy: { select: { id: true, displayName: true } },
+  canceledBy: { select: { id: true, displayName: true } },
   currentVersion: {
     include: {
       uploadedBy: { select: { id: true, displayName: true } },
@@ -44,6 +49,44 @@ const MATERIAL_INCLUDE = {
       reviewedBy: { select: { id: true, displayName: true } },
     },
     orderBy: { versionNo: "desc" as const },
+  },
+  currentSubmission: {
+    include: {
+      createdBy: { select: { id: true, displayName: true } },
+      submittedBy: { select: { id: true, displayName: true } },
+      reviewStartedBy: { select: { id: true, displayName: true } },
+      reviewedBy: { select: { id: true, displayName: true } },
+      files: {
+        include: {
+          uploadedBy: { select: { id: true, displayName: true } },
+          reviewedBy: { select: { id: true, displayName: true } },
+        },
+        orderBy: { uploadedAt: "asc" as const },
+      },
+    },
+  },
+  submissions: {
+    include: {
+      createdBy: { select: { id: true, displayName: true } },
+      submittedBy: { select: { id: true, displayName: true } },
+      reviewStartedBy: { select: { id: true, displayName: true } },
+      reviewedBy: { select: { id: true, displayName: true } },
+      files: {
+        include: {
+          uploadedBy: { select: { id: true, displayName: true } },
+          reviewedBy: { select: { id: true, displayName: true } },
+        },
+        orderBy: { uploadedAt: "asc" as const },
+      },
+    },
+    orderBy: { submissionNo: "desc" as const },
+  },
+  applicabilityRequests: {
+    include: {
+      requestedBy: { select: { id: true, displayName: true } },
+      reviewedBy: { select: { id: true, displayName: true } },
+    },
+    orderBy: { createdAt: "desc" as const },
   },
   followups: {
     include: {
@@ -90,20 +133,21 @@ export class MaterialsService {
     await this.access.assertInternalAccess(studentId, request);
     const actor = request.authenticatedUser as AuthenticatedUser;
     const isPlanner = actor.roles.includes(RoleCode.PLANNER);
-    const isAdministrator = actor.roles.includes(RoleCode.ADMINISTRATOR);
     const items = await this.prisma.materialItem.findMany({
       where: {
         studentId,
-        ...(isPlanner ? { materialType: { code: { in: PLANNER_VISIBLE_MATERIAL_CODES } } } : {}),
+        ...(isPlanner
+          ? {
+              status: "APPROVED" as const,
+              materialType: { code: { in: PLANNER_VISIBLE_MATERIAL_CODES } },
+            }
+          : {}),
       },
       include: MATERIAL_INCLUDE,
       orderBy: [{ materialType: { sequenceNo: "asc" } }, { createdAt: "asc" }],
     });
     return {
-      items: items.map((item) => {
-        const serialized = this.serialize(item);
-        return isAdministrator ? { ...serialized, currentVersion: null, versions: [] } : serialized;
-      }),
+      items: items.map((item) => this.serialize(item, isPlanner)),
       summary: this.summary(items),
     };
   }
@@ -111,6 +155,17 @@ export class MaterialsService {
   public async create(studentId: string, body: CreateMaterialItemDto, request: RequestContext) {
     await this.access.assertInternalAccess(studentId, request);
     const actor = request.authenticatedUser as AuthenticatedUser;
+    const student = await this.prisma.student.findUniqueOrThrow({
+      where: { id: studentId },
+      select: { defaultButlerId: true },
+    });
+    if (!actor.roles.includes(RoleCode.BUTLER) || student.defaultButlerId !== actor.id) {
+      throw new ApiException(
+        HttpStatus.FORBIDDEN,
+        ErrorCode.FORBIDDEN,
+        "只有该学生的负责管家可以新增特殊资料",
+      );
+    }
     try {
       const item = await this.prisma.$transaction(async (transaction) => {
         const materialType = await transaction.materialType.findFirst({
@@ -129,8 +184,12 @@ export class MaterialsService {
             materialTypeId: materialType.id,
             title: body.title.trim(),
             requirement: this.optionalText(body.requirement),
+            origin: "SPECIAL",
+            requirementKind: body.requirementKind,
             dueAt: body.dueAt ? new Date(body.dueAt) : null,
             ownerId: body.ownerId ?? null,
+            createdById: actor.id,
+            creationReason: body.creationReason.trim(),
           },
           include: MATERIAL_INCLUDE,
         });
@@ -139,9 +198,12 @@ export class MaterialsService {
             studentId,
             materialTypeCode: materialType.code,
             ownerId: body.ownerId ?? null,
+            origin: "SPECIAL",
+            requirementKind: body.requirementKind,
+            creationReason: body.creationReason.trim(),
           }),
         });
-        if (materialType.isCore) {
+        if (body.requirementKind === "REQUIRED") {
           await this.ensureBlockingTask(transaction, created.id, actor.id, request);
         }
         return created;
@@ -161,6 +223,13 @@ export class MaterialsService {
     request: RequestContext,
     expectedStudentId?: string,
   ) {
+    if (!expectedStudentId) {
+      throw new ApiException(
+        HttpStatus.CONFLICT,
+        ErrorCode.MATERIAL_REVIEW_CONFLICT,
+        "管家代传请使用提交批次入口并填写原因",
+      );
+    }
     const item = await this.loadAccessible(materialId, request, expectedStudentId);
     const actor = request.authenticatedUser as AuthenticatedUser;
     const content = this.decodeAndValidateFile(body);
@@ -237,6 +306,9 @@ export class MaterialsService {
         ErrorCode.MATERIAL_REVIEW_CONFLICT,
         "该资料尚未上传版本",
       );
+    }
+    if (item.currentVersion.uploadedById === actor.id) {
+      throw new ApiException(HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN, "上传人不能审核自己的资料");
     }
     const terminalTaskStatus: TaskStatus | null =
       body.outcome === "APPROVED"
@@ -422,16 +494,11 @@ export class MaterialsService {
     if (!expectedStudentId) {
       await this.access.assertInternalAccess(version.materialItem.studentId, request);
       const actor = request.authenticatedUser as AuthenticatedUser;
-      if (actor.roles.includes(RoleCode.ADMINISTRATOR)) {
-        throw new ApiException(
-          HttpStatus.FORBIDDEN,
-          ErrorCode.FORBIDDEN,
-          "管理员默认仅查看资料状态，原始文件由负责管家处理",
-        );
-      }
       if (
         actor.roles.includes(RoleCode.PLANNER) &&
-        !PLANNER_VISIBLE_MATERIAL_CODES.includes(version.materialItem.materialType.code)
+        (version.materialItem.status !== "APPROVED" ||
+          version.reviewStatus !== "APPROVED" ||
+          !PLANNER_VISIBLE_MATERIAL_CODES.includes(version.materialItem.materialType.code))
       ) {
         throw new ApiException(
           HttpStatus.FORBIDDEN,
@@ -488,24 +555,68 @@ export class MaterialsService {
     return this.serialize(item);
   }
 
-  private serialize(item: Prisma.MaterialItemGetPayload<{ include: typeof MATERIAL_INCLUDE }>) {
+  private serialize(
+    item: Prisma.MaterialItemGetPayload<{ include: typeof MATERIAL_INCLUDE }>,
+    plannerView = false,
+  ) {
+    const visibleVersions = plannerView
+      ? item.versions.filter((version) => version.reviewStatus === "APPROVED")
+      : item.versions;
+    const visibleSubmissions = plannerView
+      ? item.submissions.filter((submission) => submission.status === "APPROVED")
+      : item.submissions;
     return {
       id: item.id,
       studentId: item.studentId,
       materialType: item.materialType,
+      sopMaterialTemplate: item.sopMaterialTemplate,
+      templateKeySnapshot: item.templateKeySnapshot,
       title: item.title,
       requirement: item.requirement,
+      origin: item.origin,
+      requirementKind: item.requirementKind,
+      deadlineRule: item.deadlineRule,
+      deadlineOffsetDays: item.deadlineOffsetDays,
+      fixedDueAtSnapshot: item.fixedDueAtSnapshot?.toISOString() ?? null,
+      conditionRuleSnapshot: item.conditionRuleSnapshot,
+      conditionMatched: item.conditionMatched,
       dueAt: item.dueAt?.toISOString() ?? null,
       owner: item.owner,
+      createdBy: item.createdBy,
+      creationReason: item.creationReason,
       status: item.status,
       missingReason: item.missingReason,
       expectedSubmitAt: item.expectedSubmitAt?.toISOString() ?? null,
+      correctionDueAt: item.correctionDueAt?.toISOString() ?? null,
+      canceledAt: item.canceledAt?.toISOString() ?? null,
+      canceledBy: item.canceledBy,
+      cancelReason: item.cancelReason,
       archiveStatus: item.archiveStatus,
       archivedAt: item.archivedAt?.toISOString() ?? null,
       archiveNote: item.archiveNote,
       version: item.version,
-      currentVersion: item.currentVersion ? this.serializeVersion(item.currentVersion) : null,
-      versions: item.versions.map((version) => this.serializeVersion(version)),
+      currentVersion:
+        item.currentVersion && (!plannerView || item.currentVersion.reviewStatus === "APPROVED")
+          ? this.serializeVersion(item.currentVersion)
+          : null,
+      versions: visibleVersions.map((version) => this.serializeVersion(version)),
+      currentSubmission:
+        item.currentSubmission && (!plannerView || item.currentSubmission.status === "APPROVED")
+          ? this.serializeSubmission(item.currentSubmission)
+          : null,
+      submissions: visibleSubmissions.map((submission) => this.serializeSubmission(submission)),
+      applicabilityRequests: plannerView
+        ? []
+        : item.applicabilityRequests.map((applicability) => ({
+            id: applicability.id,
+            reason: applicability.reason,
+            status: applicability.status,
+            requestedBy: applicability.requestedBy,
+            createdAt: applicability.createdAt.toISOString(),
+            reviewedBy: applicability.reviewedBy,
+            reviewedAt: applicability.reviewedAt?.toISOString() ?? null,
+            reviewComment: applicability.reviewComment,
+          })),
       followups: item.followups.map((followup) => ({
         id: followup.id,
         note: followup.followupNote,
@@ -545,6 +656,62 @@ export class MaterialsService {
       reviewedAt: version.reviewedAt?.toISOString() ?? null,
       reviewComment: version.reviewComment,
       downloadUrl: `/api/v1/materials/versions/${version.id}/download`,
+      previewUrl:
+        version.mimeType === "application/pdf" || version.mimeType.startsWith("image/")
+          ? `/api/v1/materials/versions/${version.id}/download?preview=true`
+          : null,
+    };
+  }
+
+  private serializeSubmission(
+    submission: Prisma.MaterialSubmissionGetPayload<{
+      include: {
+        createdBy: { select: { id: true; displayName: true } };
+        submittedBy: { select: { id: true; displayName: true } };
+        reviewStartedBy: { select: { id: true; displayName: true } };
+        reviewedBy: { select: { id: true; displayName: true } };
+        files: {
+          include: {
+            uploadedBy: { select: { id: true; displayName: true } };
+            reviewedBy: { select: { id: true; displayName: true } };
+          };
+        };
+      };
+    }>,
+  ) {
+    return {
+      id: submission.id,
+      submissionNo: submission.submissionNo,
+      status: submission.status,
+      source: submission.source,
+      createdBy: submission.createdBy,
+      submittedBy: submission.submittedBy,
+      submissionReason: submission.submissionReason,
+      submittedAt: submission.submittedAt?.toISOString() ?? null,
+      withdrawnAt: submission.withdrawnAt?.toISOString() ?? null,
+      withdrawalReason: submission.withdrawalReason,
+      reviewStartedBy: submission.reviewStartedBy,
+      reviewStartedAt: submission.reviewStartedAt?.toISOString() ?? null,
+      reviewedBy: submission.reviewedBy,
+      reviewedAt: submission.reviewedAt?.toISOString() ?? null,
+      reviewComment: submission.reviewComment,
+      correctionDueAt: submission.correctionDueAt?.toISOString() ?? null,
+      files: submission.files
+        .filter((file) => !file.removedAt)
+        .map((file) => ({
+          id: file.id,
+          fileName: file.fileName,
+          mimeType: file.mimeType,
+          fileSize: file.fileSize,
+          uploadedBy: file.uploadedBy,
+          uploadedAt: file.uploadedAt.toISOString(),
+          reviewStatus: file.reviewStatus,
+          reviewedBy: file.reviewedBy,
+          reviewedAt: file.reviewedAt?.toISOString() ?? null,
+          reviewComment: file.reviewComment,
+          copiedFromFileId: file.copiedFromFileId,
+          downloadUrl: `/api/v1/material-submission-files/${file.id}/download`,
+        })),
     };
   }
 
@@ -554,10 +721,12 @@ export class MaterialsService {
       approved: items.filter((item) => item.status === "APPROVED").length,
       pendingReview: items.filter((item) => item.status === "PENDING_REVIEW").length,
       missing: items.filter((item) =>
-        ["PARTIALLY_MISSING", "RESUBMISSION_REQUIRED"].includes(item.status),
+        ["PARTIALLY_MISSING", "RESUBMISSION_REQUIRED", "NEEDS_CORRECTION"].includes(item.status),
       ).length,
       missingCore: items.filter(
-        (item) => item.materialType.isCore && !["APPROVED", "NOT_APPLICABLE"].includes(item.status),
+        (item) =>
+          item.materialType.isCore &&
+          !["APPROVED", "NOT_APPLICABLE", "CANCELED"].includes(item.status),
       ).length,
     };
   }

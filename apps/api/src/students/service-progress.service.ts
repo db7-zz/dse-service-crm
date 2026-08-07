@@ -429,6 +429,9 @@ export class ServiceProgressService {
               version: { increment: 1 },
             },
           });
+          if (changed && desiredStatus === "IN_PROGRESS" && startedAt) {
+            await this.activateStageMaterials(transaction, stage.id, startedAt, request);
+          }
           if (changed && desiredStatus !== "NOT_STARTED") {
             await transaction.stageTransition.create({
               data: {
@@ -580,6 +583,89 @@ export class ServiceProgressService {
       summary: "前序阶段完成，系统启动本阶段",
       createdAt: now,
     });
+    await this.activateStageMaterials(transaction, stage.id, now, request);
+  }
+
+  private async activateStageMaterials(
+    transaction: Prisma.TransactionClient,
+    stageInstanceId: string,
+    startedAt: Date,
+    request: RequestContext,
+  ) {
+    const actor = request.authenticatedUser as AuthenticatedUser;
+    const stage = await transaction.stageInstance.findUniqueOrThrow({
+      where: { id: stageInstanceId },
+      select: {
+        id: true,
+        studentId: true,
+        serviceActivationId: true,
+        sopVersionId: true,
+        stageTemplateId: true,
+        stageCodeSnapshot: true,
+        student: { select: { defaultButlerId: true } },
+      },
+    });
+    const materials = await transaction.materialItem.findMany({
+      where: {
+        studentId: stage.studentId,
+        sopMaterialTemplate: {
+          stageTemplate: { stageCode: stage.stageCodeSnapshot },
+        },
+        deadlineRule: "STAGE_OFFSET",
+        dueAt: null,
+        conditionMatched: true,
+        requirementKind: { in: ["REQUIRED", "CONDITIONAL"] },
+        status: { notIn: ["NOT_APPLICABLE", "CANCELED"] },
+      },
+      include: {
+        sopMaterialTemplate: {
+          select: { stageTemplate: { select: { sopVersionId: true } } },
+        },
+      },
+    });
+    for (const material of materials) {
+      const offsetDays = material.deadlineOffsetDays ?? 0;
+      const dueAt = new Date(startedAt.getTime() + offsetDays * 24 * 60 * 60 * 1000);
+      await transaction.materialItem.update({
+        where: { id: material.id },
+        data: { dueAt, version: { increment: 1 } },
+      });
+      const existingTask = await transaction.taskInstance.findFirst({
+        where: { sourceType: "MATERIAL", sourceObjectId: material.id },
+        select: { id: true },
+      });
+      if (existingTask) continue;
+      const task = await transaction.taskInstance.create({
+        data: {
+          studentId: stage.studentId,
+          serviceActivationId: stage.serviceActivationId,
+          stageInstanceId: stage.id,
+          sopVersionId:
+            material.sopMaterialTemplate?.stageTemplate.sopVersionId ?? stage.sopVersionId,
+          sourceType: "MATERIAL",
+          sourceObjectId: material.id,
+          isBlockingSnapshot: true,
+          createdById: actor.id,
+          titleSnapshot: `收集并审核：${material.title}`,
+          descriptionSnapshot: material.requirement,
+          completionCriteriaSnapshot: "资料已审核通过，或已记录不适用原因",
+          ownerId: material.ownerId ?? stage.student.defaultButlerId,
+          originalDueAt: dueAt,
+          currentDueAt: dueAt,
+          externalVisible: true,
+        },
+      });
+      await transaction.taskTimelineEvent.create({
+        data: {
+          taskId: task.id,
+          eventType: "CREATED",
+          actorId: actor.id,
+          actorRole: actor.roles[0] ?? null,
+          summary: "进入对应阶段后生成资料阻塞任务",
+          afterData: { materialId: material.id, dueAt: dueAt.toISOString() },
+        },
+      });
+    }
   }
 
   private async completeStage(
