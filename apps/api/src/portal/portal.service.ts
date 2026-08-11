@@ -117,7 +117,7 @@ export class PortalService {
         channel: application.channel,
         institutionName: application.institutionName,
         programName: application.programName,
-        status: application.status,
+        status: publicApplicationStatus(application.status),
         updatedAt: application.updatedAt.toISOString(),
       })),
       unreadNotificationCount: unreadCount,
@@ -528,7 +528,7 @@ export class PortalService {
         institutionName: application.institutionName,
         programName: application.programName,
         preferenceNo: application.preferenceNo,
-        status: application.status,
+        status: publicApplicationStatus(application.status),
         submittedAt: application.submittedAt?.toISOString() ?? null,
         applicationNo: application.applicationNo,
         result: application.result,
@@ -613,4 +613,8 @@ export class PortalService {
       respondedAt: updated.respondedAt?.toISOString(),
     };
   }
+}
+
+function publicApplicationStatus(status: string) {
+  return status === "SUBMISSION_PENDING_EVIDENCE" ? "PENDING_SUBMISSION" : status;
 }

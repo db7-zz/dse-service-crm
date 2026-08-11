@@ -7,12 +7,14 @@ import { Breadcrumb, Typography } from "antd";
 export function PageShell({
   title,
   section,
+  breadcrumbs,
   description,
   extra,
   children,
 }: {
   title: string;
   section?: string;
+  breadcrumbs?: Array<{ title: string; href?: string }>;
   description?: string;
   extra?: ReactNode;
   children: ReactNode;
@@ -26,7 +28,13 @@ export function PageShell({
             ? [{ title: "工作区" }]
             : [
                 { title: <Link href="/workspace">工作区</Link> },
-                ...(section ? [{ title: section }] : []),
+                ...(breadcrumbs
+                  ? breadcrumbs.map((item) => ({
+                      title: item.href ? <Link href={item.href}>{item.title}</Link> : item.title,
+                    }))
+                  : section
+                    ? [{ title: section }]
+                    : []),
                 { title },
               ]
         }

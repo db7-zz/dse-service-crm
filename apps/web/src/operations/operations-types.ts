@@ -107,9 +107,13 @@ export interface ApplicationView {
   channel: "HK_DIRECT" | "JUPAS";
   institutionName: string;
   programName: string | null;
+  programChoices: string[];
   preferenceNo: number | null;
   roundName: string | null;
   deadlineAt: string | null;
+  deadlineMode: "FIXED" | "ROLLING" | "UNKNOWN";
+  requestBasis: string | null;
+  portalUrl: string | null;
   status: string;
   submittedAt: string | null;
   applicationNo: string | null;
@@ -128,6 +132,9 @@ export interface ApplicationView {
     operator: PersonRef;
     changedAt: string;
   }>;
+  activities: ApplicationActivityView[];
+  availableMaterials: ApplicationAvailableMaterialView[];
+  materialSnapshots: ApplicationMaterialSnapshotView[];
   requirements: Array<{
     id: string;
     requirementType: string;
@@ -138,6 +145,155 @@ export interface ApplicationView {
   }>;
   createdAt: string;
   updatedAt: string;
+}
+
+export type ApplicationActivityType =
+  | "CREATED"
+  | "MATERIALS_UPDATED"
+  | "SUBMISSION_RECORDED"
+  | "SUPPLEMENT_RECORDED"
+  | "NOTIFICATION_RECEIVED"
+  | "RESULT_RECORDED"
+  | "CORRECTION"
+  | "EVIDENCE_RETURNED"
+  | "OWNER_TRANSFERRED"
+  | "OTHER";
+
+export interface ApplicationEvidenceView {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedBy: PersonRef;
+  createdAt: string;
+  downloadUrl: string;
+}
+
+export interface ApplicationActivityView {
+  id: string;
+  activityType: ApplicationActivityType;
+  note: string;
+  occurredAt: string;
+  createdAt: string;
+  operator: PersonRef;
+  studentVisible: boolean;
+  portalUrl: string | null;
+  applicationNo: string | null;
+  targetStatus: string | null;
+  result: string | null;
+  correctionOfActivityId: string | null;
+  invalidatedAt: string | null;
+  invalidatedBy: PersonRef | null;
+  invalidReason: string | null;
+  evidence: ApplicationEvidenceView[];
+}
+
+export interface ApplicationMaterialVersionView {
+  id: string;
+  versionNo: number;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  reviewStatus: "PENDING" | "APPROVED" | "REJECTED";
+  uploadedAt: string;
+  downloadUrl: string;
+}
+
+export interface ApplicationAvailableMaterialView {
+  id: string;
+  title: string;
+  status: string;
+  materialType: { id: string; code: string; name: string; isCore: boolean };
+  currentVersion: ApplicationMaterialVersionView | null;
+}
+
+export interface ApplicationMaterialSnapshotView {
+  id: string;
+  materialItem: {
+    id: string;
+    title: string;
+    materialType: { id: string; code: string; name: string; isCore: boolean };
+  };
+  materialVersion: ApplicationMaterialVersionView;
+  selectedBy: PersonRef;
+  selectedAt: string;
+  frozenAt: string | null;
+}
+
+export type ApplicationStageCode =
+  "PREPARING" | "PENDING_SUBMISSION" | "SUBMITTED" | "ACTION_REQUIRED" | "ADMITTED" | "CLOSED";
+
+export type ApplicationRiskCode =
+  "PENDING_EVIDENCE" | "MISSING_DEADLINE" | "OVERDUE" | "DUE_7_DAYS" | "DUE_14_DAYS";
+
+export type ApplicationAttentionCode = ApplicationRiskCode | "ACTION_REQUIRED";
+
+export interface ApplicationSummaryMetric {
+  applicationCount: number;
+  studentCount: number;
+}
+
+export interface ApplicationAttentionView {
+  code: ApplicationAttentionCode;
+  rank: number;
+  reason: string;
+  deadlineAt: string | null;
+  daysRemaining: number | null;
+}
+
+export interface ApplicationDashboardItem {
+  id: string;
+  student: { id: string; studentNo: string; name: string };
+  channel: "HK_DIRECT" | "JUPAS";
+  institutionName: string;
+  programName: string | null;
+  applicationNo: string | null;
+  deadlineMode: "FIXED" | "ROLLING" | "UNKNOWN";
+  deadlineAt: string | null;
+  confirmationDeadline: string | null;
+  effectiveDeadlineAt: string | null;
+  status: string;
+  stage: ApplicationStageCode;
+  owner: PersonRef | null;
+  updatedAt: string;
+}
+
+export interface ApplicationAttentionItem extends ApplicationDashboardItem {
+  attention: ApplicationAttentionView;
+}
+
+export interface StudentApplicationSummaryView {
+  student: { id: string; studentNo: string; name: string };
+  totalApplications: number;
+  attentionCount: number;
+  stageCounts: Record<ApplicationStageCode, number>;
+  owners: PersonRef[];
+  priorityApplication: ApplicationDashboardItem & {
+    attention: ApplicationAttentionView | null;
+  };
+}
+
+export interface ApplicationDashboardView {
+  summary: {
+    risks: Record<ApplicationRiskCode, ApplicationSummaryMetric>;
+    stages: Record<ApplicationStageCode, ApplicationSummaryMetric>;
+  };
+  attention: { items: ApplicationAttentionItem[]; total: number };
+  students: {
+    items: StudentApplicationSummaryView[];
+    page: number;
+    pageSize: number;
+    total: number;
+  };
+  owners: PersonRef[];
+}
+
+export interface ApplicationAttentionPageView {
+  items: ApplicationAttentionItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  owners: PersonRef[];
 }
 
 export interface IssueView {

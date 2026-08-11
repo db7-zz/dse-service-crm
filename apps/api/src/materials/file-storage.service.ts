@@ -14,7 +14,7 @@ export class FileStorageService {
   }
 
   public async put(input: {
-    namespace: "materials" | "task-evidence";
+    namespace: "materials" | "task-evidence" | "application-evidence";
     ownerId: string;
     fileName: string;
     content: Buffer;

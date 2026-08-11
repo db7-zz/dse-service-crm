@@ -170,14 +170,35 @@ enum ApplicationStatus {
   CONFIRMED
   MATERIAL_PREPARATION
   PENDING_SUBMISSION
+  SUBMISSION_PENDING_EVIDENCE
   SUBMITTED
   WAITING_RESULT
   SUPPLEMENT
   INTERVIEW
+  WAITLISTED
   OFFER
   REJECTED
   ENROLLED
   WITHDRAWN
+}
+
+enum ApplicationDeadlineMode {
+  FIXED
+  ROLLING
+  UNKNOWN
+}
+
+enum ApplicationActivityType {
+  CREATED
+  MATERIALS_UPDATED
+  SUBMISSION_RECORDED
+  SUPPLEMENT_RECORDED
+  NOTIFICATION_RECEIVED
+  RESULT_RECORDED
+  CORRECTION
+  EVIDENCE_RETURNED
+  OWNER_TRANSFERRED
+  OTHER
 }
 
 enum ApplicationRequirementStatus {
@@ -390,6 +411,10 @@ model User {
   materialFollowupsCreated         MaterialFollowup[]              @relation("MaterialFollowupOperator")
   applicationsOwned                Application[]                   @relation("ApplicationOwner")
   applicationStatusChanges         ApplicationStatusLog[]          @relation("ApplicationStatusOperator")
+  applicationActivities            ApplicationActivity[]           @relation("ApplicationActivityOperator")
+  applicationActivitiesVoided      ApplicationActivity[]           @relation("ApplicationActivityInvalidator")
+  applicationEvidenceUploaded      ApplicationEvidence[]           @relation("ApplicationEvidenceUploader")
+  applicationMaterialsSelected     ApplicationMaterialSnapshot[]   @relation("ApplicationMaterialSelector")
   issuesSubmitted                  Issue[]                         @relation("IssueSubmitter")
   issueLogsCreated                 IssueLog[]                      @relation("IssueLogOperator")
   notifications                    Notification[]                  @relation("NotificationRecipient")
@@ -1112,6 +1137,7 @@ model MaterialItem {
   submissions           MaterialSubmission[]           @relation("MaterialSubmissions")
   applicabilityRequests MaterialApplicabilityRequest[]
   followups             MaterialFollowup[]
+  applicationSnapshots ApplicationMaterialSnapshot[]
 
   @@unique([studentId, sopMaterialTemplateId])
   @@unique([studentId, templateKeySnapshot])
@@ -1208,24 +1234,25 @@ model MaterialApplicabilityRequest {
 }
 
 model MaterialVersion {
-  id             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  materialItemId String               @map("material_item_id") @db.Uuid
-  versionNo      Int                  @map("version_no")
-  fileName       String               @map("file_name") @db.VarChar(255)
-  mimeType       String               @map("mime_type") @db.VarChar(100)
-  fileSize       Int                  @map("file_size")
-  storageKey     String               @unique @map("storage_key") @db.VarChar(500)
-  fileHash       String               @map("file_hash") @db.Char(64)
-  uploadedById   String               @map("uploaded_by") @db.Uuid
-  uploadedAt     DateTime             @default(now()) @map("uploaded_at")
-  reviewStatus   MaterialReviewStatus @default(PENDING) @map("review_status")
-  reviewedById   String?              @map("reviewed_by") @db.Uuid
-  reviewedAt     DateTime?            @map("reviewed_at")
-  reviewComment  String?              @map("review_comment") @db.VarChar(1000)
-  materialItem   MaterialItem         @relation("MaterialVersions", fields: [materialItemId], references: [id], onDelete: Cascade)
-  currentForItem MaterialItem?        @relation("CurrentMaterialVersion")
-  uploadedBy     User                 @relation("MaterialVersionUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
-  reviewedBy     User?                @relation("MaterialVersionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  id                   String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  materialItemId       String                        @map("material_item_id") @db.Uuid
+  versionNo            Int                           @map("version_no")
+  fileName             String                        @map("file_name") @db.VarChar(255)
+  mimeType             String                        @map("mime_type") @db.VarChar(100)
+  fileSize             Int                           @map("file_size")
+  storageKey           String                        @unique @map("storage_key") @db.VarChar(500)
+  fileHash             String                        @map("file_hash") @db.Char(64)
+  uploadedById         String                        @map("uploaded_by") @db.Uuid
+  uploadedAt           DateTime                      @default(now()) @map("uploaded_at")
+  reviewStatus         MaterialReviewStatus          @default(PENDING) @map("review_status")
+  reviewedById         String?                       @map("reviewed_by") @db.Uuid
+  reviewedAt           DateTime?                     @map("reviewed_at")
+  reviewComment        String?                       @map("review_comment") @db.VarChar(1000)
+  materialItem         MaterialItem                  @relation("MaterialVersions", fields: [materialItemId], references: [id], onDelete: Cascade)
+  currentForItem       MaterialItem?                 @relation("CurrentMaterialVersion")
+  uploadedBy           User                          @relation("MaterialVersionUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  reviewedBy           User?                         @relation("MaterialVersionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  applicationSnapshots ApplicationMaterialSnapshot[]
 
   @@unique([materialItemId, versionNo])
   @@index([materialItemId, uploadedAt])
@@ -1250,34 +1277,106 @@ model MaterialFollowup {
 }
 
 model Application {
-  id                   String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  studentId            String                   @map("student_id") @db.Uuid
+  id                   String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId            String                        @map("student_id") @db.Uuid
   channel              ApplicationChannel
-  institutionName      String                   @map("institution_name") @db.VarChar(200)
-  programName          String?                  @map("program_name") @db.VarChar(200)
-  preferenceNo         Int?                     @map("preference_no")
-  roundName            String?                  @map("round_name") @db.VarChar(100)
-  deadlineAt           DateTime?                @map("deadline_at")
-  status               ApplicationStatus        @default(PLANNING)
-  submittedAt          DateTime?                @map("submitted_at")
-  applicationNo        String?                  @map("application_no") @db.VarChar(100)
-  result               String?                  @db.VarChar(500)
-  offerCondition       String?                  @map("offer_condition") @db.VarChar(1000)
-  confirmationDeadline DateTime?                @map("confirmation_deadline")
-  ownerId              String?                  @map("owner_id") @db.Uuid
-  intakeDecision       String?                  @map("intake_decision") @db.VarChar(500)
-  version              Int                      @default(1)
-  createdAt            DateTime                 @default(now()) @map("created_at")
-  updatedAt            DateTime                 @updatedAt @map("last_updated_at")
-  student              Student                  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  owner                User?                    @relation("ApplicationOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  institutionName      String                        @map("institution_name") @db.VarChar(200)
+  programName          String?                       @map("program_name") @db.VarChar(200)
+  programChoices       String[]                      @default([]) @map("program_choices")
+  preferenceNo         Int?                          @map("preference_no")
+  roundName            String?                       @map("round_name") @db.VarChar(100)
+  deadlineAt           DateTime?                     @map("deadline_at")
+  deadlineMode         ApplicationDeadlineMode       @default(UNKNOWN) @map("deadline_mode")
+  requestBasis         String?                       @map("request_basis") @db.VarChar(1000)
+  portalUrl            String?                       @map("portal_url") @db.VarChar(1000)
+  status               ApplicationStatus             @default(PLANNING)
+  submittedAt          DateTime?                     @map("submitted_at")
+  applicationNo        String?                       @map("application_no") @db.VarChar(100)
+  result               String?                       @db.VarChar(500)
+  offerCondition       String?                       @map("offer_condition") @db.VarChar(1000)
+  confirmationDeadline DateTime?                     @map("confirmation_deadline")
+  ownerId              String?                       @map("owner_id") @db.Uuid
+  intakeDecision       String?                       @map("intake_decision") @db.VarChar(500)
+  version              Int                           @default(1)
+  createdAt            DateTime                      @default(now()) @map("created_at")
+  updatedAt            DateTime                      @updatedAt @map("last_updated_at")
+  student              Student                       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  owner                User?                         @relation("ApplicationOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   statusLogs           ApplicationStatusLog[]
   requirements         ApplicationRequirement[]
+  activities           ApplicationActivity[]
+  materialSnapshots    ApplicationMaterialSnapshot[]
 
   @@index([studentId, status, deadlineAt])
   @@index([ownerId, status])
   @@index([channel, status, updatedAt])
   @@map("applications")
+}
+
+model ApplicationActivity {
+  id                     String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId          String                  @map("application_id") @db.Uuid
+  activityType           ApplicationActivityType @map("activity_type")
+  note                   String                  @db.VarChar(2000)
+  occurredAt             DateTime                @map("occurred_at")
+  operatorId             String                  @map("operator_id") @db.Uuid
+  studentVisible         Boolean                 @default(false) @map("student_visible")
+  portalUrl              String?                 @map("portal_url") @db.VarChar(1000)
+  applicationNoSnapshot  String?                 @map("application_no_snapshot") @db.VarChar(100)
+  targetStatus           ApplicationStatus?      @map("target_status")
+  resultSnapshot         String?                 @map("result_snapshot") @db.VarChar(500)
+  correctionOfActivityId String?                 @map("correction_of_activity_id") @db.Uuid
+  invalidatedAt          DateTime?               @map("invalidated_at")
+  invalidatedById        String?                 @map("invalidated_by") @db.Uuid
+  invalidReason          String?                 @map("invalid_reason") @db.VarChar(1000)
+  createdAt              DateTime                @default(now()) @map("created_at")
+  application            Application             @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  operator               User                    @relation("ApplicationActivityOperator", fields: [operatorId], references: [id], onDelete: Restrict)
+  correctionOf           ApplicationActivity?    @relation("ApplicationActivityCorrections", fields: [correctionOfActivityId], references: [id], onDelete: Restrict)
+  corrections            ApplicationActivity[]   @relation("ApplicationActivityCorrections")
+  invalidatedBy          User?                   @relation("ApplicationActivityInvalidator", fields: [invalidatedById], references: [id], onDelete: SetNull)
+  evidence               ApplicationEvidence[]
+
+  @@index([applicationId, occurredAt])
+  @@index([applicationId, activityType, createdAt])
+  @@index([correctionOfActivityId])
+  @@map("application_activities")
+}
+
+model ApplicationEvidence {
+  id           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  activityId   String              @map("activity_id") @db.Uuid
+  fileName     String              @map("file_name") @db.VarChar(255)
+  mimeType     String              @map("mime_type") @db.VarChar(100)
+  fileSize     Int                 @map("file_size")
+  storageKey   String              @unique @map("storage_key") @db.VarChar(500)
+  fileHash     String              @map("file_hash") @db.Char(64)
+  uploadedById String              @map("uploaded_by") @db.Uuid
+  createdAt    DateTime            @default(now()) @map("created_at")
+  activity     ApplicationActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  uploadedBy   User                @relation("ApplicationEvidenceUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@index([activityId, createdAt])
+  @@map("application_evidence")
+}
+
+model ApplicationMaterialSnapshot {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId     String          @map("application_id") @db.Uuid
+  materialItemId    String          @map("material_item_id") @db.Uuid
+  materialVersionId String          @map("material_version_id") @db.Uuid
+  selectedById      String          @map("selected_by") @db.Uuid
+  selectedAt        DateTime        @default(now()) @map("selected_at")
+  frozenAt          DateTime?       @map("frozen_at")
+  application       Application     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  materialItem      MaterialItem    @relation(fields: [materialItemId], references: [id], onDelete: Restrict)
+  materialVersion   MaterialVersion @relation(fields: [materialVersionId], references: [id], onDelete: Restrict)
+  selectedBy        User            @relation("ApplicationMaterialSelector", fields: [selectedById], references: [id], onDelete: Restrict)
+
+  @@unique([applicationId, materialItemId])
+  @@index([applicationId, frozenAt])
+  @@index([materialVersionId])
+  @@map("application_material_snapshots")
 }
 
 model ApplicationStatusLog {

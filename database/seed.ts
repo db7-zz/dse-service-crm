@@ -989,12 +989,24 @@ async function main(): Promise<void> {
         channel: "HK_DIRECT",
         institutionName: "香港大学",
         programName: "Bachelor of Arts",
+        programChoices: ["Bachelor of Arts"],
         roundName: "Early Round",
         deadlineAt: shiftDays(now, 25),
-        status: "SUBMITTED",
+        deadlineMode: "FIXED",
+        requestBasis: "学生已确认申请香港大学 Bachelor of Arts，授权管家开始外部申请。",
+        status: "SUBMISSION_PENDING_EVIDENCE",
         submittedAt: shiftDays(now, -2),
         applicationNo: "HKU-DEMO-2026-001",
         ownerId: butler.id,
+        activities: {
+          create: {
+            activityType: "SUBMISSION_RECORDED",
+            note: "已完成外部申请操作，等待补充成功页截图。",
+            occurredAt: shiftDays(now, -2),
+            operatorId: butler.id,
+            applicationNoSnapshot: "HKU-DEMO-2026-001",
+          },
+        },
       },
     });
     await prisma.applicationStatusLog.createMany({
@@ -1017,8 +1029,8 @@ async function main(): Promise<void> {
         {
           applicationId: directApplication.id,
           fromStatus: "CONFIRMED",
-          toStatus: "SUBMITTED",
-          note: "申请已递交并记录申请编号",
+          toStatus: "SUBMISSION_PENDING_EVIDENCE",
+          note: "外部申请已操作，等待补充递交凭证",
           operatorId: butler.id,
           changedAt: shiftDays(now, -2),
         },
@@ -1031,10 +1043,21 @@ async function main(): Promise<void> {
         channel: "JUPAS",
         institutionName: "JUPAS",
         programName: "首轮课程排序",
+        programChoices: ["JS1001 文学士", "JS1010 工商管理", "JS1200 社会科学"],
         preferenceNo: 1,
         deadlineAt: shiftDays(now, 18),
+        deadlineMode: "FIXED",
+        requestBasis: "学生已确认首轮 JUPAS 志愿顺序。",
         status: "MATERIAL_PREPARATION",
         ownerId: butler.id,
+        activities: {
+          create: {
+            activityType: "CREATED",
+            note: "已按学生确认的志愿顺序创建 JUPAS 申请记录。",
+            occurredAt: shiftDays(now, -3),
+            operatorId: butler.id,
+          },
+        },
       },
     });
     await prisma.applicationStatusLog.createMany({

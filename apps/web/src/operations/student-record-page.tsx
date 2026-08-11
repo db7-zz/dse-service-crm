@@ -284,7 +284,7 @@ export function StudentRecordPage({ studentId }: { studentId: string }) {
                 key: "apps",
                 label: "申请",
                 children: (
-                  <Link href={`/workspace/applications?studentId=${studentId}`}>查看申请管理</Link>
+                  <Link href={`/workspace/applications/students/${studentId}`}>查看申请管理</Link>
                 ),
               },
             ]}

@@ -1,5 +1,5 @@
-import { ApplicationsPage } from "../../../src/operations/applications-page";
+import { ApplicationsDashboardPage } from "../../../src/operations/applications-dashboard-page";
 
 export default function Page() {
-  return <ApplicationsPage />;
+  return <ApplicationsDashboardPage />;
 }
